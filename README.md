@@ -1,7 +1,7 @@
 <p align="center">
-  <img alt="Evilginx2 Logo" src="https://raw.githubusercontent.com/kgretzky/evilginx2/img/media/evilginx2-logo-512.png" height="160" />
+  <img alt="Evilginx2 Logo" src="https://raw.githubusercontent.com/kgretzky/evilginx2/media/img/evilginx2-logo-512.png" height="160" />
   <p align="center">
-    <img alt="Evilginx2 Title" src="https://raw.githubusercontent.com/kgretzky/evilginx2/img/media/evilginx2-title-black-512.png" height="140" />
+    <img alt="Evilginx2 Title" src="https://raw.githubusercontent.com/kgretzky/evilginx2/media/img/evilginx2-title-black-512.png" height="140" />
   </p>
 </p>
 
