@@ -1,0 +1,11 @@
+sudo: false
+
+language: go
+go:
+  - 1.10.x
+  - master
+
+notifications:
+  email: false
+
+install: true

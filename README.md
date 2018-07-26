@@ -14,38 +14,91 @@ Present version is fully written in GO as a standalone application, which implem
 
 I am very much aware that Evilginx can be used for nefarious purposes. This work is merely a demonstration of what adept attackers can do. It is the defender's responsibility to take such attacks into consideration and find ways to protect their users against this type of phishing attacks. Evilginx should be used only in legitimate penetration testing assignments with written permission from to-be-phished parties.
 
+## Video
+
+See **evilginx2** in action here:
+
+https://vimeo.com/281220095
+
+## Write-up
+
+If you want to learn more about this phishing technique, I've published an extensive blog post about **evilginx2** here:
+
+https://breakdev.org/evilginx-2-next-generation-of-phishing-2fa-tokens
+
 ## Installation
 
 You can either use a [precompiled binary package](https://github.com/kgretzky/evilginx2/releases) for your architecture or you can compile **evilginx2** from source.
 
-You will need an external server where you'll host your **evilginx2** installation. I personally recommend Digital Ocean and if you follow this referral link, you will get an extra $10 to spend on servers for free: [Digital Ocean VPS with $10 free credit to spend](https://m.do.co/c/50338abc7ffe). Evilginx runs very well on the cheapest Debian 8 VPS.
+You will need an external server where you'll host your **evilginx2** installation. I personally recommend Digital Ocean and if you follow my referral link, you will [get an extra $10 to spend on servers for free](https://m.do.co/c/50338abc7ffe).
+
+Evilginx runs very well on the cheapest Debian 8 VPS.
 
 #### Installing from source
 
-In order to compile from source, make sure you have installed **GO compiler** of version at least **>= 1.10.0** (get it from [here](https://golang.org/doc/install)) and that `$GOPATH` environment variable is set up properly (def. `$HOME/go`). Then follow these instructions:
+In order to compile from source, make sure you have installed **GO** of version at least **1.10.0** (get it from [here](https://golang.org/doc/install)) and that `$GOPATH` environment variable is set up properly (def. `$HOME/go`).
+
+After installation, add this to your `~/.profile`:
 
 ```
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+```
+Then load it with `source ~/.profiles`.
+
+Now you should be ready to install **evilginx2**. Follow these instructions:
+
+```
+sudo apt-get install git make
 go get -u github.com/kgretzky/evilginx2
-cd $GOPATH/src/github.com/kgretzky/evilginx2 (if $GOPATH is not set, try $HOME/go)
-make all
+cd $GOPATH/src/github.com/kgretzky/evilginx2 #(if $GOPATH is not set, try $HOME/go)
+make
 ```
 
-Instructions above can also be used to update **evilginx2** to latest version.
+You can now either run **evilginx2** from local directory like:
+```
+sudo ./bin/evilginx -p ./phishlets/
+```
+or install it globally:
+```
+sudo make install
+sudo evilginx
+```
+
+Instructions above can also be used to update **evilginx2** to the latest version.
 
 #### Installing from precompiled binary packages
 
 Grab the package you want from [here](https://github.com/kgretzky/evilginx2/releases) and drop it on your box. Then do:
 ```
-tar zxvf <package_name>.tar.gz
+unzip <package_name>.zip -d <package_name>
 cd <package_name>
-make all
+```
+
+If you want to do a system-wide install, use the install script with root privileges:
+```
+chmod 700 ./install.sh
+sudo ./install.sh
+sudo evilginx
+```
+or just launch **evilginx2** from the current directory (you will also need root privileges):
+```
+chmod 700 ./evilginx
+sudo ./evilginx
 ```
 
 ## Usage
 
-Type:
+**IMPORTANT!** Make sure that there is no service listening on ports `TCP 443`, `TCP 80` and `UDP 53`. You may need to shutdown apache or nginx and any service used for resolving DNS that may be running. **evilginx2** will tell you on launch if it fails to open a listening socket on any of these ports.
+
+By default, **evilginx2** will look for phishlets in `./phishlets/` directory and later in `/usr/share/evilginx/phishlets/`. If you want to specify a custom path to load phishlets from, use the `-p <phishlets_dir_path>` parameter when launching the tool.
+
 ```
-evilginx
+Usage of ./evilginx:
+  -debug
+        Enable debug output
+  -p string
+        Phishlets directory path
 ```
 
 You should see **evilginx2** logo with a prompt to enter commands. Type `help` or `help <command>` if you want to see available commands or more detailed information on them.
@@ -82,6 +135,20 @@ phishlet get-url linkedin https://www.google.com
 ```
 
 Running phishlets will only respond to tokenized links, so any scanners who scan your main domain will be redirected to URL specified as `redirect_url` under `config`. If you want to hide your phishlet and make it not respond even to valid tokenized phishing URLs, use `phishlet hide/unhide <phishlet>` command.
+
+You can monitor captured credentials and session cookies with:
+```
+sessions
+```
+
+To get detailed information about the captured session, with the session cookie itself (it will be printed in JSON format at the bottom), select its session ID:
+```
+sessions <id>
+```
+
+The captured session cookie can be copied and imported into Chrome browser, using [EditThisCookie](https://chrome.google.com/webstore/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg?hl=en) extension.
+
+**Important!** If you want **evilginx2** to continue running after you log out from your server, you should run it inside a `screen` session.
 
 ## Credits
 

