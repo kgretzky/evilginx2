@@ -11,7 +11,7 @@ This tool is a successor to [Evilginx](https://github.com/kgretzky/evilginx), re
 Present version is fully written in GO as a standalone application, which implements its own HTTP and DNS server, making it extremely easy to set up and use.
 
 <p align="center">
-  <img alt="Screenshot" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/media/img/screen.png" height="480" />
+  <img alt="Screenshot" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/media/img/screen.png" height="320" />
 </p>
 
 ## Disclaimer
