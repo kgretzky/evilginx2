@@ -125,17 +125,17 @@ config ip 10.0.0.1
 
 Now you can set up the phishlet you want to use. For the sake of this short guide, we will use a LinkedIn phishlet. Set up the hostname for the phishlet (it must contain your domain obviously):
 ```
-phishlet hostname linkedin my.phishing.hostname.yourdomain.com
+phishlets hostname linkedin my.phishing.hostname.yourdomain.com
 ```
 
 And now you can `enable` the phishlet, which will initiate automatic retrieval of LetsEncrypt SSL/TLS certificates if none are locally found for the hostname you picked:
 ```
-phishlet enable linkedin
+phishlets enable linkedin
 ```
 
 Your phishing site is now live. Think of the URL, you want the victim to be redirected to on successful login and get the phishing URL like this (victim will be redirected to `https://www.google.com`):
 ```
-phishlet get-url linkedin https://www.google.com
+phishlets get-url linkedin https://www.google.com
 ```
 
 Running phishlets will only respond to tokenized links, so any scanners who scan your main domain will be redirected to URL specified as `redirect_url` under `config`. If you want to hide your phishlet and make it not respond even to valid tokenized phishing URLs, use `phishlet hide/unhide <phishlet>` command.
