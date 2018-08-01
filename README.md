@@ -71,6 +71,20 @@ sudo evilginx
 
 Instructions above can also be used to update **evilginx2** to the latest version.
 
+### Installing with Docker
+
+You can launch **evilginx2** from within Docker. First build the container:
+```
+docker build . -t evilginx2
+```
+
+Then you can run the container:
+```
+docker run -it -p 53:53/udp -p 80:80 -p 443:443 evilginx2
+```
+
+Phishlets are loaded within the container at `/app/phishlets`, which can be mounted as a volume for configuration.
+
 #### Installing from precompiled binary packages
 
 Grab the package you want from [here](https://github.com/kgretzky/evilginx2/releases) and drop it on your box. Then do:
