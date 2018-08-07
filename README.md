@@ -30,6 +30,12 @@ If you want to learn more about this phishing technique, I've published an exten
 
 https://breakdev.org/evilginx-2-next-generation-of-phishing-2fa-tokens
 
+## Phishlet Masters - Hall of Fame
+
+Please thank the following contributors for devoting their precious time to deliver us fresh phishlets! (in order of first contributions)
+
+[@cust0msync](https://twitter.com/cust0msync) - Amazon, Reddit
+
 ## Installation
 
 You can either use a [precompiled binary package](https://github.com/kgretzky/evilginx2/releases) for your architecture or you can compile **evilginx2** from source.
