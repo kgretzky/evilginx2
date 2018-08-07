@@ -77,7 +77,7 @@ sudo evilginx
 
 Instructions above can also be used to update **evilginx2** to the latest version.
 
-### Installing with Docker
+#### Installing with Docker
 
 You can launch **evilginx2** from within Docker. First build the container:
 ```
