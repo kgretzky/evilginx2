@@ -34,8 +34,9 @@ https://breakdev.org/evilginx-2-next-generation-of-phishing-2fa-tokens
 
 Please thank the following contributors for devoting their precious time to deliver us fresh phishlets! (in order of first contributions)
 
-[@cust0msync](https://twitter.com/cust0msync) - Amazon, Reddit
-[@white_fi](https://twitter.com/white_fi) - Twitter
+[**@cust0msync**](https://twitter.com/cust0msync) - Amazon, Reddit
+
+[**@white_fi**](https://twitter.com/white_fi) - Twitter
 
 ## Installation
 
