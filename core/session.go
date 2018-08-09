@@ -37,13 +37,15 @@ func (s *Session) SetPassword(password string) {
 func (s *Session) AddAuthToken(key string, value string, req_keys []string) bool {
 	s.Tokens[key] = value
 
-	var tkeys []string
-	tkeys = append(tkeys, req_keys...)
-	for k, _ := range s.Tokens {
-		tkeys = removeString(k, tkeys)
-	}
-	if len(tkeys) == 0 {
-		return true
+	if len(req_keys) > 0 {
+		var tkeys []string
+		tkeys = append(tkeys, req_keys...)
+		for k, _ := range s.Tokens {
+			tkeys = removeString(k, tkeys)
+		}
+		if len(tkeys) == 0 {
+			return true
+		}
 	}
 	return false
 }
