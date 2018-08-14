@@ -50,6 +50,14 @@ Evilginx runs very well on the most basic Debian 8 VPS.
 
 In order to compile from source, make sure you have installed **GO** of version at least **1.10.0** (get it from [here](https://golang.org/doc/install)) and that `$GOPATH` environment variable is set up properly (def. `$HOME/go`).
 
+To install GO on Ubuntu 
+
+```
+sudo apt-get update
+sudo apt-get install golang-go 
+```
+
+
 After installation, add this to your `~/.profile`, assuming that you installed **GO** in `/usr/local/go`:
 
 ```
