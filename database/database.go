@@ -49,7 +49,7 @@ func (d *Database) SetSessionPassword(sid string, password string) error {
 	return err
 }
 
-func (d *Database) SetSessionTokens(sid string, tokens map[string]map[string]string) error {
+func (d *Database) SetSessionTokens(sid string, tokens map[string]map[string]*Token) error {
 	err := d.sessionsUpdateTokens(sid, tokens)
 	return err
 }
