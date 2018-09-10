@@ -123,6 +123,8 @@ By default, **evilginx2** will look for phishlets in `./phishlets/` directory an
 Usage of ./evilginx:
   -debug
         Enable debug output
+  -developer
+        Enable developer mode (generates self-signed certificates for all hostnames)
   -p string
         Phishlets directory path
 ```
