@@ -314,8 +314,14 @@ func (d *CertDb) SignCertificateForHost(host string, phish_host string, port int
 	if srvCert == nil {
 		return nil, fmt.Errorf("failed to get TLS certificate for: %s", host)
 	} else {
+		serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+		serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+		if err != nil {
+			return nil, err
+		}
+
 		template = x509.Certificate{
-			SerialNumber:          srvCert.SerialNumber,
+			SerialNumber:          serialNumber,
 			Issuer:                x509ca.Subject,
 			Subject:               srvCert.Subject,
 			NotBefore:             srvCert.NotBefore,
