@@ -223,7 +223,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if err == nil {
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 
-
 						contentType := req.Header.Get("Content-type")
 						if contentType == "application/json" {
 							
@@ -250,7 +249,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								}
 							}
 
-						}else{
+						} else {
 
 							if req.ParseForm() == nil {
 								for k, v := range req.Form {

