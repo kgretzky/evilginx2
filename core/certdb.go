@@ -20,16 +20,17 @@ import (
 )
 
 type CertDb struct {
-	PrivateKey *rsa.PrivateKey
-	CACert     tls.Certificate
-	client     *acme.Client
-	certUser   CertUser
-	dataDir    string
-	ns         *Nameserver
-	hs         *HttpServer
-	cfg        *Config
-	cache      map[string]map[string]*tls.Certificate
-	tls_cache  map[string]*tls.Certificate
+	PrivateKey    *rsa.PrivateKey
+	CACert        tls.Certificate
+	client        *acme.Client
+	certUser      CertUser
+	dataDir       string
+	ns            *Nameserver
+	hs            *HttpServer
+	cfg           *Config
+	cache         map[string]map[string]*tls.Certificate
+	tls_cache     map[string]*tls.Certificate
+	httpChallenge *HTTPChallenge
 }
 
 type CertUser struct {
@@ -181,6 +182,10 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 		return nil, err
 	}
 
+	d.httpChallenge = &HTTPChallenge{crt_db: d}
+	d.client.SetChallengeProvider(acme.HTTP01, d.httpChallenge)
+	d.client.ExcludeChallenges([]acme.Challenge{acme.TLSSNI01})
+
 	return d, nil
 }
 
@@ -241,9 +246,6 @@ func (d *CertDb) obtainCertificate(site_name string, base_domain string, domains
 		return err
 	}
 	crt_dir := filepath.Join(d.dataDir, base_domain)
-
-	httpChallenge := HTTPChallenge{crt_db: d}
-	d.client.SetChallengeProvider(acme.HTTP01, &httpChallenge)
 
 	reg, err := d.client.Register()
 	if err != nil {
