@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	httpReadTimeout  = 5 * time.Second
-	httpWriteTimeout = 10 * time.Second
+	httpReadTimeout  = 15 * time.Second
+	httpWriteTimeout = 15 * time.Second
 )
 
 type HttpProxy struct {
