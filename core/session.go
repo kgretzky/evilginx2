@@ -12,6 +12,7 @@ type Session struct {
 	Tokens      map[string]map[string]*database.Token
 	RedirectURL string
 	IsDone      bool
+	IsAuthUrl   bool
 }
 
 func NewSession(name string) (*Session, error) {
@@ -22,6 +23,7 @@ func NewSession(name string) (*Session, error) {
 		Password:    "",
 		RedirectURL: "",
 		IsDone:      false,
+		IsAuthUrl:   false,
 	}
 	s.Tokens = make(map[string]map[string]*database.Token)
 

