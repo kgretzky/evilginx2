@@ -8,12 +8,13 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/kgretzky/evilginx2/core"
-	"github.com/kgretzky/evilginx2/database"
-	"github.com/kgretzky/evilginx2/log"
+	"./core"
+	"./database"
+	"./log"
 )
 
 var phishlets_dir = flag.String("p", "", "Phishlets directory path")
+var resource_file = flag.String("rc", "", "Resource script to run on startup")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
 
@@ -45,6 +46,10 @@ func main() {
 	}
 	if _, err := os.Stat(*phishlets_dir); os.IsNotExist(err) {
 		log.Fatal("provided phishlets directory path does not exist: %s", *phishlets_dir)
+		return
+	}
+	if _, err := os.Stat(*resource_file); os.IsNotExist(err) {
+		log.Fatal("provided resource file does not exist: %s", *resource_file)
 		return
 	}
 	log.DebugEnable(*debug_log)
