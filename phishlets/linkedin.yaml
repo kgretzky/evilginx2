@@ -1,4 +1,3 @@
-name: 'linkedin'
 author: '@mrgretzky'
 min_ver: '2.2.0'
 proxy_hosts:
