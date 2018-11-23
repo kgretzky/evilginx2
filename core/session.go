@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/blacklanternsecurityevilginx2/database"
+	"github.com/blacklanternsecurity/evilginx2/database"
 )
 
 type Session struct {
