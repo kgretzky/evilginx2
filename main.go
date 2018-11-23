@@ -139,5 +139,9 @@ func main() {
 		return
 	}
 
+	if resource_file {
+		t.ProcessResourceFile(*resource_file)
+	}
+
 	t.DoWork()
 }
