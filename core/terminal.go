@@ -87,7 +87,7 @@ func (t *Terminal) ProcessResourceFile(rc string) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(line)
+		fmt.Println("%s%s", t.rl.Config.Prompt, line)
 		t.ProcessCommand(line)
 	}
 }
