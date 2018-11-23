@@ -84,16 +84,12 @@ func (t *Terminal) ProcessResourceFile(rc string) ([]string, error){
 	}
 	defer file.Close()
 
-	var lines []string
-	var line string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line = scanner.Text()
+		line := scanner.Text()
 		fmt.Println(line)
-		lines = append(lines, line)
+		t.ProcessCommand(line)
 	}
-
-	return lines, scanner.Err()
 }
 
 func (t *Terminal) ProcessCommand(line string) bool {
