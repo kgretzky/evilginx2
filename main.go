@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"./core"
-	"./database"
-	"./log"
+	"github.com/blacklanternsecurity/core"
+	"github.com/blacklanternsecurity/database"
+	"github.com/blacklanternsecurity/log"
 )
 
 var phishlets_dir = flag.String("p", "", "Phishlets directory path")

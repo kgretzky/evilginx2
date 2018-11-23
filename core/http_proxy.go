@@ -26,8 +26,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/inconshreveable/go-vhost"
 
-	"github.com/kgretzky/evilginx2/database"
-	"github.com/kgretzky/evilginx2/log"
+	"github.com/blacklanternsecurityevilginx2/database"
+	"github.com/blacklanternsecurityevilginx2/log"
 )
 
 const (
