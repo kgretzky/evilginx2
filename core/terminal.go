@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blacklanternsecurity/evilginx2/database"
-	"github.com/blacklanternsecurity/evilginx2/log"
-	"github.com/blacklanternsecurity/evilginx2/parser"
+	"github.com/kgretzky/evilginx2/database"
+	"github.com/kgretzky/evilginx2/log"
+	"github.com/kgretzky/evilginx2/parser"
 
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"

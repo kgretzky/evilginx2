@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/blacklanternsecurity/evilginx2/log"
+	"github.com/kgretzky/evilginx2/log"
 )
 
 type CertDb struct {
