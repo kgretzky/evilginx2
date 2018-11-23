@@ -77,10 +77,10 @@ func (t *Terminal) output(s string, args ...interface{}) {
 	fmt.Fprintf(color.Output, "\n%s\n\n", out)
 }
 
-func (t *Terminal) ProcessResourceFile(rc string) ([]string, error){
+func (t *Terminal) ProcessResourceFile(rc string) {
 	file, err := os.Open(rc)
 	if err != nil {
-		log.Error("error opening resource file: %v", err)
+		log.Fatal("error opening resource file: %v", err)
 	}
 	defer file.Close()
 
