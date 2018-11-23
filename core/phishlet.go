@@ -318,9 +318,11 @@ func (p *Phishlet) LoadFromFile(site string, path string) error {
 		return fmt.Errorf("credentials: %v", err)
 	}
 
+	p.username.tp = fp.Credentials.Username.Type
 	if p.username.tp == "" {
 		p.username.tp = "post"
 	}
+	p.password.tp = fp.Credentials.Password.Type
 	if p.password.tp == "" {
 		p.password.tp = "post"
 	}
