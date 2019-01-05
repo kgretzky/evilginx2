@@ -43,7 +43,6 @@ var LogLabels = map[int]string{
 func StartServerLogging() {
 	// Server Logging
 	if _, err := os.Stat("evilginx2log.txt"); os.IsNotExist(err) {
-		os.Mkdir("log", os.ModeDir)
 		os.Create("evilginx2log.txt")
 	}
 	var errLog error
