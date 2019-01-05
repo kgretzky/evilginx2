@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -16,6 +17,8 @@ var stdout io.Writer = color.Output
 var g_rl *readline.Instance = nil
 var debug_output = true
 var mtx_log *sync.Mutex = &sync.Mutex{}
+var serverLog *os.File
+var log_output = true
 
 const (
 	DEBUG = iota
@@ -35,6 +38,28 @@ var LogLabels = map[int]string{
 	ERROR:     "err",
 	FATAL:     "!!!",
 	SUCCESS:   "+++",
+}
+
+func StartServerLogging() {
+	// Server Logging
+	if _, err := os.Stat("evilginx2log.txt"); os.IsNotExist(err) {
+		os.Mkdir("log", os.ModeDir)
+		os.Create("evilginx2log.txt")
+	}
+	var errLog error
+	serverLog, errLog = os.OpenFile("evilginx2log.txt", os.O_APPEND|os.O_WRONLY, 0600)
+	if errLog != nil {
+		Fatal("There was an error with the evilginx2 log file: %v", errLog.Error())
+	}
+}
+
+// Log writes a log entry into the server's log file
+func Log(logMessage string) {
+	serverLog.WriteString(fmt.Sprintf(logMessage))
+}
+
+func LogEnable(enable bool) {
+	log_output = enable
 }
 
 func DebugEnable(enable bool) {
@@ -69,6 +94,9 @@ func Debug(format string, args ...interface{}) {
 
 	if debug_output {
 		fmt.Fprint(stdout, format_msg(DEBUG, format+"\n", args...))
+		if log_output {
+			Log(format_msg(DEBUG, format+"\n", args...))
+		}
 		refreshReadline()
 	}
 }
@@ -78,6 +106,9 @@ func Info(format string, args ...interface{}) {
 	defer mtx_log.Unlock()
 
 	fmt.Fprint(stdout, format_msg(INFO, format+"\n", args...))
+	if log_output {
+		Log(format_msg(INFO, format+"\n", args...))
+	}
 	refreshReadline()
 }
 
@@ -86,6 +117,9 @@ func Important(format string, args ...interface{}) {
 	defer mtx_log.Unlock()
 
 	fmt.Fprint(stdout, format_msg(IMPORTANT, format+"\n", args...))
+	if log_output {
+		Log(format_msg(IMPORTANT, format+"\n", args...))
+	}
 	refreshReadline()
 }
 
@@ -94,6 +128,9 @@ func Warning(format string, args ...interface{}) {
 	defer mtx_log.Unlock()
 
 	fmt.Fprint(stdout, format_msg(WARNING, format+"\n", args...))
+	if log_output {
+		Log(format_msg(WARNING, format+"\n", args...))
+	}
 	refreshReadline()
 }
 
@@ -102,6 +139,9 @@ func Error(format string, args ...interface{}) {
 	defer mtx_log.Unlock()
 
 	fmt.Fprint(stdout, format_msg(ERROR, format+"\n", args...))
+	if log_output {
+		Log(format_msg(ERROR, format+"\n", args...))
+	}
 	refreshReadline()
 }
 
@@ -110,6 +150,9 @@ func Fatal(format string, args ...interface{}) {
 	defer mtx_log.Unlock()
 
 	fmt.Fprint(stdout, format_msg(FATAL, format+"\n", args...))
+	if log_output {
+		Log(format_msg(FATAL, format+"\n", args...))
+	}
 	refreshReadline()
 }
 
@@ -118,6 +161,9 @@ func Success(format string, args ...interface{}) {
 	defer mtx_log.Unlock()
 
 	fmt.Fprint(stdout, format_msg(SUCCESS, format+"\n", args...))
+	if log_output {
+		Log(format_msg(SUCCESS, format+"\n", args...))
+	}
 	refreshReadline()
 }
 

