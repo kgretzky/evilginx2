@@ -856,7 +856,7 @@ func (p *HttpProxy) deleteRequestCookie(name string, req *http.Request) {
 
 func (p *HttpProxy) whitelistIP(ip_addr string, sid string) {
 	log.Debug("whitelistIP: %s %s", ip_addr, sid)
-	p.ip_whitelist[ip_addr] = time.Now().Add(5 * time.Minute).Unix()
+	p.ip_whitelist[ip_addr] = time.Now().Add(5 * time.Second).Unix()
 	p.ip_sids[ip_addr] = sid
 }
 
@@ -865,7 +865,6 @@ func (p *HttpProxy) isWhitelistedIP(ip_addr string) bool {
 	ct := time.Now()
 	if ip_t, ok := p.ip_whitelist[ip_addr]; ok {
 		et := time.Unix(ip_t, 0)
-		fmt.Println(ct.Unix(), et.Unix())
 		return ct.Before(et)
 	}
 	return false
