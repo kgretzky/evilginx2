@@ -1,5 +1,7 @@
 package core
 
+import "strings"
+
 func combineHost(sub string, domain string) string {
 	if sub == "" {
 		return domain
@@ -40,6 +42,17 @@ func truncateString(s string, maxLen int) string {
 		pre := s[:ml/2-1]
 		suf := s[len(s)-(ml/2-2):]
 		return pre + "..." + suf
+	}
+	return s
+}
+
+func patchPlaceholder(s string, params *map[string]string) string {
+	if params == nil {
+		return s
+	}
+	
+	for key, value := range params {
+		s = strings.Replace(s, "{"+value+"}", value, -1)
 	}
 	return s
 }

