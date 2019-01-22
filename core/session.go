@@ -5,27 +5,31 @@ import (
 )
 
 type Session struct {
-	Id          string
-	Name        string
-	Username    string
-	Password    string
-	Custom      map[string]string
-	Tokens      map[string]map[string]*database.Token
-	RedirectURL string
-	IsDone      bool
-	IsAuthUrl   bool
+	Id            string
+	Name          string
+	Username      string
+	Password      string
+	Custom        map[string]string
+	Tokens        map[string]map[string]*database.Token
+	RedirectURL   string
+	IsDone        bool
+	IsAuthUrl     bool
+	RedirectCount int
+	PhishLure     *Lure
 }
 
 func NewSession(name string) (*Session, error) {
 	s := &Session{
-		Id:          GenRandomToken(),
-		Name:        name,
-		Username:    "",
-		Password:    "",
-		Custom:      make(map[string]string),
-		RedirectURL: "",
-		IsDone:      false,
-		IsAuthUrl:   false,
+		Id:            GenRandomToken(),
+		Name:          name,
+		Username:      "",
+		Password:      "",
+		Custom:        make(map[string]string),
+		RedirectURL:   "",
+		IsDone:        false,
+		IsAuthUrl:     false,
+		RedirectCount: 0,
+		PhishLure:     nil,
 	}
 	s.Tokens = make(map[string]map[string]*database.Token)
 

