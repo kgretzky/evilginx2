@@ -22,7 +22,7 @@ I am very much aware that Evilginx can be used for nefarious purposes. This work
 
 See **evilginx2** in action here:
 
-https://vimeo.com/281220095
+[![Evilginx Demo](https://i.imgur.com/80jcbDl.png)](https://vimeo.com/281220095)
 
 ## Write-up
 
