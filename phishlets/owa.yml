@@ -21,3 +21,4 @@ login:
   path: '/'
 auth_urls:
   - '/owa/manifests/.*'
+  
