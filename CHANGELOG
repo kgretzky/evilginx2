@@ -1,3 +1,6 @@
+2.3.1
+- Redirection is now triggered only for responses with `text/html` content-type header.
+
 2.3.0
 - Proxy can now create most of required `sub_filters` on its own, making it much easier to create new phishlets.
 - Added lures, with which you can prepare custom phishing URLs with each having its own set of unique options (`help lures` for more info).
