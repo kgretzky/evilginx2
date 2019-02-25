@@ -1,4 +1,4 @@
-name: 'o365'
+name: 'protonmail'
 author: '@jamescullum'
 # This phishlet is mostly an appeal to introduce U2F everywhere, protecting users from phishing in an easy and accessible way.
 # Protonmail is based on Angular, very JS heavy and changes a lot of things often. This makes it difficult to keep the script compatible for a long period of time.
