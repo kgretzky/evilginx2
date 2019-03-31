@@ -14,6 +14,9 @@ auth_tokens:
     keys: ['onelogin.com_user']
   - domain: 'EXAMPLE.onelogin.com'
     keys: ['sub_session_onelogin.com']
+auth_urls:
+ - '/portal/'
+ - '/client/apps'
 # This is used to force the rememebr me functionality if the target is using the /login url
 # This method will not work if they are using the multistep login method on the /login2 url  
 force_post:
