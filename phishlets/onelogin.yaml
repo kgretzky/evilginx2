@@ -25,6 +25,8 @@ force_post:
     force:
       - {key: 'persist_session', value: 'true'}
     type: 'post'
+# The post type is used to capture credentials which use the /login url
+# The json type is used to capture credentials which use the /login2 url
 credentials:
   username:
     key: 'email'
@@ -34,15 +36,14 @@ credentials:
     key: 'password'
     search: '(.*)'
     type: 'post'
-  # You will need to uncomment the custom section if the target is using /login2/.
-  # When using /login2/ it changes from using a post to sending json across multiple requests.
-  #custom:
-  #  - key: 'username'
-  #    search: '"login":"(.*)"'
-  #    type: 'json'
-  #  - key: 'password'
-  #    search: '"password":"(.*)",'
-  #    type: 'json'
+  username:
+    key: 'login'
+    search: '"login":"(.*)"'
+    type: 'json'
+  password:
+    key: 'password'
+    search: '"password":"(.*)",'
+    type: 'json'
 login:
   domain: 'EXAMPLE.onelogin.com'
   path: '/login'
