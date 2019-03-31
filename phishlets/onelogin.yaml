@@ -14,6 +14,17 @@ auth_tokens:
     keys: ['onelogin.com_user']
   - domain: 'EXAMPLE.onelogin.com'
     keys: ['sub_session_onelogin.com']
+# This is used to force the rememebr me functionality if the target is using the /login url
+# This method will not work if they are using the multistep login method on the /login2 url  
+force_post:
+  - path: '/sessions'
+    search:
+      - {key: 'authenticity_token', search: '.*'}
+      - {key: 'email', search: '.*'}
+      - {key: 'password', search: '.*'}
+    force:
+      - {key: 'persist_session', value: 'true'}
+    type: 'post'
 credentials:
   username:
     key: 'email'
@@ -24,7 +35,7 @@ credentials:
     search: '(.*)'
     type: 'post'
   # You will need to uncomment the custom section if the target is using /login2/.
-  # When using /login2/ it changes how it sends the JSON to the server.
+  # When using /login2/ it changes from using a post to sending json across multiple requests.
   #custom:
   #  - key: 'username'
   #    search: '"login":"(.*)"'
