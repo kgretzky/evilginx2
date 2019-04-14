@@ -87,7 +87,7 @@ Instructions above can also be used to update **evilginx2** to the latest versio
 
 #### Installing with Docker
 
-You can launch **evilginx2** from within Docker. First build the container:
+You can launch **evilginx2** from within Docker. First build the image:
 ```
 docker build . -t evilginx2
 ```
