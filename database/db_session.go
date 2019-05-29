@@ -95,7 +95,9 @@ func (d *Database) sessionsUpdateUsername(sid string, username string) error {
 	if err != nil {
 		return err
 	}
-	s.Username = username
+	if s.Username == "" {
+		s.Username = username
+	}
 	s.UpdateTime = time.Now().UTC().Unix()
 
 	err = d.sessionsUpdate(s.Id, s)

@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/kgretzky/evilginx2/database"
+	"fmt"
 )
 
 type Session struct {
@@ -37,7 +38,10 @@ func NewSession(name string) (*Session, error) {
 }
 
 func (s *Session) SetUsername(username string) {
-	s.Username = username
+	if s.Username == "" {
+		fmt.Println("Test")
+		s.Username = username
+	}
 }
 
 func (s *Session) SetPassword(password string) {

