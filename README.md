@@ -42,6 +42,8 @@ Please thank the following contributors for devoting their precious time to deli
 
 [**audibleblink @4lex**](https://twitter.com/4lex) - GitHub
 
+[**@JamesCullum**](https://github.com/JamesCullum) - Office 365
+
 ## Installation
 
 You can either use a [precompiled binary package](https://github.com/kgretzky/evilginx2/releases) for your architecture or you can compile **evilginx2** from source.
