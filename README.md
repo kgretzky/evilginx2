@@ -163,7 +163,9 @@ phishlets enable linkedin
 
 Your phishing site is now live. Think of the URL, you want the victim to be redirected to on successful login and get the phishing URL like this (victim will be redirected to `https://www.google.com`):
 ```
-phishlets get-url linkedin https://www.google.com
+lures create linkedin
+lures edit redirect-url 0 https://www.google.com
+lures get-url 0
 ```
 
 Running phishlets will only respond to tokenized links, so any scanners who scan your main domain will be redirected to URL specified as `redirect_url` under `config`. If you want to hide your phishlet and make it not respond even to valid tokenized phishing URLs, use `phishlet hide/unhide <phishlet>` command.

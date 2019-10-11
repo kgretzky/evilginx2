@@ -20,7 +20,7 @@ type ProxyHttpServer struct {
 	KeepDestinationHeaders bool
 	// setting Verbose to true will log information on each request sent to the proxy
 	Verbose         bool
-	Logger          *log.Logger
+	Logger          Logger
 	NonproxyHandler http.Handler
 	reqHandlers     []ReqHandler
 	respHandlers    []RespHandler
@@ -29,6 +29,7 @@ type ProxyHttpServer struct {
 	// ConnectDial will be used to create TCP connections for CONNECT requests
 	// if nil Tr.Dial will be used
 	ConnectDial func(network string, addr string) (net.Conn, error)
+	CertStore   CertStorage
 }
 
 var hasPort = regexp.MustCompile(`:\d+$`)
@@ -117,16 +118,28 @@ func (proxy *ProxyHttpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			if err != nil {
 				ctx.Error = err
 				resp = proxy.filterResponse(nil, ctx)
-				if resp == nil {
-					ctx.Logf("error read response %v %v:", r.URL.Host, err.Error())
-					http.Error(w, err.Error(), 500)
-					return
-				}
+
 			}
-			ctx.Logf("Received response %v", resp.Status)
+			if resp != nil {
+				ctx.Logf("Received response %v", resp.Status)
+			}
+		}
+		resp = proxy.filterResponse(resp, ctx)
+
+		if resp == nil {
+			var errorString string
+			if ctx.Error != nil {
+				errorString = "error read response " + r.URL.Host + " : " + ctx.Error.Error()
+				ctx.Logf(errorString)
+				http.Error(w, ctx.Error.Error(), 500)
+			} else {
+				errorString = "error read response " + r.URL.Host
+				ctx.Logf(errorString)
+				http.Error(w, errorString, 500)
+			}
+			return
 		}
 		origBody := resp.Body
-		resp = proxy.filterResponse(resp, ctx)
 		defer origBody.Close()
 		ctx.Logf("Copying response to client %v [%d]", resp.Status, resp.StatusCode)
 		// http.ResponseWriter will take care of filling the correct response length

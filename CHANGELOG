@@ -1,3 +1,9 @@
+2.3.2
+- ACMEv2 support added to comply with LetsEncrypt requirements.
+- Fixed session cookie output to support EditThisCookie on the latest Chrome version.
+- Increased timeouts for proxying HTTP packets to 45 seconds.
+- Added support for Go modules.
+
 2.3.1
 - Redirection is now triggered only for responses with `text/html` content-type header.
 
