@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"evilginx2/database"
-	"evilginx2/log"
-	"evilginx2/parser"
+	"github.com/kgretzky/evilginx2/database"
+	"github.com/kgretzky/evilginx2/log"
+	"github.com/kgretzky/evilginx2/parser"
 
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
