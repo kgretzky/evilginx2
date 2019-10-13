@@ -1,4 +1,4 @@
-module evilginx2
+module github.com/kgretzky/evilginx2
 
 go 1.12
 

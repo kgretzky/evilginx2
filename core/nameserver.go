@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"evilginx2/log"
+	"github.com/kgretzky/evilginx2/log"
 )
 
 type Nameserver struct {
