@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/elazarl/goproxy"
@@ -61,6 +62,7 @@ type HttpProxy struct {
 	ip_whitelist      map[string]int64
 	ip_sids           map[string]string
 	auto_filter_mimes []string
+	ip_mtx            sync.Mutex
 }
 
 type ProxySession struct {
@@ -1058,12 +1060,18 @@ func (p *HttpProxy) deleteRequestCookie(name string, req *http.Request) {
 }
 
 func (p *HttpProxy) whitelistIP(ip_addr string, sid string) {
+	p.ip_mtx.Lock()
+	defer p.ip_mtx.Unlock()
+
 	log.Debug("whitelistIP: %s %s", ip_addr, sid)
 	p.ip_whitelist[ip_addr] = time.Now().Add(15 * time.Second).Unix()
 	p.ip_sids[ip_addr] = sid
 }
 
 func (p *HttpProxy) isWhitelistedIP(ip_addr string) bool {
+	p.ip_mtx.Lock()
+	defer p.ip_mtx.Unlock()
+
 	log.Debug("isWhitelistIP: %s", ip_addr)
 	ct := time.Now()
 	if ip_t, ok := p.ip_whitelist[ip_addr]; ok {
@@ -1074,6 +1082,9 @@ func (p *HttpProxy) isWhitelistedIP(ip_addr string) bool {
 }
 
 func (p *HttpProxy) getSessionIdByIP(ip_addr string) (string, bool) {
+	p.ip_mtx.Lock()
+	defer p.ip_mtx.Unlock()
+
 	sid, ok := p.ip_sids[ip_addr]
 	return sid, ok
 }

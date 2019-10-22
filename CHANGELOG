@@ -1,3 +1,6 @@
+2.3.3
+- Fixed: Multiple concurrent map writes when whitelisting IPs during heavy loads.
+
 2.3.2
 - ACMEv2 support added to comply with LetsEncrypt requirements.
 - Fixed session cookie output to support EditThisCookie on the latest Chrome version.
