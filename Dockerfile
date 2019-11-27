@@ -1,4 +1,4 @@
-FROM golang:1.10.3-alpine AS build
+FROM golang:1.13.1-alpine as build
 
 RUN apk add --update \
     git \
@@ -8,9 +8,11 @@ RUN wget -O /usr/local/bin/dep https://github.com/golang/dep/releases/download/v
 
 WORKDIR /go/src/github.com/kgretzky/evilginx2
 
-COPY Gopkg.toml Gopkg.lock ./
+COPY go.mod go.sum ./
 
-RUN dep ensure -vendor-only
+ENV GO111MODULE on
+
+RUN go mod download
 
 COPY . /go/src/github.com/kgretzky/evilginx2
 
