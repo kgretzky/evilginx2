@@ -8,10 +8,6 @@ RUN wget -O /usr/local/bin/dep https://github.com/golang/dep/releases/download/v
 
 WORKDIR /go/src/github.com/kgretzky/evilginx2
 
-COPY Gopkg.toml Gopkg.lock ./
-
-RUN dep ensure -vendor-only
-
 COPY . /go/src/github.com/kgretzky/evilginx2
 
 RUN go build -o ./bin/evilginx main.go
