@@ -166,7 +166,7 @@ phishlets enable linkedin
 Your phishing site is now live. Think of the URL, you want the victim to be redirected to on successful login and get the phishing URL like this (victim will be redirected to `https://www.google.com`):
 ```
 lures create linkedin
-lures edit redirect-url 0 https://www.google.com
+lures edit redirect_url 0 https://www.google.com
 lures get-url 0
 ```
 
