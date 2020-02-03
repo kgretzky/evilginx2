@@ -186,6 +186,10 @@ The captured session cookie can be copied and imported into Chrome browser, usin
 
 **Important!** If you want **evilginx2** to continue running after you log out from your server, you should run it inside a `screen` session.
 
+## Support
+
+If you want to report issues with the tool, please do it by submitting a pull request. Thank you!
+
 ## Credits
 
 Huge thanks to Simone Margaritelli ([@evilsocket](https://twitter.com/evilsocket)) for [bettercap](https://github.com/bettercap/bettercap) and inspiring me to learn GO and rewrite the tool in that language!
