@@ -16,6 +16,7 @@ import (
 var phishlets_dir = flag.String("p", "", "Phishlets directory path")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
+var cfg_dir = flag.String("c", "", "Configuration directory path")
 
 func joinPath(base_path string, rel_path string) string {
 	var ret string
@@ -54,36 +55,42 @@ func main() {
 
 	phishlets_path := *phishlets_dir
 	log.Info("loading phishlets from: %s", phishlets_path)
-	cfg_dir := ""
 
-	if cfg_dir == "" {
+	if *cfg_dir == "" {
 		usr, err := user.Current()
 		if err != nil {
 			log.Fatal("%v", err)
 			return
 		}
-		cfg_dir = filepath.Join(usr.HomeDir, ".evilginx")
+		*cfg_dir = filepath.Join(usr.HomeDir, ".evilginx")
 	}
-	err := os.MkdirAll(cfg_dir, os.FileMode(0700))
+	if _, err := os.Stat(*cfg_dir); os.IsNotExist(err) {
+                log.Fatal("provided configuration directory path does not exist: %s", *cfg_dir)
+                return
+	}
+	config_path := *cfg_dir
+        log.Info("loading configuration from: %s", config_path)
+
+	err := os.MkdirAll(*cfg_dir, os.FileMode(0700))
 	if err != nil {
 		log.Fatal("%v", err)
 		return
 	}
 
-	crt_path := joinPath(cfg_dir, "./crt")
+	crt_path := joinPath(*cfg_dir, "./crt")
 
 	if err := core.CreateDir(crt_path, 0700); err != nil {
 		log.Fatal("mkdir: %v", err)
 		return
 	}
 
-	cfg, err := core.NewConfig(cfg_dir, "")
+	cfg, err := core.NewConfig(*cfg_dir, "")
 	if err != nil {
 		log.Fatal("config: %v", err)
 		return
 	}
 
-	db, err := database.NewDatabase(filepath.Join(cfg_dir, "data.db"))
+	db, err := database.NewDatabase(filepath.Join(*cfg_dir, "data.db"))
 	if err != nil {
 		log.Fatal("database: %v", err)
 		return
