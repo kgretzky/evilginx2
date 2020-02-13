@@ -16,6 +16,15 @@ func stringExists(s string, sa []string) bool {
 	return false
 }
 
+func intExists(i int, ia []int) bool {
+	for _, k := range ia {
+		if i == k {
+			return true
+		}
+	}
+	return false
+}
+
 func removeString(s string, sa []string) []string {
 	for i, k := range sa {
 		if s == k {

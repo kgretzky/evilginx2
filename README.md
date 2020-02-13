@@ -22,7 +22,7 @@ I am very much aware that Evilginx can be used for nefarious purposes. This work
 
 See **evilginx2** in action here:
 
-https://vimeo.com/281220095
+[![Evilginx Demo](https://i.imgur.com/80jcbDl.png)](https://vimeo.com/281220095)
 
 ## Write-up
 
@@ -37,6 +37,12 @@ Please thank the following contributors for devoting their precious time to deli
 [**@cust0msync**](https://twitter.com/cust0msync) - Amazon, Reddit
 
 [**@white_fi**](https://twitter.com/white_fi) - Twitter
+
+[**rvrsh3ll @424f424f**](https://twitter.com/424f424f) - Citrix
+
+[**audibleblink @4lex**](https://twitter.com/4lex) - GitHub
+
+[**@JamesCullum**](https://github.com/JamesCullum) - Office 365
 
 ## Installation
 
@@ -159,7 +165,9 @@ phishlets enable linkedin
 
 Your phishing site is now live. Think of the URL, you want the victim to be redirected to on successful login and get the phishing URL like this (victim will be redirected to `https://www.google.com`):
 ```
-phishlets get-url linkedin https://www.google.com
+lures create linkedin
+lures edit redirect-url 0 https://www.google.com
+lures get-url 0
 ```
 
 Running phishlets will only respond to tokenized links, so any scanners who scan your main domain will be redirected to URL specified as `redirect_url` under `config`. If you want to hide your phishlet and make it not respond even to valid tokenized phishing URLs, use `phishlet hide/unhide <phishlet>` command.
@@ -177,6 +185,10 @@ sessions <id>
 The captured session cookie can be copied and imported into Chrome browser, using [EditThisCookie](https://chrome.google.com/webstore/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg?hl=en) extension.
 
 **Important!** If you want **evilginx2** to continue running after you log out from your server, you should run it inside a `screen` session.
+
+## Support
+
+If you want to report issues with the tool, please do it by submitting a pull request. Thank you!
 
 ## Credits
 

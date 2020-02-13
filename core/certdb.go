@@ -9,7 +9,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/xenolf/lego/acme"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -17,24 +16,32 @@ import (
 	"time"
 
 	"github.com/kgretzky/evilginx2/log"
+
+	"github.com/go-acme/lego/v3/certcrypto"
+	"github.com/go-acme/lego/v3/certificate"
+	"github.com/go-acme/lego/v3/challenge"
+	"github.com/go-acme/lego/v3/lego"
+	legolog "github.com/go-acme/lego/v3/log"
+	"github.com/go-acme/lego/v3/registration"
 )
 
 type CertDb struct {
-	PrivateKey *rsa.PrivateKey
-	CACert     tls.Certificate
-	client     *acme.Client
-	certUser   CertUser
-	dataDir    string
-	ns         *Nameserver
-	hs         *HttpServer
-	cfg        *Config
-	cache      map[string]map[string]*tls.Certificate
-	tls_cache  map[string]*tls.Certificate
+	PrivateKey    *rsa.PrivateKey
+	CACert        tls.Certificate
+	client        *lego.Client
+	certUser      CertUser
+	dataDir       string
+	ns            *Nameserver
+	hs            *HttpServer
+	cfg           *Config
+	cache         map[string]map[string]*tls.Certificate
+	tls_cache     map[string]*tls.Certificate
+	httpChallenge *HTTPChallenge
 }
 
 type CertUser struct {
 	Email        string
-	Registration *acme.RegistrationResource
+	Registration *registration.Resource
 	key          crypto.PrivateKey
 }
 
@@ -42,7 +49,7 @@ func (u CertUser) GetEmail() string {
 	return u.Email
 }
 
-func (u CertUser) GetRegistration() *acme.RegistrationResource {
+func (u CertUser) GetRegistration() *registration.Resource {
 	return u.Registration
 }
 
@@ -64,24 +71,9 @@ func (ch HTTPChallenge) CleanUp(domain, token, keyAuth string) error {
 	return nil
 }
 
-type DNSChallenge struct {
-	crt_db *CertDb
-}
+const acmeURL = "https://acme-v02.api.letsencrypt.org/directory"
 
-func (ch DNSChallenge) Present(domain, token, keyAuth string) error {
-	fqdn, val, ttl := acme.DNS01Record(domain, keyAuth)
-	ch.crt_db.ns.AddTXT(fqdn, val, ttl)
-	return nil
-}
-
-func (ch DNSChallenge) CleanUp(domain, token, keyAuth string) error {
-	ch.crt_db.ns.ClearTXT()
-	return nil
-}
-
-const acmeURL = "https://acme-v01.api.letsencrypt.org/directory"
-
-//const acmeURL = "https://acme-staging.api.letsencrypt.org/directory"
+//const acmeURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*CertDb, error) {
 	d := &CertDb{
@@ -91,7 +83,7 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 		hs:      hs,
 	}
 
-	acme.Logger = log.NullLogger()
+	legolog.Logger = log.NullLogger()
 	d.cache = make(map[string]map[string]*tls.Certificate)
 	d.tls_cache = make(map[string]*tls.Certificate)
 
@@ -149,7 +141,7 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 			KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 			BasicConstraintsValid: true,
-			IsCA: true,
+			IsCA:                  true,
 		}
 
 		cert, err := x509.CreateCertificate(rand.Reader, &template, &template, &d.PrivateKey.PublicKey, d.PrivateKey)
@@ -176,10 +168,19 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 		key:   d.PrivateKey,
 	}
 
-	d.client, err = acme.NewClient(acmeURL, &d.certUser, acme.RSA2048)
+	config := lego.NewConfig(&d.certUser)
+	config.CADirURL = acmeURL
+	config.Certificate.KeyType = certcrypto.RSA2048
+
+	d.client, err = lego.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
+
+	d.httpChallenge = &HTTPChallenge{crt_db: d}
+
+	d.client.Challenge.SetHTTP01Provider(d.httpChallenge)
+	d.client.Challenge.Remove(challenge.TLSALPN01)
 
 	return d, nil
 }
@@ -242,25 +243,20 @@ func (d *CertDb) obtainCertificate(site_name string, base_domain string, domains
 	}
 	crt_dir := filepath.Join(d.dataDir, base_domain)
 
-	httpChallenge := HTTPChallenge{crt_db: d}
-	d.client.SetChallengeProvider(acme.HTTP01, &httpChallenge)
-
-	reg, err := d.client.Register()
+	reg, err := d.client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 	if err != nil {
 		return err
 	}
 	d.certUser.Registration = reg
-	err = d.client.AgreeToTOS()
-	if err != nil {
-		return err
+
+	req := certificate.ObtainRequest{
+		Domains: domains,
+		Bundle:  true,
 	}
 
-	cert_res, fails := d.client.ObtainCertificate(domains, true, nil, false)
-	if len(fails) > 0 {
-		for domain, err := range fails {
-			log.Error("[%s] %v", domain, err)
-		}
-		return fmt.Errorf("failed to obtain certificates")
+	cert_res, err := d.client.Certificate.Obtain(req)
+	if err != nil {
+		return err
 	}
 
 	cert, err := tls.X509KeyPair(cert_res.Certificate, cert_res.PrivateKey)

