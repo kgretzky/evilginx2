@@ -64,12 +64,9 @@ func main() {
 		}
 		*cfg_dir = filepath.Join(usr.HomeDir, ".evilginx")
 	}
-	if _, err := os.Stat(*cfg_dir); os.IsNotExist(err) {
-                log.Fatal("provided configuration directory path does not exist: %s", *cfg_dir)
-                return
-	}
+
 	config_path := *cfg_dir
-        log.Info("loading configuration from: %s", config_path)
+	log.Info("loading configuration from: %s", config_path)
 
 	err := os.MkdirAll(*cfg_dir, os.FileMode(0700))
 	if err != nil {
