@@ -118,6 +118,18 @@ or just launch **evilginx2** from the current directory (you will also need root
 chmod 700 ./evilginx
 sudo ./evilginx
 ```
+## Error Resolving
+
+### Error-1 : (Failed to start nameserver on port 53)
+** Follow These Commands & Then Try Relaunching Evilginx
+
+```
+sudo service systemd-resolved stop
+nano /etc/resolv.conf
+```
+** Then change nameserver 127.x.x.x to nameserver 8.8.8.8 
+
+** Then save the file (By pressing CTRL+X and pressing Y followed by enter)
 
 ## Usage
 
