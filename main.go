@@ -14,6 +14,7 @@ import (
 )
 
 var phishlets_dir = flag.String("p", "", "Phishlets directory path")
+var resource_file = flag.String("rc", "", "Resource script to run on startup")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
 var cfg_dir = flag.String("c", "", "Configuration directory path")
@@ -46,6 +47,10 @@ func main() {
 	}
 	if _, err := os.Stat(*phishlets_dir); os.IsNotExist(err) {
 		log.Fatal("provided phishlets directory path does not exist: %s", *phishlets_dir)
+		return
+	}
+	if _, err := os.Stat(*resource_file); os.IsNotExist(err) {
+		log.Fatal("provided resource file does not exist: %s", *resource_file)
 		return
 	}
 	log.DebugEnable(*debug_log)
@@ -136,6 +141,10 @@ func main() {
 	if err != nil {
 		log.Fatal("%v", err)
 		return
+	}
+
+	if *resource_file != "" {
+		t.ProcessResourceFile(*resource_file)
 	}
 
 	t.DoWork()

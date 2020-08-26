@@ -3,7 +3,9 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"bufio"
 	"io"
+	"os"
 	"net/url"
 	"strconv"
 	"strings"
@@ -75,41 +77,39 @@ func (t *Terminal) output(s string, args ...interface{}) {
 	fmt.Fprintf(color.Output, "\n%s\n", out)
 }
 
-func (t *Terminal) DoWork() {
-	var do_quit = false
+func (t *Terminal) ProcessResourceFile(rc string) {
+	file, err := os.Open(rc)
+	if err != nil {
+		log.Fatal("error opening resource file: %v", err)
+	}
+	defer file.Close()
 
-	t.checkStatus()
-	log.SetReadline(t.rl)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		t.output("%s%s", t.rl.Config.Prompt, line)
+		t.ProcessCommand(line)
+	}
+}
 
-	t.cfg.refreshActiveHostnames()
-	t.updateCertificates("")
+func (t *Terminal) ProcessCommand(line string) bool {
 
-	t.output("%s", t.sprintPhishletStatus(""))
+	line = strings.TrimSpace(line)	
 
-	for !do_quit {
-		line, err := t.rl.Readline()
-		if err == readline.ErrInterrupt {
-			log.Info("type 'exit' in order to quit")
-			continue
-		} else if err == io.EOF {
-			break
-		}
+	args, err := parser.Parse(line)
+	if err != nil {
+		log.Error("syntax error: %v", err)
+	}
 
-		line = strings.TrimSpace(line)
+	argn := len(args)
+	if argn == 0 {
+		t.checkStatus()
+		return false
+	}
 
-		args, err := parser.Parse(line)
-		if err != nil {
-			log.Error("syntax error: %v", err)
-		}
-
-		argn := len(args)
-		if argn == 0 {
-			t.checkStatus()
-			continue
-		}
-
-		cmd_ok := false
-		switch args[0] {
+	do_quit := false
+	cmd_ok := false
+	switch args[0] {
 		case "clear":
 			cmd_ok = true
 			readline.ClearScreen(color.Output)
@@ -119,13 +119,13 @@ func (t *Terminal) DoWork() {
 			if err != nil {
 				log.Error("config: %v", err)
 			}
-		case "sessions":
+		case "session", "sessions":
 			cmd_ok = true
 			err := t.handleSessions(args[1:])
 			if err != nil {
 				log.Error("sessions: %v", err)
 			}
-		case "phishlets":
+		case "phishlet", "phishlets":
 			cmd_ok = true
 			err := t.handlePhishlets(args[1:])
 			if err != nil {
@@ -152,11 +152,36 @@ func (t *Terminal) DoWork() {
 		default:
 			log.Error("unknown command: %s", args[0])
 			cmd_ok = true
+	}
+	if !cmd_ok {
+		log.Error("invalid syntax: %s", line)
+	}
+	t.checkStatus()
+
+	return do_quit
+}
+
+func (t *Terminal) DoWork() {
+	var do_quit = false
+
+	t.checkStatus()
+	log.SetReadline(t.rl)
+
+	t.cfg.refreshActiveHostnames()
+	t.updateCertificates("")
+
+	t.output("%s", t.sprintPhishletStatus(""))
+
+	for !do_quit {
+		line, err := t.rl.Readline()
+		if err == readline.ErrInterrupt {
+			log.Info("type 'exit' in order to quit")
+			continue
+		} else if err == io.EOF {
+			break
 		}
-		if !cmd_ok {
-			log.Error("invalid syntax: %s", line)
-		}
-		t.checkStatus()
+
+		do_quit = t.ProcessCommand(line)		
 	}
 }
 

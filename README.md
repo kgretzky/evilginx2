@@ -127,6 +127,8 @@ sudo ./evilginx
 
 By default, **evilginx2** will look for phishlets in `./phishlets/` directory and later in `/usr/share/evilginx/phishlets/`. If you want to specify a custom path to load phishlets from, use the `-p <phishlets_dir_path>` parameter when launching the tool.
 
+Optionally, you may specify a list of commands to run immediately upon startup via the `-rc <resource_file>` parameter. The target should be a file containing a list of interactive Evilginx commands, one per line.
+
 ```
 Usage of ./evilginx:
   -debug
@@ -135,6 +137,8 @@ Usage of ./evilginx:
         Enable developer mode (generates self-signed certificates for all hostnames)
   -p string
         Phishlets directory path
+  -rc string
+        Resource script to run on startup
 ```
 
 You should see **evilginx2** logo with a prompt to enter commands. Type `help` or `help <command>` if you want to see available commands or more detailed information on them.
