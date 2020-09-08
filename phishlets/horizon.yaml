@@ -14,7 +14,7 @@ auth_tokens:
 
 credentials:
   username:
-    key: 'login'
+    key: 'username'
     search: '(.*)'
     type: 'post'
   password:
