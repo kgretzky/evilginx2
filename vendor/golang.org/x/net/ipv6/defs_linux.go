@@ -106,9 +106,6 @@ const (
 	sysICMPV6_FILTER_BLOCKOTHERS = C.ICMPV6_FILTER_BLOCKOTHERS
 	sysICMPV6_FILTER_PASSONLY    = C.ICMPV6_FILTER_PASSONLY
 
-	sysSOL_SOCKET       = C.SOL_SOCKET
-	sysSO_ATTACH_FILTER = C.SO_ATTACH_FILTER
-
 	sizeofKernelSockaddrStorage = C.sizeof_struct___kernel_sockaddr_storage
 	sizeofSockaddrInet6         = C.sizeof_struct_sockaddr_in6
 	sizeofInet6Pktinfo          = C.sizeof_struct_in6_pktinfo
@@ -120,8 +117,6 @@ const (
 	sizeofGroupSourceReq = C.sizeof_struct_group_source_req
 
 	sizeofICMPv6Filter = C.sizeof_struct_icmp6_filter
-
-	sizeofSockFprog = C.sizeof_struct_sock_fprog
 )
 
 type kernelSockaddrStorage C.struct___kernel_sockaddr_storage
@@ -141,7 +136,3 @@ type groupReq C.struct_group_req
 type groupSourceReq C.struct_group_source_req
 
 type icmpv6Filter C.struct_icmp6_filter
-
-type sockFProg C.struct_sock_fprog
-
-type sockFilter C.struct_sock_filter

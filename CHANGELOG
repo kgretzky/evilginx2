@@ -1,3 +1,19 @@
+2.4.0
+- Feature: Create and set up pre-phish HTML templates for your campaigns. Create your HTML file and place `{lure_url_html}` or `{lure_url_js}` in code to manage redirection to the phishing page with any form of user interaction. Command: `lures edit <id> template <template>`
+- Feature: Create customized hostnames for every phishing lure. Command: `lures edit <id> hostname <hostname>`.
+- Feature: Support for routing connection via SOCKS5 and HTTP(S) proxies. Command: `proxy`.
+- Feature: IP blacklist with automated IP address blacklisting and blocking on all or unauthorized requests. Command: `blacklist`
+- Feature: Custom parameters can now be embedded encrypted in the phishing url. Command: `lures get-url <id> param1=value1 param2="value2 with spaces"`.
+- Feature: Requests to phishing urls can now be rejected if User-Agent of the visitor doesn't match the whitelist regular expression filter for given lure. Command: `lures edit <id> ua_filter <regexp>`
+- List of custom parameters can now be imported directly from file (text, csv, json). Command: `lures get-url <id> import <params_file>`.
+- Generated phishing urls can now be exported to file (text, csv, json). Command: `lures get-url <id> import <params_file> export <export_file> <text|csv|json>`.
+- Fixed: Requesting LetsEncrypt certificates multiple times without restarting. Subsequent requests would result in "No embedded JWK in JWS header" error.
+- Removed setting custom parameters in lures options. Parameters will now only be sent encoded with the phishing url.
+- Added `with_params` option to `sub_filter` allowing to enable the sub_filter only when specific parameter was set with the phishing url.
+- Made command help screen easier to read.
+- Improved autofill for `lures edit` commands and switched positions of `<id>` and the variable name.
+- Increased the duration of whitelisting authorized connections for whole IP address from 15 seconds to 10 minutes.
+
 2.3.3
 - Fixed: Multiple concurrent map writes when whitelisting IPs during heavy loads.
 
