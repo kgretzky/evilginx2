@@ -71,7 +71,7 @@ When you have GO installed, type in the following:
 
 ```
 sudo apt-get -y install git make
-git clone github.com/kgretzky/evilginx2
+git clone https://github.com/kgretzky/evilginx2
 cd evilginx2
 make
 ```
