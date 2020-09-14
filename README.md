@@ -30,7 +30,7 @@ If you want to learn more about this phishing technique, I've published extensiv
 
 [Evilginx 2.3 - Phisherman's Dream](https://breakdev.org/evilginx-2-3-phishermans-dream/)
 
-[Evilginx 2.4 - Gone Phishing](breakdev.org/evilginx-2-4-gone-phishing/)
+[Evilginx 2.4 - Gone Phishing](https://breakdev.org/evilginx-2-4-gone-phishing/)
 
 ## Video guide
 
