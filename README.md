@@ -23,9 +23,13 @@ I am very much aware that Evilginx can be used for nefarious purposes. This work
 If you want to learn more about this phishing technique, I've published extensive blog posts about **evilginx2** here:
 
 [Evilginx 2.0 - Release](https://breakdev.org/evilginx-2-next-generation-of-phishing-2fa-tokens)
+
 [Evilginx 2.1 - First Update](https://breakdev.org/evilginx-2-1-the-first-post-release-update/)
+
 [Evilginx 2.2 - Jolly Winter Update](https://breakdev.org/evilginx-2-2-jolly-winter-update/)
+
 [Evilginx 2.3 - Phisherman's Dream](https://breakdev.org/evilginx-2-3-phishermans-dream/)
+
 [Evilginx 2.4 - Gone Phishing](breakdev.org/evilginx-2-4-gone-phishing/)
 
 ## Video guide
