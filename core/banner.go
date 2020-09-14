@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	VERSION = "2.3.3"
+	VERSION = "2.4.0"
 )
 
 func putAsciiArt(s string) {
@@ -54,6 +54,12 @@ func printLogo(s string) {
 	color.Unset()
 }
 
+func printUpdateName() {
+	nameClr := color.New(color.FgHiRed)
+	txt := nameClr.Sprintf("                 - --  Gone Phishing  -- -")
+	fmt.Fprintf(color.Output, "%s", txt)
+}
+
 func printOneliner1() {
 	handleClr := color.New(color.FgHiBlue)
 	versionClr := color.New(color.FgGreen)
@@ -95,9 +101,11 @@ func Banner() {
 	fmt.Println()
 	putAsciiArt("      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@      \n")
 	putAsciiArt("     @@@@@WW@@@WW@@WWW@@WW@@@WW@@@@@     ")
-	printOneliner2()
+	printUpdateName()
 	fmt.Println()
 	putAsciiArt("    @@@@@@WW@@@WW@@WWW@@WW@@@WW@@@@@@    \n")
+	//printOneliner2()
+	//fmt.Println()
 	putAsciiArt("_   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   _")
 	printOneliner1()
 	fmt.Println()

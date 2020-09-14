@@ -44,6 +44,7 @@ includes_AIX='
 #include <sys/stropts.h>
 #include <sys/mman.h>
 #include <sys/poll.h>
+#include <sys/select.h>
 #include <sys/termio.h>
 #include <termios.h>
 #include <fcntl.h>
@@ -104,6 +105,7 @@ includes_FreeBSD='
 #include <sys/capsicum.h>
 #include <sys/param.h>
 #include <sys/types.h>
+#include <sys/disk.h>
 #include <sys/event.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -185,16 +187,19 @@ struct ltchars {
 #include <sys/select.h>
 #include <sys/signalfd.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <sys/xattr.h>
 #include <linux/bpf.h>
 #include <linux/can.h>
 #include <linux/capability.h>
 #include <linux/cryptouser.h>
+#include <linux/devlink.h>
 #include <linux/errqueue.h>
 #include <linux/falloc.h>
 #include <linux/fanotify.h>
 #include <linux/filter.h>
 #include <linux/fs.h>
+#include <linux/fscrypt.h>
 #include <linux/genetlink.h>
 #include <linux/hdreg.h>
 #include <linux/icmpv6.h>
@@ -276,6 +281,11 @@ struct ltchars {
 // for the tipc_subscr timeout __u32 field.
 #undef TIPC_WAIT_FOREVER
 #define TIPC_WAIT_FOREVER 0xffffffff
+
+// Copied from linux/l2tp.h
+// Including linux/l2tp.h here causes conflicts between linux/in.h
+// and netinet/in.h included via net/route.h above.
+#define IPPROTO_L2TP		115
 '
 
 includes_NetBSD='
@@ -482,8 +492,9 @@ ccflags="$@"
 		$2 ~ /^TCSET/ ||
 		$2 ~ /^TC(FLSH|SBRKP?|XONC)$/ ||
 		$2 !~ "RTF_BITS" &&
-		$2 ~ /^(IFF|IFT|NET_RT|RTM|RTF|RTV|RTA|RTAX)_/ ||
+		$2 ~ /^(IFF|IFT|NET_RT|RTM(GRP)?|RTF|RTV|RTA|RTAX)_/ ||
 		$2 ~ /^BIOC/ ||
+		$2 ~ /^DIOC/ ||
 		$2 ~ /^RUSAGE_(SELF|CHILDREN|THREAD)/ ||
 		$2 ~ /^RLIMIT_(AS|CORE|CPU|DATA|FSIZE|LOCKS|MEMLOCK|MSGQUEUE|NICE|NOFILE|NPROC|RSS|RTPRIO|RTTIME|SIGPENDING|STACK)|RLIM_INFINITY/ ||
 		$2 ~ /^PRIO_(PROCESS|PGRP|USER)/ ||
@@ -494,7 +505,9 @@ ccflags="$@"
 		$2 ~ /^CAN_/ ||
 		$2 ~ /^CAP_/ ||
 		$2 ~ /^ALG_/ ||
-		$2 ~ /^FS_(POLICY_FLAGS|KEY_DESC|ENCRYPTION_MODE|[A-Z0-9_]+_KEY_SIZE|IOC_(GET|SET)_ENCRYPTION)/ ||
+		$2 ~ /^FS_(POLICY_FLAGS|KEY_DESC|ENCRYPTION_MODE|[A-Z0-9_]+_KEY_SIZE)/ ||
+		$2 ~ /^FS_IOC_.*ENCRYPTION/ ||
+		$2 ~ /^FSCRYPT_/ ||
 		$2 ~ /^GRND_/ ||
 		$2 ~ /^RND/ ||
 		$2 ~ /^KEY_(SPEC|REQKEY_DEFL)_/ ||
@@ -521,9 +534,11 @@ ccflags="$@"
 		$2 ~ /^WDIOC_/ ||
 		$2 ~ /^NFN/ ||
 		$2 ~ /^XDP_/ ||
+		$2 ~ /^RWF_/ ||
 		$2 ~ /^(HDIO|WIN|SMART)_/ ||
 		$2 ~ /^CRYPTO_/ ||
 		$2 ~ /^TIPC_/ ||
+		$2 ~ /^DEVLINK_/ ||
 		$2 !~ "WMESGLEN" &&
 		$2 ~ /^W[A-Z0-9]+$/ ||
 		$2 ~/^PPPIOC/ ||
