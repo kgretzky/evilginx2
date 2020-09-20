@@ -618,7 +618,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					final_url := scheme + "//" + r_origin
 					if (ok){
 						resp.Header.Set("Access-Control-Allow-Origin", final_url)
-						resp.Header.Set("Access-Control-Allow-Credentials", "true")
 					}else{
 						resp.Header.Set("Access-Control-Allow-Origin", "*")
 					}
