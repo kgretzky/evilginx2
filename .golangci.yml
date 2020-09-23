@@ -1,0 +1,15 @@
+linters:
+  disable:
+    - errcheck
+
+issues:
+  exclude-rules:
+    - path: db_session\.go
+      linters:
+        - staticcheck
+      text: "CreateIndex is deprecated"
+
+linters-settings:
+  nolintlint:
+    require-explanation: true
+    require-specific: true
