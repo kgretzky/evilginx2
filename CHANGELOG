@@ -1,0 +1,49 @@
+2.4.0
+- Feature: Create and set up pre-phish HTML templates for your campaigns. Create your HTML file and place `{lure_url_html}` or `{lure_url_js}` in code to manage redirection to the phishing page with any form of user interaction. Command: `lures edit <id> template <template>`
+- Feature: Create customized hostnames for every phishing lure. Command: `lures edit <id> hostname <hostname>`.
+- Feature: Support for routing connection via SOCKS5 and HTTP(S) proxies. Command: `proxy`.
+- Feature: IP blacklist with automated IP address blacklisting and blocking on all or unauthorized requests. Command: `blacklist`
+- Feature: Custom parameters can now be embedded encrypted in the phishing url. Command: `lures get-url <id> param1=value1 param2="value2 with spaces"`.
+- Feature: Requests to phishing urls can now be rejected if User-Agent of the visitor doesn't match the whitelist regular expression filter for given lure. Command: `lures edit <id> ua_filter <regexp>`
+- List of custom parameters can now be imported directly from file (text, csv, json). Command: `lures get-url <id> import <params_file>`.
+- Generated phishing urls can now be exported to file (text, csv, json). Command: `lures get-url <id> import <params_file> export <export_file> <text|csv|json>`.
+- Fixed: Requesting LetsEncrypt certificates multiple times without restarting. Subsequent requests would result in "No embedded JWK in JWS header" error.
+- Removed setting custom parameters in lures options. Parameters will now only be sent encoded with the phishing url.
+- Added `with_params` option to `sub_filter` allowing to enable the sub_filter only when specific parameter was set with the phishing url.
+- Made command help screen easier to read.
+- Improved autofill for `lures edit` commands and switched positions of `<id>` and the variable name.
+- Increased the duration of whitelisting authorized connections for whole IP address from 15 seconds to 10 minutes.
+
+2.3.3
+- Fixed: Multiple concurrent map writes when whitelisting IPs during heavy loads.
+
+2.3.2
+- ACMEv2 support added to comply with LetsEncrypt requirements.
+- Fixed session cookie output to support EditThisCookie on the latest Chrome version.
+- Increased timeouts for proxying HTTP packets to 45 seconds.
+- Added support for Go modules.
+
+2.3.1
+- Redirection is now triggered only for responses with `text/html` content-type header.
+
+2.3.0
+- Proxy can now create most of required `sub_filters` on its own, making it much easier to create new phishlets.
+- Added lures, with which you can prepare custom phishing URLs with each having its own set of unique options (`help lures` for more info).
+- Added OpenGraph settings for lures, allowing to create enticing content for link previews.
+- Added ability to inject custom Javascript into proxied pages.
+- Injected Javascript can be customized with values of custom parameters, specified in lure options.
+- Deprecated `landing_path` and replaced it with `login` section, which contains the domain and path for website's login page.
+
+2.2.1
+- Fixed: `type` with value `json` was not correctly activated when set under `credentials`.
+
+2.2.0
+- Now when any of `auth_urls` is triggered, the redirection will take place AFTER response cookies for that request are captured.
+- Regular expression groups working with `sub_filters`.
+- Phishlets are now listed in a table.
+- Restructured phishlet YAML config file to be easier to understand (phishlets from previous versions need to be updated to new format).
+- Phishlet fields are now selectively lowercased and validated upon loading to prevent surprises.
+- All search fields in the phishlet are now regular expressions by default (remember about proper escaping!).
+- Added option to capture custom POST arguments additionally to credentials. Check `custom` field under `credentials`.
+- Added feature to inject custom POST arguments to requests. Useful when forcing users to tick that "Remember me" checkbox.
+- Removed 'name' variable from phishlets. Phishlet name is now determined solely based on the filename.

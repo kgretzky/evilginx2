@@ -1,5 +1,6 @@
-/bin/
-/docs/
-/img/
-/release/
-/build_run.bat
+bin/
+docs/
+img/
+release/
+build/
+phishlets/test-*

