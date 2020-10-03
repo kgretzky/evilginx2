@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-	"errors"
 
 	"github.com/kgretzky/evilginx2/log"
 
@@ -300,7 +299,7 @@ func (d *CertDb) loadPhishletCertificate(site_name string, base_domain string, d
 			}
 		}
 		if !found {
-			return errors.New("the '"+domain+"' sub domain is not supported")
+			return fmt.Errorf("the '%s' sub domain is not supported", domain)
 		}
 	}
 
