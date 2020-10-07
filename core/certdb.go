@@ -290,6 +290,7 @@ func (d *CertDb) loadPhishletCertificate(site_name string, base_domain string, d
 		return err
 	}
 
+	// ensure that there are no new subdomains
 	for _, domain := range domains {
 		found := false
 		for _, DNSName := range cert_x509.DNSNames {
@@ -301,6 +302,13 @@ func (d *CertDb) loadPhishletCertificate(site_name string, base_domain string, d
 		if !found {
 			return fmt.Errorf("the '%s' sub domain is not supported", domain)
 		}
+	}
+
+	// if the certificate expires in less than one week, regenerate it
+	one_week := 7 * 24 * time.Hour
+	next_week := time.Now().Add(one_week)
+	if next_week.After(cert_x509.NotAfter) {
+		return fmt.Errorf("the certificate expires in less than week")
 	}
 
 	d.addPhishletCertificate(site_name, base_domain, &cert)
