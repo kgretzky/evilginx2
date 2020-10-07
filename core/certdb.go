@@ -308,7 +308,7 @@ func (d *CertDb) loadPhishletCertificate(site_name string, base_domain string, d
 	one_week := 7 * 24 * time.Hour
 	next_week := time.Now().Add(one_week)
 	if next_week.After(cert_x509.NotAfter) {
-		return fmt.Errorf("the certificate expires in less than week")
+		return fmt.Errorf("the certificate expires in less than a week")
 	}
 
 	d.addPhishletCertificate(site_name, base_domain, &cert)
