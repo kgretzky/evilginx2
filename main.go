@@ -88,6 +88,15 @@ func main() {
 		return
 	}
 
+	// create log file
+	file, err := os.OpenFile(filepath.Join(config_path, "evilginx2.log"), os.O_RDWR | os.O_CREATE, 755)
+	if err == nil {
+		log.SetLogFile(file)
+		defer file.Close()
+	} else {
+		log.Error("failed opening log file")
+	}
+
 	crt_path := joinPath(*cfg_dir, "./crt")
 
 	if err := core.CreateDir(crt_path, 0700); err != nil {

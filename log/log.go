@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 )
 
 var stdout io.Writer = color.Output
+var log_file *os.File = nil
 var g_rl *readline.Instance = nil
 var debug_output = true
 var mtx_log *sync.Mutex = &sync.Mutex{}
@@ -45,6 +47,10 @@ func SetOutput(o io.Writer) {
 	stdout = o
 }
 
+func SetLogFile(o *os.File) {
+	log_file = o
+}
+
 func SetReadline(rl *readline.Instance) {
 	g_rl = rl
 }
@@ -64,61 +70,33 @@ func refreshReadline() {
 }
 
 func Debug(format string, args ...interface{}) {
-	mtx_log.Lock()
-	defer mtx_log.Unlock()
-
 	if debug_output {
-		fmt.Fprint(stdout, format_msg(DEBUG, format+"\n", args...))
-		refreshReadline()
+		Print(DEBUG, format, args...)
 	}
 }
 
 func Info(format string, args ...interface{}) {
-	mtx_log.Lock()
-	defer mtx_log.Unlock()
-
-	fmt.Fprint(stdout, format_msg(INFO, format+"\n", args...))
-	refreshReadline()
+	Print(INFO, format, args...)
 }
 
 func Important(format string, args ...interface{}) {
-	mtx_log.Lock()
-	defer mtx_log.Unlock()
-
-	fmt.Fprint(stdout, format_msg(IMPORTANT, format+"\n", args...))
-	refreshReadline()
+	Print(IMPORTANT, format, args...)
 }
 
 func Warning(format string, args ...interface{}) {
-	mtx_log.Lock()
-	defer mtx_log.Unlock()
-
-	fmt.Fprint(stdout, format_msg(WARNING, format+"\n", args...))
-	refreshReadline()
+	Print(WARNING, format, args...)
 }
 
 func Error(format string, args ...interface{}) {
-	mtx_log.Lock()
-	defer mtx_log.Unlock()
-
-	fmt.Fprint(stdout, format_msg(ERROR, format+"\n", args...))
-	refreshReadline()
+	Print(ERROR, format, args...)
 }
 
 func Fatal(format string, args ...interface{}) {
-	mtx_log.Lock()
-	defer mtx_log.Unlock()
-
-	fmt.Fprint(stdout, format_msg(FATAL, format+"\n", args...))
-	refreshReadline()
+	Print(FATAL, format, args...)
 }
 
 func Success(format string, args ...interface{}) {
-	mtx_log.Lock()
-	defer mtx_log.Unlock()
-
-	fmt.Fprint(stdout, format_msg(SUCCESS, format+"\n", args...))
-	refreshReadline()
+	Print(SUCCESS, format, args...)
 }
 
 func Printf(format string, args ...interface{}) {
@@ -129,7 +107,21 @@ func Printf(format string, args ...interface{}) {
 	refreshReadline()
 }
 
-func format_msg(lvl int, format string, args ...interface{}) string {
+func Print(lvl int, format string, args ...interface{}) {
+	mtx_log.Lock()
+	defer mtx_log.Unlock()
+
+	stdout_msg, file_msg := format_msg(lvl, format + "\n", args...)
+	fmt.Fprint(stdout, stdout_msg)
+	refreshReadline()
+
+	if log_file != nil {
+		fmt.Fprint(log_file, file_msg)
+		log_file.Sync()
+	}
+}
+
+func format_msg(lvl int, format string, args ...interface{}) (string, string) {
 	t := time.Now()
 	var sign, msg *color.Color
 	switch lvl {
@@ -158,5 +150,6 @@ func format_msg(lvl int, format string, args ...interface{}) string {
 		msg = color.New(color.Reset, color.FgGreen)
 	}
 	time_clr := color.New(color.Reset)
-	return "\r[" + time_clr.Sprintf("%02d:%02d:%02d", t.Hour(), t.Minute(), t.Second()) + "] [" + sign.Sprintf("%s", LogLabels[lvl]) + "] " + msg.Sprintf(format, args...)
+	return "\r[" + time_clr.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second()) + "] [" + sign.Sprintf("%s", LogLabels[lvl]) + "] " + msg.Sprintf(format, args...),
+		fmt.Sprintf("[%04d-%02d-%02d %02d:%02d:%02d] [%s] ", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), LogLabels[lvl]) + fmt.Sprintf(format, args...)
 }
