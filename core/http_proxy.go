@@ -248,6 +248,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									p.extractParams(session, req.URL)
 
 									ps.Session = session
+									ps.Session.PhishLure = l
 									// tell method OnResponse to set Set-Cookie header
 									ps.Created = true
 
