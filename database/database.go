@@ -64,6 +64,11 @@ func (d *Database) SetSessionTokens(sid string, tokens map[string]map[string]*To
 	return err
 }
 
+func (d *Database) SetSetLogoutTime(sid string) error {
+	err := d.sessionsSetLogoutTime(sid)
+	return err
+}
+
 func (d *Database) DeleteSession(sid string) error {
 	s, err := d.sessionsGetBySid(sid)
 	if err != nil {
