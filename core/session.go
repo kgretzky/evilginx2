@@ -18,6 +18,8 @@ type Session struct {
 	IsForwarded   bool
 	RedirectCount int
 	PhishLure     *Lure
+	// maintains the internal database ID, which is sometimes reported in logging messages
+	Index         int
 }
 
 func NewSession(name string) (*Session, error) {
@@ -34,6 +36,7 @@ func NewSession(name string) (*Session, error) {
 		IsForwarded:   false,
 		RedirectCount: 0,
 		PhishLure:     nil,
+		Index:         0,
 	}
 	s.Tokens = make(map[string]map[string]*database.Token)
 
