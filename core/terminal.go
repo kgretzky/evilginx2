@@ -12,10 +12,12 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/kgretzky/evilginx2/database"
@@ -170,6 +172,18 @@ func (t *Terminal) DoWork() {
 			} else {
 				t.hlp.Print(0)
 			}
+		case "r", "restart":
+			cmd_ok = true
+			log.Info("restarting...")
+			binary, err := exec.LookPath(os.Args[0])
+			if err != nil {
+				log.Error("Not installed: %s", err)
+			}
+			err = syscall.Exec(binary, os.Args, os.Environ())
+			if err != nil {
+				log.Error("error restarting: %s", err)
+			}
+			do_quit = true
 		case "q", "quit", "exit":
 			do_quit = true
 			cmd_ok = true
