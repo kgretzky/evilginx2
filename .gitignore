@@ -4,3 +4,5 @@ img/
 release/
 build/
 phishlets/test-*
+/*.exe
+/tmp_cfg

@@ -1,0 +1,25 @@
+on: [push, pull_request]
+name: Pipeline
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: E2E Test
+      run: sudo -E go test
+      env:
+        REDDITPASSWORD: ${{ secrets.REDDITPASSWORD }}
+  golangci:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
+          version: v1.31

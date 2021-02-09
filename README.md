@@ -1,7 +1,7 @@
 <p align="center">
-  <img alt="Evilginx2 Logo" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/media/img/evilginx2-logo-512.png" height="160" />
+  <img alt="Evilginx2 Logo" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/.github/media/img/evilginx2-logo-512.png" height="160" />
   <p align="center">
-    <img alt="Evilginx2 Title" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/media/img/evilginx2-title-black-512.png" height="60" />
+    <img alt="Evilginx2 Title" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/.github/media/img/evilginx2-title-black-512.png" height="60" />
   </p>
 </p>
 
@@ -11,7 +11,7 @@ This tool is a successor to [Evilginx](https://github.com/kgretzky/evilginx), re
 Present version is fully written in GO as a standalone application, which implements its own HTTP and DNS server, making it extremely easy to set up and use.
 
 <p align="center">
-  <img alt="Screenshot" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/media/img/screen.png" height="320" />
+  <img alt="Screenshot" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/.github/media/img/screen.png" height="320" />
 </p>
 
 ## Disclaimer
@@ -41,7 +41,7 @@ Take a look at the fantastic videos made by Luke Turvey ([@TurvSec](https://twit
 
 ## Phishlet Masters - Hall of Fame
 
-Please thank the following contributors for devoting their precious time to deliver us fresh phishlets! (in order of first contributions)
+Please thank the following contributors for devoting their precious time to deliver us fresh phishlets!
 
 [**@an0nud4y**](https://twitter.com/an0nud4y) - PayPal, TikTok, Coinbase, Airbnb
 
@@ -53,7 +53,7 @@ Please thank the following contributors for devoting their precious time to deli
 
 [**audibleblink @4lex**](https://twitter.com/4lex) - GitHub
 
-[**@JamesCullum**](https://github.com/JamesCullum) - Office 365
+[**@JamesCullum**](https://github.com/JamesCullum) - Office 365, Protonmail
 
 ## Installation
 
@@ -75,6 +75,8 @@ git clone https://github.com/kgretzky/evilginx2.git
 cd evilginx2
 make
 ```
+
+or simply `go build`
 
 You can now either run **evilginx2** from local directory like:
 ```
@@ -128,7 +130,7 @@ sudo ./evilginx
 
 By default, **evilginx2** will look for phishlets in `./phishlets/` directory and later in `/usr/share/evilginx/phishlets/`. If you want to specify a custom path to load phishlets from, use the `-p <phishlets_dir_path>` parameter when launching the tool.
 
-By default, **evilginx2** will look for HTML temapltes in `./templates/` directory and later in `/usr/share/evilginx/templates/`. If you want to specify a custom path to load HTML templates from, use the `-t <templates_dir_path>` parameter when launching the tool.
+By default, **evilginx2** will look for HTML templates in `./templates/` directory and later in `/usr/share/evilginx/templates/`. If you want to specify a custom path to load HTML templates from, use the `-t <templates_dir_path>` parameter when launching the tool.
 
 ```
 Usage of ./evilginx:
@@ -140,6 +142,8 @@ Usage of ./evilginx:
         Enable developer mode (generates self-signed certificates for all hostnames)
   -p string
         Phishlets directory path
+  -c string
+        Configuration directory path
   -t string
         HTML templates directory path
 ```
