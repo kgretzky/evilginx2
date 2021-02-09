@@ -36,8 +36,8 @@ If you want to learn more about this phishing technique, I've published extensiv
 
 Take a look at the fantastic videos made by Luke Turvey ([@TurvSec](https://twitter.com/TurvSec)), which fully explain how to get started using **evilginx2**.
 
-[![How to phish for passwords and bypass 2FA - Luke Turvey](https://img.youtube.com/vi/B3CycQgkVY0/0.jpg)](https://www.youtube.com/watch?v=B3CycQgkVY0)
-[![Creating custom phishlets for evilginx2 (2FA Bypass) - Luke Turvey](https://img.youtube.com/vi/8mfsF5Qdqw0/0.jpg)](https://www.youtube.com/watch?v=8mfsF5Qdqw0)
+[![How to phish for passwords and bypass 2FA - Luke Turvey](https://mrturvey.co.uk/wp-content/uploads/2020/12/Phishing-Bypass-2FA--1024x576.jpg)](https://mrturvey.co.uk/aiovg_videos/how-to-phish-for-passwords-and-bypass-2fa/)
+[![Creating custom phishlets for evilginx2 (2FA Bypass) - Luke Turvey](https://mrturvey.co.uk/wp-content/uploads/2020/12/Evilginx2-Phishlet-Creation-1024x576.jpg)](https://mrturvey.co.uk/aiovg_videos/creating-custom-phishlets-for-evilginx2-2fa-bypass/)
 
 ## Phishlet Masters - Hall of Fame
 
