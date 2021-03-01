@@ -67,9 +67,7 @@ Installation:
 
 Provides an installation script file
 ```
-git clone https://github.com/kgretzky/evilginx2
-cd evilginx2
-chmod 700 install.sh
+wget https://github.com/NikhilKamboj22/evilginx2/install.sh
 ./install.sh
 ```
 
