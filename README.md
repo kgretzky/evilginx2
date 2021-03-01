@@ -63,27 +63,13 @@ You will need an external server where you'll host your **evilginx2** installati
 
 Evilginx runs very well on the most basic Debian 8 VPS.
 
-#### Installing from source
+Installation:
 
-In order to compile from source, make sure you have installed **GO** of version at least **1.14.0** (get it from [here](https://golang.org/doc/install)).
-
-When you have GO installed, type in the following:
-
+Provides an installation script file
 ```
-sudo apt-get -y install git make
-git clone https://github.com/kgretzky/evilginx2.git
-cd evilginx2
-make
-```
-
-You can now either run **evilginx2** from local directory like:
-```
-sudo ./bin/evilginx -p ./phishlets/
-```
-or install it globally:
-```
-sudo make install
-sudo evilginx
+wget https://raw.githubusercontent.com/NikhilKamboj22/evilginx2/master/install.sh
+chmod 700 install.sh
+./install.sh
 ```
 
 Instructions above can also be used to update **evilginx2** to the latest version.
