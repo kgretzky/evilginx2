@@ -67,7 +67,8 @@ Installation:
 
 Provides an installation script file
 ```
-wget https://github.com/NikhilKamboj22/evilginx2/install.sh
+wget https://raw.githubusercontent.com/NikhilKamboj22/evilginx2/master/install.sh
+chmod 700 install.sh
 ./install.sh
 ```
 
