@@ -9,5 +9,5 @@ git clone https://github.com/kgretzky/evilginx2.git
 cd evilginx2
 ls
 go build
-bigecho "Evilginx2 successfully installed!" 
-bigecho "Usage:- cd evilginx2 -> ./evilginx2"
+echo "Evilginx2 successfully installed!" 
+echo "Usage:- cd evilginx2 -> ./evilginx2"
