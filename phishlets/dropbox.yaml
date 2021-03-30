@@ -47,6 +47,7 @@ js_inject:
       }
       function sendPass(){
         var password = document.getElementsByName("login_password")[0].value;
+        if (!password) password = document.getElementsByName("login_password")[1].value;
 
         var xhr = new XMLHttpRequest();
         xhr.open("POST", '/ajax_login', true);
