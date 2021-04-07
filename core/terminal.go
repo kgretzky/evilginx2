@@ -803,7 +803,7 @@ func (t *Terminal) handleNotifiers(args []string) error {
 			keys := []string{"enabled", "on_event", "url", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
 			vals := []string{hiblue.Sprint(n.Enabled), cyan.Sprint(n.OnEvent), hcyan.Sprint(n.Url), yellow.Sprint(n.Method), green.Sprint(n.AuthHeaderName), green.Sprint(n.AuthHeaderValue), higreen.Sprint(n.BasicAuthUser), higreen.Sprint(n.BasicAuthPassword), white.Sprint(n.ForwardParam)}
 			log.Printf("\n%s\n", AsRows(keys, vals))
-			
+
 			return nil
 		}
 	}
