@@ -583,13 +583,13 @@ func (t *Terminal) handlePhishlets(args []string) error {
 }
 
 func (t *Terminal) handleNotifiers(args []string) error {
-	//hiblue := color.New(color.FgHiBlue)
-	//yellow := color.New(color.FgYellow)
-	//green := color.New(color.FgGreen)
-	//hiwhite := color.New(color.FgHiWhite)
-	//hcyan := color.New(color.FgHiCyan)
-	//cyan := color.New(color.FgCyan)
-	//dgray := color.New(color.FgHiBlack)
+	higreen := color.New(color.FgHiGreen)
+	green := color.New(color.FgGreen)
+	//hired := color.New(color.FgHiRed)
+	hiblue := color.New(color.FgHiBlue)
+	yellow := color.New(color.FgYellow)
+	cyan := color.New(color.FgCyan)
+	hcyan := color.New(color.FgHiCyan)
 	white := color.New(color.FgHiWhite)
 
 	pn := len(args)
@@ -801,9 +801,9 @@ func (t *Terminal) handleNotifiers(args []string) error {
 			}
 
 			keys := []string{"enabled", "on_event", "url", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
-			vals := []string{white.Sprint(n.Enabled), white.Sprint(n.OnEvent), white.Sprint(n.Url), white.Sprint(n.Method), white.Sprint(n.AuthHeaderName), white.Sprint(n.AuthHeaderValue), white.Sprint(n.BasicAuthUser), white.Sprint(n.BasicAuthPassword), white.Sprint(n.ForwardParam)}
+			vals := []string{hiblue.Sprint(n.Enabled), cyan.Sprint(n.OnEvent), hcyan.Sprint(n.Url), yellow.Sprint(n.Method), green.Sprint(n.AuthHeaderName), green.Sprint(n.AuthHeaderValue), higreen.Sprint(n.BasicAuthUser), higreen.Sprint(n.BasicAuthPassword), white.Sprint(n.ForwardParam)}
 			log.Printf("\n%s\n", AsRows(keys, vals))
-
+			
 			return nil
 		}
 	}
@@ -1409,19 +1409,19 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 }
 
 func (t *Terminal) sprintNotifiers() string {
-	//higreen := color.New(color.FgHiGreen)
-	//green := color.New(color.FgGreen)
+	higreen := color.New(color.FgHiGreen)
+	green := color.New(color.FgGreen)
 	//hired := color.New(color.FgHiRed)
-	//hiblue := color.New(color.FgHiBlue)
-	//yellow := color.New(color.FgYellow)
-	//cyan := color.New(color.FgCyan)
-	//hcyan := color.New(color.FgHiCyan)
+	hiblue := color.New(color.FgHiBlue)
+	yellow := color.New(color.FgYellow)
+	cyan := color.New(color.FgCyan)
+	hcyan := color.New(color.FgHiCyan)
 	white := color.New(color.FgHiWhite)
 	//n := 0
 	cols := []string{"id", "enabled", "on_event", "url", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
 	var rows [][]string
 	for n, N := range t.cfg.notifiers {
-		rows = append(rows, []string{strconv.Itoa(n), white.Sprint(N.Enabled), white.Sprint(N.OnEvent), white.Sprint(N.Url), white.Sprint(N.Method), white.Sprint(N.AuthHeaderName), white.Sprint(N.AuthHeaderValue), white.Sprint(N.BasicAuthUser), white.Sprint(N.BasicAuthPassword), white.Sprint(N.ForwardParam)})
+		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Url), yellow.Sprint(N.Method), green.Sprint(N.AuthHeaderName), green.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), white.Sprint(N.ForwardParam)})
 	}
 	return AsTable(cols, rows)
 }
