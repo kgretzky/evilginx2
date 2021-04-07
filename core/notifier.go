@@ -65,10 +65,10 @@ func NotifierSend(n *Notify, body interface{}) error {
 }
 
 // prepares the Body for unauthorized requests and triggers NotifierSend
-func NotifyOnUnauthorized(n *Notify, pl_name string, Req_url string, useragent string, remote_addr string) error {
+func NotifyOnUnauthorized(n *Notify, pl_name string, req_url string, useragent string, remote_addr string) error {
 	b := Unauthorized{
 		Phishlet:    pl_name,
-		Req_url:     Req_url,
+		Req_url:     req_url,
 		Useragent:   useragent,
 		Remote_addr: remote_addr,
 	}
