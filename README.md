@@ -123,16 +123,27 @@ sudo ./evilginx
 ## Error Resolving
 
 ### Error-1 : (Failed to start nameserver on port 53)
-** Follow These Commands & Then Try Relaunching Evilginx
+#### METHOD 1 :-
+- Follow These Commands & Then Try Relaunching Evilginx
 
 ```
 sudo service systemd-resolved stop
 nano /etc/resolv.conf
 ```
-** Then change nameserver 127.x.x.x to nameserver 8.8.8.8 
+- Then change nameserver 127.x.x.x to nameserver 8.8.8.8 
 
-** Then save the file (By pressing CTRL+X and pressing Y followed by enter)
-
+- Then save the file (By pressing CTRL+X and pressing Y followed by enter)
+#### METHOD 2 :-
+- Check if All the neccessary ports are not being used by some other services.
+- Ports Like: 80, 53, 443
+- Find Those Ports And Kill those Processes
+```
+sudo netstat -ptnl | grep 53
+sudo kill PID
+```
+- Where PID is Process ID
+- Similarly Find And Kill Process On other Ports That are in use.
+- Now Try To Run Evilginx and get SSL certificates
 ## Usage
 
 **IMPORTANT!** Make sure that there is no service listening on ports `TCP 443`, `TCP 80` and `UDP 53`. You may need to shutdown apache or nginx and any service used for resolving DNS that may be running. **evilginx2** will tell you on launch if it fails to open a listening socket on any of these ports.
