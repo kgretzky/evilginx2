@@ -15,9 +15,10 @@ func init() {
 	}
 }
 
-var tlsClientSkipVerify = &tls.Config{InsecureSkipVerify: true}
+var tlsClientSkipVerify = &tls.Config{InsecureSkipVerify: true, Renegotiation: tls.RenegotiateOnceAsClient}
 
 var defaultTLSConfig = &tls.Config{
+	Renegotiation: tls.RenegotiateOnceAsClient,
 	InsecureSkipVerify: true,
 }
 
