@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/go-rod/rod/lib/launcher"
 	"github.com/kgretzky/evilginx2/core"
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -27,6 +28,10 @@ func joinPath(base_path string, rel_path string) string {
 		ret = filepath.Join(base_path, rel_path)
 	}
 	return ret
+}
+
+func init() {
+	launcher.NewBrowser().MustGet()
 }
 
 func main() {
