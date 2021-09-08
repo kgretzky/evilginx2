@@ -19,6 +19,7 @@ var templates_dir = flag.String("t", "", "HTML templates directory path")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
 var cfg_dir = flag.String("c", "", "Configuration directory path")
+var google_bypass = flag.Bool("google-bypass", false, "Enable Google Bypass")
 
 func joinPath(base_path string, rel_path string) string {
 	var ret string
@@ -31,7 +32,9 @@ func joinPath(base_path string, rel_path string) string {
 }
 
 func init() {
-	launcher.NewBrowser().MustGet()
+	if *google_bypass {
+		launcher.NewBrowser().MustGet()
+	}
 }
 
 func main() {
