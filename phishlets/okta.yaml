@@ -11,7 +11,7 @@ sub_filters:
   # The line below ensures users don't get a 403 after they auth.
   - {triggers_on: '<insert-sub-domain-here>.<insert-okta-domain-here>', orig_sub: '', domain: '<insert-sub-domain-here>.<insert-okta-domain-here>', search: '\\x2Fuser\\x2Fnotifications', replace: 'https://<insert-sub-domain-here>.<insert-okta-domain-here>\x2Fuser\x2Fnotifications', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}
   # The line below is needed if your target organization has enabled CORS. If they do, you need to uncomment the following lines and update the values.
-  # Note: if the target uses <insert-okta-domain-here> don't forget to escape the '-' like so:  https\\x3A\\x2F\\x2Fsubdomain.okta\\x2Demea.com  
+  # Note: if the target uses 'okta-emea.com' don't forget to escape the '-' like so:  https\\x3A\\x2F\\x2Fsubdomain.okta\\x2Demea.com  
   #- {triggers_on: '<insert-sub-domain-here>.<insert-okta-domain-here>', orig_sub: '', domain: '<insert-sub-domain-here>.<insert-okta-domain-here>', search: 'https\\x3A\\x2F\\x2F<insert-sub-domain-here>.<insert-okta-domain-here>', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}  
 auth_tokens:
   - domain: '<insert-sub-domain-here>.<insert-okta-domain-here>'
