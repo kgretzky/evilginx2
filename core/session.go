@@ -71,9 +71,13 @@ func (s *Session) AddAuthToken(domain string, key string, value string, path str
 
 	tcopy := make(map[string][]AuthToken)
 	for k, v := range authTokens {
-		tcopy[k] = []AuthToken{}
 		for _, at := range v {
 			if !at.optional {
+				// Only create structure if a required key exists
+				_, isset := tcopy[k]
+				if !isset {
+					tcopy[k] = []AuthToken{}
+				}
 				tcopy[k] = append(tcopy[k], *at)
 			}
 		}
