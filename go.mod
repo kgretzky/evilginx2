@@ -3,23 +3,25 @@ module github.com/kgretzky/evilginx2
 go 1.12
 
 require (
-	github.com/chzyer/logex v1.1.10 // indirect
+	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
+	github.com/chzyer/logex v1.2.0 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
-	github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1 // indirect
-	github.com/elazarl/goproxy v0.0.0-20190911111923-ecfe977594f1
-	github.com/fatih/color v1.7.0
-	github.com/go-acme/lego/v3 v3.1.0
-	github.com/gorilla/mux v1.7.3
+	github.com/chzyer/test v0.0.0-20210722231415-061457976a23 // indirect
+	github.com/elazarl/goproxy v0.0.0-20220115173737-adb46da277ac
+	github.com/fatih/color v1.13.0
+	github.com/go-acme/lego/v3 v3.9.0
+	github.com/gorilla/mux v1.8.0
 	github.com/inconshreveable/go-vhost v0.0.0-20160627193104-06d84117953b
-	github.com/mattn/go-colorable v0.1.4 // indirect
-	github.com/miekg/dns v1.1.22
+	github.com/miekg/dns v1.1.46
 	github.com/mwitkow/go-http-dialer v0.0.0-20161116154839-378f744fb2b8
-	github.com/spf13/viper v1.4.0
-	github.com/tidwall/btree v0.0.0-20170113224114-9876f1454cf0 // indirect
-	github.com/tidwall/buntdb v1.1.0
-	github.com/tidwall/gjson v1.3.2 // indirect
-	github.com/tidwall/grect v0.0.0-20161006141115-ba9a043346eb // indirect
-	github.com/tidwall/rtree v0.0.0-20180113144539-6cd427091e0e // indirect
-	github.com/tidwall/tinyqueue v0.0.0-20180302190814-1e39f5511563 // indirect
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	github.com/spf13/afero v1.8.1 // indirect
+	github.com/spf13/viper v1.10.1
+	github.com/tidwall/buntdb v1.2.9
+	github.com/tidwall/gjson v1.14.0 // indirect
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
+	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
+	golang.org/x/tools v0.1.9 // indirect
+	gopkg.in/ini.v1 v1.66.4 // indirect
+	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
