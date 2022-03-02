@@ -148,6 +148,12 @@ Usage of ./evilginx:
 
 You should see **evilginx2** logo with a prompt to enter commands. Type `help` or `help <command>` if you want to see available commands or more detailed information on them.
 
+You can use these flags in docker, by appending them to the docker-run command:
+
+```
+docker run -it evilginx2 -debug -developer
+```
+
 ## Getting started
 
 To get up and running, you need to first do some setting up.
