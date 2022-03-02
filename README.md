@@ -102,6 +102,8 @@ docker run -it -p 53:53/udp -p 80:80 -p 443:443 evilginx2
 
 Phishlets are loaded within the container at `/app/phishlets`, which can be mounted as a volume for configuration.
 
+Configuration is saved in `/root/.evilginx/`. You can also mount this as a volume to persist configurations between containers.
+
 #### Installing from precompiled binary packages
 
 Grab the package you want from [here](https://github.com/kgretzky/evilginx2/releases) and drop it on your box. Then do:

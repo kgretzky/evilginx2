@@ -30,6 +30,7 @@ COPY --from=build /go/src/github.com/kgretzky/evilginx2/bin/evilginx /app/evilgi
 COPY ./phishlets/*.yaml /app/phishlets/
 
 VOLUME ["/app/phishlets/"]
+VOLUME ["/root/.evilginx/"]
 
 EXPOSE 443 80 53/udp
 
