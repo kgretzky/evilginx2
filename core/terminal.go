@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net/mail"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -670,7 +671,13 @@ func (t *Terminal) handleNotifiers(args []string) error {
 		switch args[0] {
 		case "create":
 			if pn == 4 {
-				_, err := url.ParseRequestURI(args[3])
+				var err error
+				switch args[2] {
+				case "GET", "POST":
+					_, err = url.ParseRequestURI(args[3])
+				case "E-Mail":
+					_, err = mail.ParseAddress(args[3])
+				}
 				if err != nil {
 					return fmt.Errorf("create: %v", err)
 				}
