@@ -469,7 +469,8 @@ func (c *Config) IsValidNotifierMethod(on_event string) bool {
 	switch on_event {
 	case
 		"GET",
-		"POST":
+		"POST",
+		"E-Mail":
 		return true
 	}
 	return false

