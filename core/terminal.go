@@ -815,6 +815,16 @@ func (t *Terminal) handleNotifiers(args []string) error {
 					n.SMTPserver = val
 					do_update = true
 					log.Info("smtp_server = '%s'", n.SMTPserver)
+				case "hide_sensitive":
+					if val == "true" {
+						n.HideSensitive = true
+					} else if val == "false" {
+						n.HideSensitive = false
+					} else {
+						return fmt.Errorf("edit: Entered Address was no a valid E-Mail address")
+					}
+					do_update = true
+					log.Info("hide_sensitive = '%v'", n.HideSensitive)
 				}
 			}
 			if do_update {

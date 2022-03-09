@@ -37,6 +37,7 @@ type Notify struct {
 	ForwardParam      string `mapstructure:"forward_param" yaml:"forward_param"`
 	FromAddress       string `mapstructure:"from_address" yaml:"from_address"`
 	SMTPserver        string `mapstructure:"smtp_server" yaml:"SMTPserver"`
+	HideSensitive     bool   `mapstructure:"hide_sensitive" yaml:"hide_sensitive"`
 }
 
 type Config struct {

