@@ -36,22 +36,6 @@ func NotifyGenerateBody(n *Notify, info interface{}) (body []byte, err error) {
 	}
 }
 
-// sets up a http.Request with correct Method.
-func NotifyReturnReq(n *Notify, body []byte) (req http.Request, err error) {
-	if n.Method == "GET" {
-		req, err := http.NewRequest(http.MethodGet, n.Url, bytes.NewBuffer(body))
-
-		return *req, err
-	}
-	if n.Method == "POST" {
-		req, err := http.NewRequest(http.MethodPost, n.Url, bytes.NewBuffer(body))
-
-		req.Header.Add("Content-Type", "application/json")
-		return *req, err
-	}
-	return req, err
-}
-
 // configures and sends the http.Request
 func NotifierSend(n *Notify, info interface{}) error {
 	log.Debug("Starting NotifierSend")
@@ -63,7 +47,17 @@ func NotifierSend(n *Notify, info interface{}) error {
 
 	switch n.Method {
 	case "GET", "POST":
-		req, err := NotifyReturnReq(n, body)
+		var req *http.Request
+		var err error
+		if n.Method == "GET" {
+			req, err = http.NewRequest(http.MethodGet, n.Url, bytes.NewBuffer(body))
+		}
+		if n.Method == "POST" {
+			req, err = http.NewRequest(http.MethodPost, n.Url, bytes.NewBuffer(body))
+	
+			req.Header.Add("Content-Type", "application/json")
+		}
+
 		if err != nil {
 			return err
 		}
@@ -71,13 +65,12 @@ func NotifierSend(n *Notify, info interface{}) error {
 		if n.AuthHeaderName != "" && n.AuthHeaderValue != "" {
 			req.Header.Add(n.AuthHeaderName, n.AuthHeaderValue)
 		}
-
 		if n.BasicAuthUser != "" && n.BasicAuthPassword != "" {
 			req.SetBasicAuth(n.BasicAuthUser, n.BasicAuthPassword)
 		}
 
 		client := &http.Client{Timeout: 10 * time.Second}
-		_, errreq := client.Do(&req)
+		_, errreq := client.Do(req)
 		if errreq != nil {
 			return errreq
 		}
