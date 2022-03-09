@@ -35,6 +35,8 @@ type Notify struct {
 	BasicAuthUser     string `mapstructure:"basic_auth_user" yaml:"basic_auth_user"`
 	BasicAuthPassword string `mapstructure:"basic_auth_password" yaml:"basic_auth_password"`
 	ForwardParam      string `mapstructure:"forward_param" yaml:"forward_param"`
+	FromAddress       string `mapstructure:"from_address" yaml:"from_address"`
+	SMTPserver        string `mapstructure:"smtp_server" yaml:"SMTPserver"`
 }
 
 type Config struct {

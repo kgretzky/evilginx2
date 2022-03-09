@@ -802,6 +802,19 @@ func (t *Terminal) handleNotifiers(args []string) error {
 					} else {
 						return fmt.Errorf("edit: ForwardParam is only implimented for the 'visitor' on_event")
 					}
+				case "from_address":
+					_, err := mail.ParseAddress(val)
+					if err == nil {
+						n.FromAddress = val
+						do_update = true
+						log.Info("from_address = '%s'", n.FromAddress)
+					} else {
+						return fmt.Errorf("edit: Entered Address was no a valid E-Mail address")
+					}
+				case "smtp_server":
+					n.SMTPserver = val
+					do_update = true
+					log.Info("smtp_server = '%s'", n.SMTPserver)
 				}
 			}
 			if do_update {
