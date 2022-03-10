@@ -683,13 +683,21 @@ func (t *Terminal) handleNotifiers(args []string) error {
 				}
 				if t.cfg.IsValidNotifierOnEvent(args[1]) && t.cfg.IsValidNotifierMethod(args[2]) {
 					n := &Notify{
+						Enabled: true,
 						OnEvent: args[1],
 						Url:     args[3],
 						Method:  args[2],
 					}
 					t.cfg.AddNotifier(args[1], n)
 					log.Info("created notifier with ID: %d", len(t.cfg.notifiers)-1)
-					log.Info("disabled notifier with ID: %d", len(t.cfg.notifiers)-1)
+					if args[2] == "E-Mail" {
+						//adding E-Mail specific defaults
+						n.FromAddress = "phishing-notification@" + t.cfg.baseDomain
+						n.HideSensitive = true
+						log.Info("set FromAddress to %s and enabled HideSensitive", n.FromAddress)
+						log.Warning("Don't forget to set an SMTP server with 'notifiers edit %d smtp_server <smtpserver>'", len(t.cfg.notifiers)-1)
+					}
+					log.Info("enabled notifier with ID: %d", len(t.cfg.notifiers)-1)
 					return nil
 				}
 				return fmt.Errorf("create: invalid on_event: %s. use 'authenticated', 'visitor' or 'unauthorized'", args[1])
