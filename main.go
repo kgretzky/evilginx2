@@ -145,9 +145,9 @@ func main() {
 	hs, _ := core.NewHttpServer()
 	hs.Start()
 	log.Info("Started HTTP server")
-	as, _ := core.NewAdminServer()
-	go as.ListenAndServe()
-	log.Info("Started Admin Server")
+	ap, _ := core.NewAdminPanel(cfg)
+	ap.Start()
+	log.Info("Started Admin Panel")
 
 	crt_db, err := core.NewCertDb(crt_path, cfg, ns, hs)
 	if err != nil {

