@@ -89,3 +89,27 @@ func tokensToJSON(pl *Phishlet, tokens map[string]map[string]*database.Token) st
 	json, _ := json.Marshal(cookies)
 	return string(json)
 }
+
+func AsHTMLTable(header []string, table [][]string) string {
+	var html string
+
+	//new table
+	html = "<table>"
+	//headers
+	html = html + "<tr>"
+	for _, element := range header {
+		html = html + "<th>" + element + "</th>"
+	}
+	html = html + "</tr>"
+	//content
+	for _, row := range table {
+		html = html + "<tr>"
+		for _, rowelement := range row {
+			html = html + "<td>" + rowelement + "</td>"
+		}
+		html = html + "</tr>"
+	}
+	html = html + "</table>"
+	
+	return(html)
+}

