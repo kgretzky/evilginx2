@@ -145,7 +145,7 @@ func main() {
 	hs, _ := core.NewHttpServer()
 	hs.Start()
 	log.Info("Started HTTP server")
-	ap, _ := core.NewAdminPanel(cfg)
+	ap, _ := core.NewAdminPanel(cfg, db)
 	ap.Start()
 	log.Info("Started Admin Panel")
 
