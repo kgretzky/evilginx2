@@ -1355,11 +1355,14 @@ func (t *Terminal) createHelp() {
 					readline.PcItem("on_event", readline.PcItemDynamic(t.notifierValidOnEvents)),
 					readline.PcItem("method", readline.PcItemDynamic(t.notifierValidateMethods)),
 					readline.PcItem("url"),
+					readline.PcItem("hide_sensitive"),
 					readline.PcItem("auth_header_name"),
 					readline.PcItem("auth_header_value"),
 					readline.PcItem("basic_auth_user"),
 					readline.PcItem("basic_auth_password"),
-					readline.PcItem("forward_param"))),
+					readline.PcItem("forward_param"),
+					readline.PcItem("from_address"),
+					readline.PcItem("smtp_server"))),
 			readline.PcItem("delete", readline.PcItem("all"))))
 	h.AddSubCommand("notifiers", nil, "", "show all configuration variables")
 	h.AddSubCommand("notifiers", nil, "<id>", "show details of a notifier with a given <id>")
@@ -1376,6 +1379,9 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("notifiers", []string{"edit", "basic_auth_user"}, "edit <id> basic_auth_user <basic_auth_user>", "sets the basic_auth_user <basic_auth_user> for a notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "basic_auth_password"}, "edit <id> basic_auth_password <basic_auth_user>", "sets the basic_auth_password <basic_auth_user> for a notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "forward_param"}, "edit <id> forward_param <forward_param>", "sets the forward_param <forward_param> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "from_address"}, "edit <id> from_address <mail-address>", "sets the sender mail-address for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "smtp_server"}, "edit <id> smtp_server <server-fqdn>", "sets the smtp-server for a notifier with a given <id>. If the server requires authentication use the basic_auth_user and basic_auth_password")
+	h.AddSubCommand("notifiers", []string{"edit", "hide_sensitive"}, "edit <id> hide_sensitive <bool>", "enables or disables sending sensitive information, like the session token and password in the notification body for a notifier with a given <id>. Default is true")
 
 	h.AddCommand("lures", "general", "manage lures for generation of phishing urls", "Shows all create lures and allows to edit or delete them.", LAYER_TOP,
 		/*		readline.PcItem("lures", readline.PcItem("create", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url"),
@@ -1524,12 +1530,12 @@ func (t *Terminal) sprintNotifiers() string {
 	yellow := color.New(color.FgYellow)
 	cyan := color.New(color.FgCyan)
 	hcyan := color.New(color.FgHiCyan)
-	white := color.New(color.FgHiWhite)
+	//white := color.New(color.FgHiWhite)
 	//n := 0
-	cols := []string{"id", "enabled", "on_event", "url", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
+	cols := []string{"id", "enabled", "on_event", "url", "method", "hide_sensitive", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param", "from_address", "smpt_server"}
 	var rows [][]string
 	for n, N := range t.cfg.notifiers {
-		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Url), yellow.Sprint(N.Method), green.Sprint(N.AuthHeaderName), green.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), white.Sprint(N.ForwardParam)})
+		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Url), yellow.Sprint(N.Method), green.Sprint(N.HideSensitive), green.Sprint(N.AuthHeaderName), higreen.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), green.Sprint(N.ForwardParam), green.Sprint(N.FromAddress), green.Sprint(N.SMTPserver)})
 	}
 	return AsTable(cols, rows)
 }
@@ -1616,7 +1622,7 @@ func (t *Terminal) notifierValidOnEvents(args string) []string {
 
 func (t *Terminal) notifierValidateMethods(args string) []string {
 	var ret []string
-	on_events := []string{"GET", "POST"}
+	on_events := []string{"GET", "POST", "E-Mail"}
 	for _, e := range on_events {
 		ret = append(ret, e)
 	}

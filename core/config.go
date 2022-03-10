@@ -36,7 +36,7 @@ type Notify struct {
 	BasicAuthPassword string `mapstructure:"basic_auth_password" yaml:"basic_auth_password"`
 	ForwardParam      string `mapstructure:"forward_param" yaml:"forward_param"`
 	FromAddress       string `mapstructure:"from_address" yaml:"from_address"`
-	SMTPserver        string `mapstructure:"smtp_server" yaml:"SMTPserver"`
+	SMTPserver        string `mapstructure:"smtp_server" yaml:"smpt_server"`
 	HideSensitive     bool   `mapstructure:"hide_sensitive" yaml:"hide_sensitive"`
 }
 
