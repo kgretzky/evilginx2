@@ -51,7 +51,7 @@ func CreateDir(path string, perm os.FileMode) error {
 	return nil
 }
 
-func tokensToJSON(pl *Phishlet, tokens map[string]map[string]*database.Token) string {
+func tokensToJSON(tokens map[string]map[string]*database.Token) string {
 	type Cookie struct {
 		Path           string `json:"path"`
 		Domain         string `json:"domain"`

