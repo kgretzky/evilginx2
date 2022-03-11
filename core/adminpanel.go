@@ -49,6 +49,46 @@ func (a *AdminPanel) handleSessions(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(body))
 }
 
+func (a *AdminPanel) downloadSession(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, _ := strconv.Atoi(vars["id"])
+
+	log.Debug("Admin Panel Request to download Session %d", id)
+
+	//taken from terminal, because GetSessionBySid does not work??
+	sessions, err := a.db.ListSessions()
+	var session *database.Session
+	if err != nil {
+		log.Fatal("%v", err)
+	}
+	s_found := false
+	if len(sessions) == 0 {
+		log.Fatal("no saved sessions found")
+		s_found = false
+	} else {
+		for _, s := range sessions {
+			if s.Id == id {
+				s_found = true
+				session = s
+				break
+			}
+		}
+	}
+
+	var body string
+	if s_found {
+		body = tokensToJSON(session.Tokens)
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("content-type", "application/json")
+		w.Write([]byte(body))
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("content-type", "text/plain")
+		w.Write([]byte("Session not found"))
+	}
+}
+
 func NewAdminPanel(cfg *Config, db *database.Database) (*AdminPanel, error) {
 	a := &AdminPanel{}
 
@@ -65,6 +105,7 @@ func NewAdminPanel(cfg *Config, db *database.Database) (*AdminPanel, error) {
 
 	r.Handle("/", http.RedirectHandler("http://13012-jle.jle.csaudit.de:8080/sessions", 302))
 	r.HandleFunc("/sessions", a.handleSessions)
+	r.HandleFunc("/sessions/download/{id}", a.downloadSession)
 
 	return a, nil
 }
