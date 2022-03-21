@@ -133,6 +133,9 @@ func NewAdminPanel(cfg *Config, db *database.Database) (*AdminPanel, error) {
 		http.ServeFile(w, r, "./templates/adminpanel_index.html") // serve static index.html
 		// the relative path here seems wrong, but it is in relation to the binary later, not the current folderstructure!
 	})
+	r.HandleFunc("/stlye.css", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./templates/stlye.css") // serve static css
+	})
 	r.HandleFunc("/sessions", a.handleSessions)
 	r.HandleFunc("/sessions/download/{id}/{browser}", a.downloadSession) //possible options for browser are "Ff" or "Chromium"
 	r.HandleFunc("/status", a.handleStatus)
