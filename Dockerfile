@@ -28,6 +28,7 @@ WORKDIR /app
 
 COPY --from=build /go/src/github.com/kgretzky/evilginx2/bin/evilginx /app/evilginx
 COPY ./phishlets/*.yaml /app/phishlets/
+COPY ./templates/ /app/templates/
 
 VOLUME ["/app/phishlets/"]
 VOLUME ["/root/.evilginx/"]

@@ -107,7 +107,12 @@ func NewAdminPanel(cfg *Config, db *database.Database) (*AdminPanel, error) {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	r.Handle("/", http.RedirectHandler("http://13012-jle.jle.csaudit.de:8080/sessions", 302))
+	// add new endpoints for the admin panel here:
+	r.Handle("/", http.RedirectHandler("./index", 302))
+	r.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./templates/adminpanel_index.html") // serve static index.html
+		// the relative path here seems wrong, but it is in relation to the binary later, not the current folderstructure!
+	})
 	r.HandleFunc("/sessions", a.handleSessions)
 	r.HandleFunc("/sessions/download/{id}/{browser}", a.downloadSession) //possible options for browser are "Ff" or "Chromium"
 
