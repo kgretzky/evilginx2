@@ -1,3 +1,7 @@
+2.5.0-jle-dev22w12a
+- Feature: Notifiers. Set up webhook or E-Mail Notifiers for authentication, visitor or failed authorization
+- Feature: Admin panel. On port 8080 an admin panel can be accessed to get system information and sessions as well as download cookies
+
 2.4.0
 - Feature: Create and set up pre-phish HTML templates for your campaigns. Create your HTML file and place `{lure_url_html}` or `{lure_url_js}` in code to manage redirection to the phishing page with any form of user interaction. Command: `lures edit <id> template <template>`
 - Feature: Create customized hostnames for every phishing lure. Command: `lures edit <id> hostname <hostname>`.
