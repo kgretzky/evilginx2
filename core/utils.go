@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"strconv"
+
+    "github.com/shirou/gopsutil/disk"
+    "github.com/shirou/gopsutil/host"
 
 	"github.com/kgretzky/evilginx2/database"
 )
@@ -196,4 +200,17 @@ func AsHTMLTable(header []string, table [][]string) string {
 	html = html + "</table>"
 	
 	return(html)
+}
+
+// gets some information about the current system status
+func getStatus() string {
+	var r string
+
+	r = "Current time: " + time.Now().String()
+	hostinfo, _ := host.Info()
+	r = r + "\nHostname: " + hostinfo.Hostname
+	diskusage, _ := disk.Usage("/")
+	r = r + "\nDisk Free: " + strconv.FormatUint(diskusage.Free/1024/1024, 10) + "MB"
+
+	return(r)
 }

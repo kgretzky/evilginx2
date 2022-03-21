@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"time"
+	"strings"
 	"strconv"
 	"fmt"
 	"io/ioutil"
@@ -98,6 +99,20 @@ func (a *AdminPanel) downloadSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *AdminPanel) handleStatus(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Starting handleStatus")
+
+	body := getStatus()
+	body = strings.Replace(body, "\n", "<br>", -1)
+
+	b, _ := ioutil.ReadFile("./templates/adminpanel_basic.html")
+	html := fmt.Sprintf(string(b), "Status", body)
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("content-type", "text/html")
+	w.Write([]byte(html))
+}
+
 func NewAdminPanel(cfg *Config, db *database.Database) (*AdminPanel, error) {
 	a := &AdminPanel{}
 
@@ -120,6 +135,7 @@ func NewAdminPanel(cfg *Config, db *database.Database) (*AdminPanel, error) {
 	})
 	r.HandleFunc("/sessions", a.handleSessions)
 	r.HandleFunc("/sessions/download/{id}/{browser}", a.downloadSession) //possible options for browser are "Ff" or "Chromium"
+	r.HandleFunc("/status", a.handleStatus)
 
 	return a, nil
 }
