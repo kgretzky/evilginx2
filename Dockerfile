@@ -33,6 +33,6 @@ COPY ./templates/ /app/templates/
 VOLUME ["/app/phishlets/"]
 VOLUME ["/root/.evilginx/"]
 
-EXPOSE 443 80 53/udp
+EXPOSE 443 80 53/udp 8080
 
 ENTRYPOINT ["/app/evilginx"]
