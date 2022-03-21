@@ -141,8 +141,13 @@ func main() {
 
 	ns, _ := core.NewNameserver(cfg)
 	ns.Start()
+	log.Info("Started Nameserver")
 	hs, _ := core.NewHttpServer()
 	hs.Start()
+	log.Info("Started HTTP server")
+	ap, _ := core.NewAdminPanel(cfg, db)
+	ap.Start()
+	log.Info("Started Admin Panel")
 
 	crt_db, err := core.NewCertDb(crt_path, cfg, ns, hs)
 	if err != nil {
