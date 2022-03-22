@@ -40,6 +40,12 @@ type Notify struct {
 	HideSensitive     bool   `mapstructure:"hide_sensitive" yaml:"hide_sensitive"`
 }
 
+type Logger struct {
+	Enabled  bool   `mapstructure:"enabled" yaml: "enabled"`
+	Filename string `mapstructure:"name" yaml: "name"`
+	Type     string `mapstructure:"type" yaml: "type"` // incoming, outgoing, dns
+}
+
 type Config struct {
 	siteDomains       map[string]string
 	baseDomain        string
@@ -63,6 +69,7 @@ type Config struct {
 	templatesDir      string
 	lures             []*Lure
 	notifiers         []*Notify
+	loggers           []*Logger
 	cfg               *viper.Viper
 }
 
@@ -84,6 +91,7 @@ const (
 	CFG_PROXY_PASSWORD     = "proxy_password"
 	CFG_PROXY_ENABLED      = "proxy_enabled"
 	CFG_NOTIFIERS          = "notifiers"
+	CFG_LOGGERS            = "loggers"
 	CFG_BLACKLIST_MODE     = "blacklist_mode"
 )
 
