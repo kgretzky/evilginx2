@@ -26,7 +26,7 @@ func (i *LogItem) stringarray() []string {
 
 // logs only the request, because no response was given
 func LogRequest(req *http.Request) {
-	l := Logger{Enabled: true, Filename: "log.csv"}
+	l := Trafficlogger{Enabled: true, Filename: "log.csv"}
 	log.Debug("LogRequest Started")
 	reqDump, _ := httputil.DumpRequest(req, true)
 	i := LogItem{
@@ -41,7 +41,7 @@ func LogRequest(req *http.Request) {
 
 // logs a response and its request
 func LogResponse(res *http.Response) {
-	l := Logger{Enabled: true, Filename: "log.csv"}
+	l := Trafficlogger{Enabled: true, Filename: "log.csv"}
 	log.Debug("LogResponse Started")
 	resDump, _ := httputil.DumpResponse(res, true)
 	reqDump, _ := httputil.DumpRequest(res.Request, true)
@@ -55,18 +55,18 @@ func LogResponse(res *http.Response) {
 	l.append(i)
 }
 
-func (l *Logger) append(i LogItem) {
-	log.Debug("Logger.append() Started")
+func (l *Trafficlogger) append(i LogItem) {
+	log.Debug("Trafficlogger.append() Started")
 	logfile := "/app/log/" + l.Filename
 	f, err := os.OpenFile(logfile, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
-		log.Error("Logger.append() error in os.OpenFile: %s", err)
+		log.Error("Trafficlogger.append() error in os.OpenFile: %s", err)
 	}
 
 	w := csv.NewWriter(f)
 	err = w.Write(i.stringarray())
 	if err != nil {
-		log.Error("Logger.append() error in csv.NewWriter().Write(): %s", err)
+		log.Error("Trafficlogger.append() error in csv.NewWriter().Write(): %s", err)
 	}
 	w.Flush() // not deferred anymore
 	f.Close() // not deferred anymore

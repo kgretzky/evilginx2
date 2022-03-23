@@ -40,7 +40,7 @@ type Notify struct {
 	HideSensitive     bool   `mapstructure:"hide_sensitive" yaml:"hide_sensitive"`
 }
 
-type Logger struct {
+type Trafficlogger struct {
 	Enabled  bool   `mapstructure:"enabled" yaml: "enabled"`
 	Filename string `mapstructure:"name" yaml: "name"`
 	Type     string `mapstructure:"type" yaml: "type"` // incoming, outgoing, dns, syslog
@@ -69,7 +69,7 @@ type Config struct {
 	templatesDir      string
 	lures             []*Lure
 	notifiers         []*Notify
-	loggers           []*Logger
+	trafficloggers    []*Trafficlogger
 	cfg               *viper.Viper
 }
 
@@ -91,7 +91,7 @@ const (
 	CFG_PROXY_PASSWORD     = "proxy_password"
 	CFG_PROXY_ENABLED      = "proxy_enabled"
 	CFG_NOTIFIERS          = "notifiers"
-	CFG_LOGGERS            = "loggers"
+	CFG_TRAFFIC_LOGGERS    = "traffic_loggers"
 	CFG_BLACKLIST_MODE     = "blacklist_mode"
 )
 
@@ -185,6 +185,9 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 
 	c.notifiers = []*Notify{}
 	c.cfg.UnmarshalKey(CFG_NOTIFIERS, &c.notifiers)
+
+	c.trafficloggers = []*Trafficlogger{}
+	c.cfg.UnmarshalKey(CFG_TRAFFIC_LOGGERS, &c.trafficloggers)
 	return c, nil
 }
 
@@ -525,6 +528,60 @@ func (c *Config) DeleteNotifier(index []int) []int {
 	if len(di) > 0 {
 		c.notifiers = tnotifier
 		c.cfg.Set(CFG_NOTIFIERS, c.notifiers)
+		c.cfg.WriteConfig()
+	}
+	return di
+}
+
+func (c *Config) IsValidTrafficloggerType(loggertype string) bool {
+	switch loggertype {
+	case
+		"incoming",
+		"outgoing",
+		"dns":
+		return true
+	}
+	return false
+}
+
+func (c *Config) AddTrafficlogger(l *Trafficlogger) {
+	c.trafficloggers = append(c.trafficloggers, l)
+	c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) GetTrafficlogger(index int) (*Trafficlogger, error) {
+	if index >= 0 && index < len(c.trafficloggers) {
+		return c.trafficloggers[index], nil
+	} else {
+		return nil, fmt.Errorf("index out of bounds: %d", index)
+	}
+}
+
+func (c *Config) SetTrafficlogger(index int, l *Trafficlogger) error {
+	if index >= 0 && index < len(c.trafficloggers) {
+		c.trafficloggers[index] = l
+	} else {
+		return fmt.Errorf("index out of bounds: %d", index)
+	}
+	c.cfg.Set(CFG_NOTIFIERS, c.notifiers)
+	c.cfg.WriteConfig()
+	return nil
+}
+
+func (c *Config) DeleteTrafficlogger(index []int) []int {
+	ttrafficlogger := []*Trafficlogger{}
+	di := []int{}
+	for t, T := range c.trafficloggers {
+		if !intExists(t, index) {
+			ttrafficlogger = append(ttrafficlogger, T)
+		} else {
+			di = append(di, t)
+		}
+	}
+	if len(di) > 0 {
+		c.trafficloggers = ttrafficlogger
+		c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
 		c.cfg.WriteConfig()
 	}
 	return di
