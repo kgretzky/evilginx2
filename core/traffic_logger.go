@@ -14,20 +14,17 @@ type LogItem struct {
 	Timestamp time.Time
 	SourceIP  string // i know that there is a net.IP type, but I would just turn it back into a string anyway
 	DestIP    string
-	Body      string
+	Request   string
+	Response  string
 	Lureinfo  string
 }
 
 func (i *LogItem) stringarray() []string {
-	r := []string{i.Timestamp.String(), i.SourceIP, i.DestIP, i.Body, i.Lureinfo}
+	r := []string{i.Timestamp.String(), i.SourceIP, i.DestIP, i.Request, i.Response, i.Lureinfo}
 	return r
 }
 
-func LogDual(req *http.Request, res *http.Response) {
-	LogRequest(req)
-	LogResponse(res)
-}
-
+// logs only the request, because no response was given
 func LogRequest(req *http.Request) {
 	l := Logger{Enabled: true, Filename: "log.csv"}
 	log.Debug("LogRequest Started")
@@ -36,20 +33,24 @@ func LogRequest(req *http.Request) {
 		Timestamp: time.Now(),
 		SourceIP:  req.RemoteAddr,
 		DestIP:    "127.0.0.1:80",
-		Body:      string(reqDump),
+		Request:   string(reqDump),
+		Response:  "No Response",
 	}
 	l.append(i)
 }
 
+// logs a response and its request
 func LogResponse(res *http.Response) {
 	l := Logger{Enabled: true, Filename: "log.csv"}
 	log.Debug("LogResponse Started")
 	resDump, _ := httputil.DumpResponse(res, true)
+	reqDump, _ := httputil.DumpRequest(res.Request, true)
 	i := LogItem{
 		Timestamp: time.Now(),
 		SourceIP:  "127.0.0.1:80",
 		DestIP:    res.Request.RemoteAddr,
-		Body:      string(resDump),
+		Request:   string(reqDump),
+		Response:  string(resDump),
 	}
 	l.append(i)
 }

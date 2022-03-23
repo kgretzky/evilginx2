@@ -43,7 +43,7 @@ type Notify struct {
 type Logger struct {
 	Enabled  bool   `mapstructure:"enabled" yaml: "enabled"`
 	Filename string `mapstructure:"name" yaml: "name"`
-	Type     string `mapstructure:"type" yaml: "type"` // incoming, outgoing, dns
+	Type     string `mapstructure:"type" yaml: "type"` // incoming, outgoing, dns, syslog
 }
 
 type Config struct {
