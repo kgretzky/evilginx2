@@ -929,7 +929,7 @@ func (t *Terminal) handleTrafficloggers(args []string) error {
 				return fmt.Errorf("create: incorrect number of arguments. run 'help trafficloggers'")
 			}
 			if !t.cfg.IsValidTrafficloggerType(args[1]) {
-				return fmt.Errorf("create: invalid trafficlogger type: %s. use 'incoming', 'outgoing' or 'dns'", args[1])
+				return fmt.Errorf("create: invalid trafficlogger type: %s. use 'invalid', 'incoming', 'outgoing' or 'dns'", args[1])
 			}
 
 			l := &Trafficlogger{
@@ -971,7 +971,7 @@ func (t *Terminal) handleTrafficloggers(args []string) error {
 				switch args[2] {
 				case "type":
 					if !t.cfg.IsValidTrafficloggerType(val) {
-						return fmt.Errorf("edit: trafficlogger type is not valid. use 'incoming', 'outgoing' or 'dns'")
+						return fmt.Errorf("edit: trafficlogger type is not valid. use 'invalid', 'incoming', 'outgoing' or 'dns'")
 					}
 					l.Type = val
 					do_update = true
@@ -2108,7 +2108,7 @@ func (t *Terminal) trafficloggerIdPrefixCompleter(args string) []string {
 
 func (t *Terminal) trafficloggerValidType(args string) []string {
 	var ret []string
-	tltypes := []string{"incoming", "outgoing", "dns"}
+	tltypes := []string{"invalid", "incoming", "outgoing", "dns"}
 	for _, e := range tltypes {
 		ret = append(ret, e)
 	}
