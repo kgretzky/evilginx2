@@ -5,22 +5,25 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kgretzky/evilginx2/log"
 )
 
 type LogItem struct {
-	Timestamp time.Time
-	SourceIP  string // i know that there is a net.IP type, but I would just turn it back into a string anyway
-	DestIP    string
-	Request   string
-	Response  string
-	Lureinfo  string
+	Timestamp  time.Time
+	SourceIP   string // i know that there is a net.IP type, but I would just turn it back into a string anyway
+	SourcePort string
+	DestIP     string
+	DestPort   string
+	Request    string
+	Response   string
+	Lureinfo   string
 }
 
 func (i *LogItem) stringarray() []string {
-	r := []string{i.Timestamp.String(), i.SourceIP, i.DestIP, i.Request, i.Response, i.Lureinfo}
+	r := []string{i.Timestamp.String(), i.SourceIP, i.SourcePort, i.DestIP, i.DestPort, i.Request, i.Response, i.Lureinfo}
 	return r
 }
 
@@ -35,12 +38,14 @@ func LogInvalid(req *http.Request, ls *[]*Trafficlogger, info string) {
 
 		reqDump, _ := httputil.DumpRequest(req, true)
 		i := LogItem{
-			Timestamp: time.Now(),
-			SourceIP:  req.RemoteAddr,
-			DestIP:    "127.0.0.1:80",
-			Request:   string(reqDump),
-			Response:  "EMPTY",
-			Lureinfo:  info,
+			Timestamp:  time.Now(),
+			SourceIP:   strings.Split(req.RemoteAddr, ":")[0],
+			SourcePort: strings.Split(req.RemoteAddr, ":")[1],
+			DestIP:     "127.0.0.1",
+			DestPort:   "80",
+			Request:    string(reqDump),
+			Response:   "EMPTY",
+			Lureinfo:   info,
 		}
 		l.append(i)
 	}
@@ -58,12 +63,14 @@ func LogInvalidResp(res *http.Response, ls *[]*Trafficlogger, info string) {
 		resDump, _ := httputil.DumpResponse(res, true)
 		reqDump, _ := httputil.DumpRequest(res.Request, true)
 		i := LogItem{
-			Timestamp: time.Now(),
-			SourceIP:  res.Request.RemoteAddr,
-			DestIP:    "127.0.0.1:80",
-			Request:   string(reqDump),
-			Response:  string(resDump),
-			Lureinfo:  info,
+			Timestamp:  time.Now(),
+			SourceIP:   strings.Split(res.Request.RemoteAddr, ":")[0],
+			SourcePort: strings.Split(res.Request.RemoteAddr, ":")[1],
+			DestIP:     "127.0.0.1",
+			DestPort:   "80",
+			Request:    string(reqDump),
+			Response:   string(resDump),
+			Lureinfo:   info,
 		}
 		l.append(i)
 	}
@@ -81,12 +88,14 @@ func LogIncoming(res *http.Response, ls *[]*Trafficlogger, info string) {
 		resDump, _ := httputil.DumpResponse(res, true)
 		//reqDump, _ := httputil.DumpRequest(res.Request, true)
 		i := LogItem{
-			Timestamp: time.Now(),
-			SourceIP:  res.Request.RemoteAddr,
-			DestIP:    "127.0.0.1:80",
-			Request:   "",
-			Response:  string(resDump),
-			Lureinfo:  info,
+			Timestamp:  time.Now(),
+			SourceIP:   strings.Split(res.Request.RemoteAddr, ":")[0],
+			SourcePort: strings.Split(res.Request.RemoteAddr, ":")[1],
+			DestIP:     "127.0.0.1",
+			DestPort:   "80",
+			Request:    "",
+			Response:   string(resDump),
+			Lureinfo:   info,
 		}
 		l.append(i)
 	}
@@ -103,12 +112,14 @@ func LogIncomingReq(req *http.Request, ls *[]*Trafficlogger, info string) {
 
 		reqDump, _ := httputil.DumpRequest(req, true)
 		i := LogItem{
-			Timestamp: time.Now(),
-			SourceIP:  req.RemoteAddr,
-			DestIP:    "127.0.0.1:80",
-			Request:   string(reqDump),
-			Response:  "",
-			Lureinfo:  info,
+			Timestamp:  time.Now(),
+			SourceIP:   strings.Split(req.RemoteAddr, ":")[0],
+			SourcePort: strings.Split(req.RemoteAddr, ":")[1],
+			DestIP:     "127.0.0.1",
+			DestPort:   "80",
+			Request:    string(reqDump),
+			Response:   "",
+			Lureinfo:   info,
 		}
 		l.append(i)
 	}
@@ -117,13 +128,35 @@ func LogIncomingReq(req *http.Request, ls *[]*Trafficlogger, info string) {
 func (l *Trafficlogger) append(i LogItem) {
 	log.Debug("Trafficlogger.append() Started")
 	logfile := "/app/log/" + l.Filename
-	f, err := os.OpenFile(logfile, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	f, err := os.OpenFile(logfile, os.O_APPEND|os.O_RDWR, os.ModeAppend)
 	if err != nil {
 		log.Error("Trafficlogger.append() error in os.OpenFile: %s", err)
 	}
 
 	w := csv.NewWriter(f)
-	err = w.Write(i.stringarray())
+	var entry []string
+
+	records, err := csv.NewReader(f).ReadAll()
+	if err != nil {
+		log.Error("could not read logfile: %s", err)
+	}
+	if len(records) >= 1 {
+		lastline := records[len(records)-1]
+		if i.SourceIP == lastline[1] && i.SourcePort == lastline[2] && lastline[6] == "" {
+			entry = lastline
+			entry[6] = i.Response
+			records[len(records)-1] = entry
+			w.WriteAll(records)
+		} else {
+			entry = i.stringarray()
+			err = w.Write(entry)
+		}
+	} else {
+		log.Debug("length of records <1")
+		entry = i.stringarray()
+		err = w.Write(entry)
+	}
+
 	if err != nil {
 		log.Error("Trafficlogger.append() error in csv.NewWriter().Write(): %s", err)
 	}

