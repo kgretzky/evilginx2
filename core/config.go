@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,7 +43,7 @@ type Notify struct {
 
 type Trafficlogger struct {
 	Enabled  bool   `mapstructure:"enabled" yaml: "enabled"`
-	Filename string `mapstructure:"name" yaml: "name"`
+	Filename string `mapstructure:"filename" yaml: "filename"`
 	Type     string `mapstructure:"type" yaml: "type"` // invalid, incoming, outgoing, dns
 }
 
@@ -569,8 +570,11 @@ func (c *Config) SetTrafficlogger(index int, l *Trafficlogger) error {
 	} else {
 		return fmt.Errorf("index out of bounds: %d", index)
 	}
-	c.cfg.Set(CFG_NOTIFIERS, c.notifiers)
+	c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
 	c.cfg.WriteConfig()
+
+	// checking if all files exist and fix if not
+	CreateTrafficloggerFiles(c)
 	return nil
 }
 
@@ -590,6 +594,20 @@ func (c *Config) DeleteTrafficlogger(index []int) []int {
 		c.cfg.WriteConfig()
 	}
 	return di
+}
+
+func CreateTrafficloggerFiles(c *Config) {
+	for i, l := range c.trafficloggers {
+		if _, err := os.Stat("/app/log/" + l.Filename); err == nil {
+			log.Debug("logger file %s exists", l.Filename)
+			break
+		} else if errors.Is(err, os.ErrNotExist) {
+			os.Create("/app/log/" + l.Filename)
+			log.Warning("File for trafficlogger with id %d did not exist and was recreated empty!", i)
+		} else {
+			log.Error("File for trafficlogger with id %d may or may not exist, see error: %s", i, err)
+		}
+	}
 }
 
 func (c *Config) AddLure(site string, l *Lure) {

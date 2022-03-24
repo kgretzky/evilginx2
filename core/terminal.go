@@ -980,6 +980,7 @@ func (t *Terminal) handleTrafficloggers(args []string) error {
 					l.Filename = val
 					do_update = true
 					log.Info("filename = '%s", l.Filename)
+					log.Warning("Changing the filename here does not rename the existing logfile!")
 				}
 			}
 			if do_update {
