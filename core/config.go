@@ -545,6 +545,11 @@ func (c *Config) IsValidTrafficloggerType(loggertype string) bool {
 }
 
 func (c *Config) AddTrafficlogger(l *Trafficlogger) {
+	_, err := os.Create("/app/log/" + l.Filename)
+	if err != nil {
+		log.Error("failed to create file, aborting creation of logger: %s", err)
+		return
+	}
 	c.trafficloggers = append(c.trafficloggers, l)
 	c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
 	c.cfg.WriteConfig()

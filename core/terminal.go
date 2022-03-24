@@ -925,7 +925,7 @@ func (t *Terminal) handleTrafficloggers(args []string) error {
 	if pn > 0 {
 		switch args[0] {
 		case "create":
-			if pn != 4 {
+			if pn != 3 {
 				return fmt.Errorf("create: incorrect number of arguments. run 'help trafficloggers'")
 			}
 			if !t.cfg.IsValidTrafficloggerType(args[1]) {

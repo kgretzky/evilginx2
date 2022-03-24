@@ -25,50 +25,68 @@ func (i *LogItem) stringarray() []string {
 }
 
 // logs only the request, because no response was given
-func LogInvalid(req *http.Request) {
-	l := Trafficlogger{Enabled: true, Filename: "log.csv"}
+func LogInvalid(req *http.Request, ls *[]*Trafficlogger) {
 	log.Debug("LogInvalid Started")
-	reqDump, _ := httputil.DumpRequest(req, true)
-	i := LogItem{
-		Timestamp: time.Now(),
-		SourceIP:  req.RemoteAddr,
-		DestIP:    "127.0.0.1:80",
-		Request:   string(reqDump),
-		Response:  "EMPTY",
+	for i, l := range *ls {
+		if !l.Enabled || l.Type != "invalid" {
+			break
+		}
+		log.Debug("Traficlogger with id %d is configured to log this event", i)
+
+		reqDump, _ := httputil.DumpRequest(req, true)
+		i := LogItem{
+			Timestamp: time.Now(),
+			SourceIP:  req.RemoteAddr,
+			DestIP:    "127.0.0.1:80",
+			Request:   string(reqDump),
+			Response:  "EMPTY",
+		}
+		l.append(i)
 	}
-	l.append(i)
 }
 
 // logs a response and its request
-func LogInvalidResp(res *http.Response) {
-	l := Trafficlogger{Enabled: true, Filename: "log.csv"}
+func LogInvalidResp(res *http.Response, ls *[]*Trafficlogger) {
 	log.Debug("LogInvalidResp Started")
-	resDump, _ := httputil.DumpResponse(res, true)
-	reqDump, _ := httputil.DumpRequest(res.Request, true)
-	i := LogItem{
-		Timestamp: time.Now(),
-		SourceIP:  res.Request.RemoteAddr,
-		DestIP:    "127.0.0.1:80",
-		Request:   string(reqDump),
-		Response:  string(resDump),
+	for i, l := range *ls {
+		if !l.Enabled || l.Type != "invalid" {
+			break
+		}
+		log.Debug("Traficlogger with id %d is configured to log this event", i)
+
+		resDump, _ := httputil.DumpResponse(res, true)
+		reqDump, _ := httputil.DumpRequest(res.Request, true)
+		i := LogItem{
+			Timestamp: time.Now(),
+			SourceIP:  res.Request.RemoteAddr,
+			DestIP:    "127.0.0.1:80",
+			Request:   string(reqDump),
+			Response:  string(resDump),
+		}
+		l.append(i)
 	}
-	l.append(i)
 }
 
 // logs a response and its request
-func LogIncoming(res *http.Response) {
-	l := Trafficlogger{Enabled: true, Filename: "log.csv"}
+func LogIncoming(res *http.Response, ls *[]*Trafficlogger) {
 	log.Debug("LogIncoming Started")
-	resDump, _ := httputil.DumpResponse(res, true)
-	reqDump, _ := httputil.DumpRequest(res.Request, true)
-	i := LogItem{
-		Timestamp: time.Now(),
-		SourceIP:  res.Request.RemoteAddr,
-		DestIP:    "127.0.0.1:80",
-		Request:   string(reqDump),
-		Response:  string(resDump),
+	for i, l := range *ls {
+		if !l.Enabled || l.Type != "incoming" {
+			break
+		}
+		log.Debug("Traficlogger with id %d is configured to log this event", i)
+
+		resDump, _ := httputil.DumpResponse(res, true)
+		reqDump, _ := httputil.DumpRequest(res.Request, true)
+		i := LogItem{
+			Timestamp: time.Now(),
+			SourceIP:  res.Request.RemoteAddr,
+			DestIP:    "127.0.0.1:80",
+			Request:   string(reqDump),
+			Response:  string(resDump),
+		}
+		l.append(i)
 	}
-	l.append(i)
 }
 
 func (l *Trafficlogger) append(i LogItem) {
