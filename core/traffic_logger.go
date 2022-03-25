@@ -167,3 +167,35 @@ func (l *Trafficlogger) append(i LogItem) {
 	f.Close() // not deferred anymore
 	log.Debug("Log appending complete: " + logfile)
 }
+
+func (l *Trafficlogger) getFilesize() int64 {
+	logfile := "/app/log/" + l.Filename
+	f, err := os.Open(logfile)
+	if err != nil {
+		log.Error("Trafficlogger.getFilesize() error in os.Open: %s", err)
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		log.Error("Trafficlogger.getFilesize() error in f.Stat(): %s", err)
+	}
+	return fi.Size()
+}
+
+func (l *Trafficlogger) getEntrysize() int {
+	logfile := "/app/log/" + l.Filename
+	f, err := os.OpenFile(logfile, os.O_APPEND|os.O_RDONLY, os.ModeAppend)
+	if err != nil {
+		log.Error("Trafficlogger.append() error in os.OpenFile: %s", err)
+	}
+
+	r := csv.NewReader(f)
+	r.Comma = rune(l.Delimiter)
+	records, err := r.ReadAll()
+	if err != nil {
+		log.Error("could not read logfile: %s", err)
+	}
+
+	return len(records)
+}

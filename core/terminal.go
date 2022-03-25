@@ -2136,7 +2136,7 @@ func (t *Terminal) trafficloggerValidDelimiter(args string) []string {
 
 func (t *Terminal) sprintTrafficloggers() string {
 	//higreen := color.New(color.FgHiGreen)
-	//green := color.New(color.FgGreen)
+	green := color.New(color.FgGreen)
 	//hired := color.New(color.FgHiRed)
 	hiblue := color.New(color.FgHiBlue)
 	//yellow := color.New(color.FgYellow)
@@ -2144,10 +2144,10 @@ func (t *Terminal) sprintTrafficloggers() string {
 	hcyan := color.New(color.FgHiCyan)
 	//white := color.New(color.FgHiWhite)
 	//n := 0
-	cols := []string{"id", "enabled", "type", "filename", "delimiter"}
+	cols := []string{"id", "enabled", "type", "filename", "delimiter", "No of Entries", "Filesize"}
 	var rows [][]string
 	for l, L := range t.cfg.trafficloggers {
-		rows = append(rows, []string{strconv.Itoa(l), hiblue.Sprint(L.Enabled), cyan.Sprint(L.Type), hcyan.Sprint(L.Filename), hcyan.Sprint(string(L.Delimiter))})
+		rows = append(rows, []string{strconv.Itoa(l), hiblue.Sprint(L.Enabled), cyan.Sprint(L.Type), hcyan.Sprint(L.Filename), hcyan.Sprint(string(L.Delimiter)), green.Sprint(strconv.Itoa(L.getEntrysize())), green.Sprint(HumanFileSize(L.getFilesize()))})
 	}
 	return AsTable(cols, rows)
 }

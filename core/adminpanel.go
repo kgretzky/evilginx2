@@ -111,11 +111,11 @@ func (a *AdminPanel) handleLogs(w http.ResponseWriter, r *http.Request) {
 	if len(a.cfg.trafficloggers) == 0 {
 		body = "No saved Sessions found"
 	} else {
-		cols := []string{"id", "enabled", "type", "filename", "delimiter", "downloadlink"}
+		cols := []string{"id", "enabled", "type", "filename", "delimiter", "no of Entries", "filesize", "downloadlink"}
 		var rows [][]string
 		for i, l := range a.cfg.trafficloggers {
 			logdownloadlink = "<a href='./logs/download/" + strconv.Itoa(i) + "'>Download</a>"
-			rows = append(rows, []string{strconv.Itoa(i), strconv.FormatBool(l.Enabled), l.Type, l.Filename, string(l.Delimiter), logdownloadlink})
+			rows = append(rows, []string{strconv.Itoa(i), strconv.FormatBool(l.Enabled), l.Type, l.Filename, string(l.Delimiter), strconv.Itoa(l.getEntrysize()), HumanFileSize(l.getFilesize()), logdownloadlink})
 		}
 
 		body = AsHTMLTable(cols, rows)

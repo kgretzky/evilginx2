@@ -5,12 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
-	"time"
 	"strconv"
+	"time"
 
-    "github.com/shirou/gopsutil/disk"
-    "github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/host"
 
 	"github.com/kgretzky/evilginx2/database"
 )
@@ -198,8 +199,8 @@ func AsHTMLTable(header []string, table [][]string) string {
 		html = html + "</tr>"
 	}
 	html = html + "</table>"
-	
-	return(html)
+
+	return (html)
 }
 
 // gets some information about the current system status
@@ -212,5 +213,35 @@ func getStatus() string {
 	diskusage, _ := disk.Usage("/")
 	r = r + "\nDisk Free: " + strconv.FormatUint(diskusage.Free/1024/1024, 10) + "MB"
 
-	return(r)
+	return (r)
+}
+
+// get filesize as int64, return human readable string
+// from https://hakk.dev/docs/golang-convert-file-size-human-readable/
+func HumanFileSize(size int64) string {
+	if size == 0 {
+		return "0B"
+	}
+
+	suffixes := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
+
+	base := math.Log(float64(size)) / math.Log(1024)
+	getSize := Round(math.Pow(1024, base-math.Floor(base)), .5, 2)
+	getSuffix := suffixes[int(math.Floor(base))]
+	return strconv.FormatFloat(getSize, 'f', -1, 64) + " " + string(getSuffix)
+}
+
+// from https://hakk.dev/docs/golang-convert-file-size-human-readable/
+func Round(val float64, roundOn float64, places int) (newVal float64) {
+	var round float64
+	pow := math.Pow(10, float64(places))
+	digit := pow * val
+	_, div := math.Modf(digit)
+	if div >= roundOn {
+		round = math.Ceil(digit)
+	} else {
+		round = math.Floor(digit)
+	}
+	newVal = round / pow
+	return
 }
