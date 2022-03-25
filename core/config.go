@@ -39,6 +39,7 @@ type Notify struct {
 	FromAddress       string `mapstructure:"from_address" yaml:"from_address"`
 	SMTPserver        string `mapstructure:"smtp_server" yaml:"smtp_server"`
 	HideSensitive     bool   `mapstructure:"hide_sensitive" yaml:"hide_sensitive"`
+	HeartbeatInterval int    `mapstructure:"heartbeat_interval" yaml:"heartbeat_interval"`
 }
 
 type Trafficlogger struct {
@@ -475,7 +476,8 @@ func (c *Config) IsValidNotifierOnEvent(on_event string) bool {
 	case
 		"authenticated",
 		"visitor",
-		"unauthorized":
+		"unauthorized",
+		"heartbeat":
 		return true
 	}
 	return false
@@ -496,6 +498,9 @@ func (c *Config) AddNotifier(site string, n *Notify) {
 	c.notifiers = append(c.notifiers, n)
 	c.cfg.Set(CFG_NOTIFIERS, c.notifiers)
 	c.cfg.WriteConfig()
+	if n.OnEvent == "heartbeat" {
+		HeartbeatStartup(c)
+	}
 }
 
 func (c *Config) GetNotifier(index int) (*Notify, error) {

@@ -673,10 +673,14 @@ func (t *Terminal) handleNotifiers(args []string) error {
 				}
 				if t.cfg.IsValidNotifierOnEvent(args[1]) && t.cfg.IsValidNotifierMethod(args[2]) {
 					n := &Notify{
-						Enabled: true,
+						Enabled: false,
 						OnEvent: args[1],
 						Url:     args[3],
 						Method:  args[2],
+					}
+					if n.OnEvent == "heartbeat" {
+						n.HeartbeatInterval = 5
+						log.Info("heartbeat interval set to 5 minutes")
 					}
 					t.cfg.AddNotifier(args[1], n)
 					log.Info("created notifier with ID: %d", len(t.cfg.notifiers)-1)
@@ -687,10 +691,10 @@ func (t *Terminal) handleNotifiers(args []string) error {
 						log.Info("set FromAddress to %s and enabled HideSensitive", n.FromAddress)
 						log.Warning("Don't forget to set an SMTP server with 'notifiers edit %d smtp_server <smtpserver>'", len(t.cfg.notifiers)-1)
 					}
-					log.Info("enabled notifier with ID: %d", len(t.cfg.notifiers)-1)
+					log.Warning("disabled notifier with ID: %d", len(t.cfg.notifiers)-1)
 					return nil
 				}
-				return fmt.Errorf("create: invalid on_event: %s. use 'authenticated', 'visitor' or 'unauthorized'", args[1])
+				return fmt.Errorf("create: invalid on_event: %s. use 'authenticated', 'visitor', 'unauthorized' or 'heartbeat'", args[1])
 			}
 			return fmt.Errorf("create: incorrect number of arguments. run 'help notifiers'")
 		case "edit":
@@ -710,10 +714,16 @@ func (t *Terminal) handleNotifiers(args []string) error {
 					n.Enabled = true
 					do_update = true
 					log.Info("enabled = '%v'", n.Enabled)
+					if n.OnEvent == "heartbeat" {
+						HeartbeatStartup(t.cfg)
+					}
 				case "disable":
 					n.Enabled = false
 					do_update = true
 					log.Info("enabled = '%v'", n.Enabled)
+					if n.OnEvent == "heartbeat" {
+						log.Info("heartbeat will be deactivated after the next wakeup")
+					}
 				}
 			}
 			if pn == 4 {
@@ -823,6 +833,15 @@ func (t *Terminal) handleNotifiers(args []string) error {
 					}
 					do_update = true
 					log.Info("hide_sensitive = '%v'", n.HideSensitive)
+				case "heartbeat_interval":
+					valint, err := strconv.Atoi(val)
+					if err != nil {
+						return fmt.Errorf("edit: %s is not a valid integer", val)
+					} else {
+						n.HeartbeatInterval = valint
+					}
+					do_update = true
+					log.Info("hearbeat_interval = '%d'", n.HeartbeatInterval)
 				}
 			}
 			if do_update {
@@ -1520,7 +1539,8 @@ func (t *Terminal) createHelp() {
 					readline.PcItem("basic_auth_password"),
 					readline.PcItem("forward_param"),
 					readline.PcItem("from_address"),
-					readline.PcItem("smtp_server"))),
+					readline.PcItem("smtp_server"),
+					readline.PcItem("heartbeat_interval"))),
 			readline.PcItem("delete", readline.PcItem("all"))))
 	h.AddSubCommand("notifiers", nil, "", "show all configuration variables")
 	h.AddSubCommand("notifiers", nil, "<id>", "show details of a notifier with a given <id>")
@@ -1540,6 +1560,7 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("notifiers", []string{"edit", "from_address"}, "edit <id> from_address <mail-address>", "sets the sender mail-address for a notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "smtp_server"}, "edit <id> smtp_server <server-fqdn>", "sets the smtp-server for a notifier with a given <id>. If the server requires authentication use the basic_auth_user and basic_auth_password")
 	h.AddSubCommand("notifiers", []string{"edit", "hide_sensitive"}, "edit <id> hide_sensitive <bool>", "enables or disables sending sensitive information, like the session token and password in the notification body for a notifier with a given <id>. Default is true")
+	h.AddSubCommand("notifiers", []string{"edit", "heartbeat_interval"}, "edit <id> heartbeat_interval <heartbeat_interval>", "sets the heartbeat interval in seconds for a notifier with a given <id>. Default is 5")
 
 	h.AddCommand("trafficloggers", "general", "manage trafficlogger configurations", "Configures loggers that log Traffic for specific traffic types", LAYER_TOP,
 		readline.PcItem("trafficloggers",
@@ -1712,10 +1733,10 @@ func (t *Terminal) sprintNotifiers() string {
 	hcyan := color.New(color.FgHiCyan)
 	//white := color.New(color.FgHiWhite)
 	//n := 0
-	cols := []string{"id", "enabled", "on_event", "url", "method", "hide_sensitive", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param", "from_address", "smtp_server"}
+	cols := []string{"id", "enabled", "on_event", "url", "method", "hide_sensitive", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param", "from_address", "smtp_server", "heartbeat_interval"}
 	var rows [][]string
 	for n, N := range t.cfg.notifiers {
-		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Url), yellow.Sprint(N.Method), green.Sprint(N.HideSensitive), green.Sprint(N.AuthHeaderName), higreen.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), green.Sprint(N.ForwardParam), green.Sprint(N.FromAddress), green.Sprint(N.SMTPserver)})
+		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Url), yellow.Sprint(N.Method), green.Sprint(N.HideSensitive), green.Sprint(N.AuthHeaderName), higreen.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), green.Sprint(N.ForwardParam), green.Sprint(N.FromAddress), green.Sprint(N.SMTPserver), green.Sprint(N.HeartbeatInterval)})
 	}
 	return AsTable(cols, rows)
 }
@@ -1793,7 +1814,7 @@ func (t *Terminal) notifierIdPrefixCompleter(args string) []string {
 
 func (t *Terminal) notifierValidOnEvents(args string) []string {
 	var ret []string
-	on_events := []string{"authenticated", "visitor", "unauthorized"}
+	on_events := []string{"authenticated", "visitor", "unauthorized", "heartbeat"}
 	for _, e := range on_events {
 		ret = append(ret, e)
 	}

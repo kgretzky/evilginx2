@@ -139,6 +139,8 @@ func main() {
 		}
 	}
 
+	// start Heartbeat for existing Notifiers
+	core.HeartbeatStartup(cfg)
 	// create traficlogger files for exisitng traffic loggers
 	core.CreateTrafficloggerFiles(cfg)
 
