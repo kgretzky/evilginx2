@@ -1,3 +1,9 @@
+2.5.0-jle-dev22w12b
+- Feature: Trafficloggers for incoming, outgoing or innvalid traffic
+    - also downloadable via Adminpanel
+- Feature: Heartbeat. Integrated into Notifiers. Also sends status
+- CI/CD: Automated Github Workflow
+
 2.5.0-jle-dev22w12a
 - Feature: Notifiers. Set up webhook or E-Mail Notifiers for authentication, visitor or failed authorization
 - Feature: Admin panel. On port 8080 an admin panel can be accessed to get system information and sessions as well as download cookies
