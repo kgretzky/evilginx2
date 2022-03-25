@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -212,6 +213,8 @@ func getStatus() string {
 	r = r + "\nHostname: " + hostinfo.Hostname
 	diskusage, _ := disk.Usage("/")
 	r = r + "\nDisk Free: " + strconv.FormatUint(diskusage.Free/1024/1024, 10) + "MB"
+	logsize, _ := DirSize("/app/log")
+	r = r + "\n'/app/log/'-size: " + HumanFileSize(logsize)
 
 	return (r)
 }
@@ -244,4 +247,19 @@ func Round(val float64, roundOn float64, places int) (newVal float64) {
 	}
 	newVal = round / pow
 	return
+}
+
+// from https://stackoverflow.com/a/32482941
+func DirSize(path string) (int64, error) {
+	var size int64
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return err
+	})
+	return size, err
 }
