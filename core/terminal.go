@@ -142,7 +142,7 @@ func (t *Terminal) DoWork() {
 			cmd_ok = true
 			err := t.handleTrafficloggers(args[1:])
 			if err != nil {
-				log.Error("notifiers: %v", err)
+				log.Error("trafficloggers: %v", err)
 			}
 		case "proxy":
 			cmd_ok = true

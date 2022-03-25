@@ -390,7 +390,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 					resp := goproxy.NewResponse(req, "text/html", http.StatusNotFound, "")
 					if resp != nil {
-						LogInvalidRes(resp, &p.cfg.trafficloggers, "") //send to trafficlogger
+						LogInvalidRes(resp, &p.cfg.trafficloggers, "Lure: "+req.Host) //send to trafficlogger
 						return req, resp
 					}
 				}

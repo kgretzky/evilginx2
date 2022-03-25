@@ -538,6 +538,7 @@ func (c *Config) DeleteNotifier(index []int) []int {
 func (c *Config) IsValidTrafficloggerType(loggertype string) bool {
 	switch loggertype {
 	case
+		"invalid",
 		"incoming",
 		"outgoing",
 		"dns":
