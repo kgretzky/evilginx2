@@ -6,7 +6,6 @@ on:
     tags:        
       - v*
     branches:
-      - main
       - develop
 
 jobs:
@@ -24,8 +23,8 @@ jobs:
             ghcr.io/${{ github.repository }}
           # generate Docker tags based on the following events/attributes
           tags: |
-            type=schedule
             type=semver,pattern={{raw}}
+            type=semver,pattern={{raw}},value=latest
             type=ref,event=branch
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
