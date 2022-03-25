@@ -134,9 +134,12 @@ func (l *Trafficlogger) append(i LogItem) {
 	}
 
 	w := csv.NewWriter(f)
+	w.Comma = rune(l.Delimiter)
 	var entry []string
 
-	records, err := csv.NewReader(f).ReadAll()
+	r := csv.NewReader(f)
+	r.Comma = rune(l.Delimiter)
+	records, err := r.ReadAll()
 	if err != nil {
 		log.Error("could not read logfile: %s", err)
 	}

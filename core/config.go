@@ -42,9 +42,10 @@ type Notify struct {
 }
 
 type Trafficlogger struct {
-	Enabled  bool   `mapstructure:"enabled" yaml: "enabled"`
-	Filename string `mapstructure:"filename" yaml: "filename"`
-	Type     string `mapstructure:"type" yaml: "type"` // invalid, incoming, outgoing, dns
+	Enabled   bool   `mapstructure:"enabled" yaml: "enabled"`
+	Type      string `mapstructure:"type" yaml: "type"` // invalid, incoming, outgoing, dns
+	Filename  string `mapstructure:"filename" yaml: "filename"`
+	Delimiter byte   `mapstructure:"delimiter" yaml:"delimiter"`
 }
 
 type Config struct {
@@ -551,6 +552,9 @@ func (c *Config) AddTrafficlogger(l *Trafficlogger) {
 		log.Error("failed to create file, aborting creation of logger: %s", err)
 		return
 	}
+	if l.Delimiter == 0 {
+		l.Delimiter = ','
+	}
 	c.trafficloggers = append(c.trafficloggers, l)
 	c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
 	c.cfg.WriteConfig()
@@ -569,6 +573,9 @@ func (c *Config) SetTrafficlogger(index int, l *Trafficlogger) error {
 		c.trafficloggers[index] = l
 	} else {
 		return fmt.Errorf("index out of bounds: %d", index)
+	}
+	if l.Delimiter == 0 {
+		l.Delimiter = ','
 	}
 	c.cfg.Set(CFG_TRAFFIC_LOGGERS, c.trafficloggers)
 	c.cfg.WriteConfig()

