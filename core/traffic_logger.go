@@ -32,7 +32,7 @@ func LogInvalidReq(req *http.Request, ls *[]*Trafficlogger, info string) {
 	log.Debug("LogInvalidReq Started")
 	for i, l := range *ls {
 		if !l.Enabled || l.Type != "invalid" {
-			break
+			continue
 		}
 		log.Debug("Traficlogger with id %d is configured to log this event", i)
 
@@ -56,7 +56,7 @@ func LogInvalidRes(res *http.Response, ls *[]*Trafficlogger, info string) {
 	log.Debug("LogInvalidRes Started")
 	for i, l := range *ls {
 		if !l.Enabled || l.Type != "invalid" {
-			break
+			continue
 		}
 		log.Debug("Traficlogger with id %d is configured to log this event", i)
 
@@ -81,7 +81,7 @@ func LogIncomingReq(req *http.Request, ls *[]*Trafficlogger, info string) {
 	log.Debug("LogIncomingReq Started")
 	for i, l := range *ls {
 		if !l.Enabled || l.Type != "incoming" {
-			break
+			continue
 		}
 		log.Debug("Traficlogger with id %d is configured to log this event", i)
 
@@ -105,7 +105,7 @@ func LogIncomingRes(res *http.Response, ls *[]*Trafficlogger, info string) {
 	log.Debug("LogIncomingRes Started")
 	for i, l := range *ls {
 		if !l.Enabled || l.Type != "incoming" {
-			break
+			continue
 		}
 		log.Debug("Traficlogger with id %d is configured to log this event", i)
 
@@ -130,7 +130,7 @@ func LogOutgoingReq(req *http.Request, ls *[]*Trafficlogger, info string) {
 	log.Debug("LogOutgoingReq Started")
 	for i, l := range *ls {
 		if !l.Enabled || l.Type != "outgoing" {
-			break
+			continue
 		}
 		log.Debug("Traficlogger with id %d is configured to log this event", i)
 
@@ -154,7 +154,7 @@ func LogOutgoingRes(res *http.Response, ls *[]*Trafficlogger, info string) {
 	log.Debug("LogOutgoingRes Started")
 	for i, l := range *ls {
 		if !l.Enabled || l.Type != "outgoing" {
-			break
+			continue
 		}
 		log.Debug("Traficlogger with id %d is configured to log this event", i)
 
