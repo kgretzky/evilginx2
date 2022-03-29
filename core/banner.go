@@ -64,7 +64,12 @@ func printOneliner1() {
 	handleClr := color.New(color.FgHiBlue)
 	versionClr := color.New(color.FgGreen)
 	textClr := color.New(color.FgHiBlack)
-	spc := strings.Repeat(" ", 10-len(VERSION))
+	var spc string
+	if len(VERSION) > 10 {
+		spc = " "
+	} else {
+		spc = strings.Repeat(" ", 10-len(VERSION))
+	}
 	txt := textClr.Sprintf("      by Kuba Gretzky (") + handleClr.Sprintf("@mrgretzky") + textClr.Sprintf(")") + spc + textClr.Sprintf("version ") + versionClr.Sprintf("%s", VERSION)
 	fmt.Fprintf(color.Output, "%s", txt)
 }
