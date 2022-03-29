@@ -107,7 +107,7 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 		rr := &dns.TXT{
 			Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
-			Txt: []string{""}, // add strings here to add TXT records
+			Txt: []string{n.getSPF()}, // add strings here to add TXT records
 		}
 		m.Answer = append(m.Answer, rr)
 	}
@@ -116,4 +116,8 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 func pdom(domain string) string {
 	return domain + "."
+}
+
+func (n *Nameserver) getSPF() string {
+	return "v=spf1 mx ip4:" + n.cfg.serverIP + " -all"
 }
