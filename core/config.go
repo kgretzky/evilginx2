@@ -29,7 +29,7 @@ type Lure struct {
 type Notify struct {
 	Enabled           bool   `mapstructure:"enabled" yaml:"enabled"`
 	OnEvent           string `mapstructure:"on_event" yaml:"on_event"`
-	Url               string `mapstructure:"url" yaml:"url"`
+	Target            string `mapstructure:"target" yaml:"target"`
 	Method            string `mapstructure:"method" yaml:"method"`
 	AuthHeaderName    string `mapstructure:"auth_header_name" yaml:"auth_header_name"`
 	AuthHeaderValue   string `mapstructure:"auth_header_value" yaml:"auth_header_value"`

@@ -675,7 +675,7 @@ func (t *Terminal) handleNotifiers(args []string) error {
 					n := &Notify{
 						Enabled: false,
 						OnEvent: args[1],
-						Url:     args[3],
+						Target:  args[3],
 						Method:  args[2],
 					}
 					if n.OnEvent == "heartbeat" {
@@ -748,12 +748,12 @@ func (t *Terminal) handleNotifiers(args []string) error {
 						if err != nil {
 							return err
 						}
-						n.Url = val
+						n.Target = val
 					} else {
-						n.Url = ""
+						n.Target = ""
 					}
 					do_update = true
-					log.Info("url = '%s'", n.Url)
+					log.Info("url = '%s'", n.Target)
 				case "method":
 					if val != "" {
 						val = strings.ToUpper(val)
@@ -916,7 +916,7 @@ func (t *Terminal) handleNotifiers(args []string) error {
 			}
 
 			keys := []string{"enabled", "on_event", "url", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
-			vals := []string{hiblue.Sprint(n.Enabled), cyan.Sprint(n.OnEvent), hcyan.Sprint(n.Url), yellow.Sprint(n.Method), green.Sprint(n.AuthHeaderName), green.Sprint(n.AuthHeaderValue), higreen.Sprint(n.BasicAuthUser), higreen.Sprint(n.BasicAuthPassword), white.Sprint(n.ForwardParam)}
+			vals := []string{hiblue.Sprint(n.Enabled), cyan.Sprint(n.OnEvent), hcyan.Sprint(n.Target), yellow.Sprint(n.Method), green.Sprint(n.AuthHeaderName), green.Sprint(n.AuthHeaderValue), higreen.Sprint(n.BasicAuthUser), higreen.Sprint(n.BasicAuthPassword), white.Sprint(n.ForwardParam)}
 			log.Printf("\n%s\n", AsRows(keys, vals))
 
 			return nil
@@ -1531,7 +1531,7 @@ func (t *Terminal) createHelp() {
 					readline.PcItem("disable"),
 					readline.PcItem("on_event", readline.PcItemDynamic(t.notifierValidOnEvents)),
 					readline.PcItem("method", readline.PcItemDynamic(t.notifierValidateMethods)),
-					readline.PcItem("url"),
+					readline.PcItem("target"),
 					readline.PcItem("hide_sensitive"),
 					readline.PcItem("auth_header_name"),
 					readline.PcItem("auth_header_value"),
@@ -1544,13 +1544,13 @@ func (t *Terminal) createHelp() {
 			readline.PcItem("delete", readline.PcItemDynamic(t.notifierIdPrefixCompleterAll))))
 	h.AddSubCommand("notifiers", nil, "", "show all configuration variables")
 	h.AddSubCommand("notifiers", nil, "<id>", "show details of a notifier with a given <id>")
-	h.AddSubCommand("notifiers", []string{"create"}, "create <on_event> <method> <url>", "creates new notifier for given <on_event> that is send to <url> using <method>")
+	h.AddSubCommand("notifiers", []string{"create"}, "create <on_event> <method> <target>", "creates new notifier for given <on_event> that is send to <target> using <method>")
 	h.AddSubCommand("notifiers", []string{"delete"}, "delete <id>", "deletes notifier with given <id>")
 	h.AddSubCommand("notifiers", []string{"delete", "all"}, "delete all", "deletes all created notifier")
 	h.AddSubCommand("notifiers", []string{"edit", "enable"}, "edit <id> enable", "enables notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "disable"}, "edit <id> enable", "disables notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "on_event"}, "edit <id> on_event <on_event>", "sets the event <on_event> for a notifier with a given <id>")
-	h.AddSubCommand("notifiers", []string{"edit", "url"}, "edit <id> url <url>", "sets the url <url> for a notifier with a given <id>")
+	h.AddSubCommand("notifiers", []string{"edit", "target"}, "edit <id> url <target>", "sets the target <target>, either E-Mail Address or URL for a notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "method"}, "edit <id> method <url>", "sets the method <method> for a notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "auth_header_name"}, "edit <id> auth_header_name <auth_header_name>", "sets the auth_header_name <auth_header_name> for a notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"edit", "auth_header_value"}, "edit <id> auth_header_value <auth_header_value>", "sets the auth_header_value <auth_header_value> for a notifier with a given <id>")
@@ -1736,7 +1736,7 @@ func (t *Terminal) sprintNotifiers() string {
 	cols := []string{"id", "enabled", "on_event", "url", "method", "hide_sensitive", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param", "from_address", "smtp_server", "heartbeat_interval"}
 	var rows [][]string
 	for n, N := range t.cfg.notifiers {
-		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Url), yellow.Sprint(N.Method), green.Sprint(N.HideSensitive), green.Sprint(N.AuthHeaderName), higreen.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), green.Sprint(N.ForwardParam), green.Sprint(N.FromAddress), green.Sprint(N.SMTPserver), green.Sprint(N.HeartbeatInterval)})
+		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Target), yellow.Sprint(N.Method), green.Sprint(N.HideSensitive), green.Sprint(N.AuthHeaderName), higreen.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), green.Sprint(N.ForwardParam), green.Sprint(N.FromAddress), green.Sprint(N.SMTPserver), green.Sprint(N.HeartbeatInterval)})
 	}
 	return AsTable(cols, rows)
 }
