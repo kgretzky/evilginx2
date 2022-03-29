@@ -1541,7 +1541,7 @@ func (t *Terminal) createHelp() {
 					readline.PcItem("from_address"),
 					readline.PcItem("smtp_server"),
 					readline.PcItem("heartbeat_interval"))),
-			readline.PcItem("delete", readline.PcItem("all"))))
+			readline.PcItem("delete", readline.PcItemDynamic(t.notifierIdPrefixCompleterAll))))
 	h.AddSubCommand("notifiers", nil, "", "show all configuration variables")
 	h.AddSubCommand("notifiers", nil, "<id>", "show details of a notifier with a given <id>")
 	h.AddSubCommand("notifiers", []string{"create"}, "create <on_event> <method> <url>", "creates new notifier for given <on_event> that is send to <url> using <method>")
@@ -1809,6 +1809,13 @@ func (t *Terminal) notifierIdPrefixCompleter(args string) []string {
 	for n, _ := range t.cfg.notifiers {
 		ret = append(ret, strconv.Itoa(n))
 	}
+	return ret
+}
+
+func (t *Terminal) notifierIdPrefixCompleterAll(args string) []string {
+	var ret []string
+	ret = t.notifierIdPrefixCompleter("")
+	ret = append(ret, "all")
 	return ret
 }
 
