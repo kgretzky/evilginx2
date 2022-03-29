@@ -1,4 +1,4 @@
-FROM golang:1.13.1-alpine as build
+FROM golang:alpine as build
 
 RUN apk add --update \
     git \
@@ -18,7 +18,7 @@ COPY . /go/src/github.com/kgretzky/evilginx2
 
 RUN go build -o ./bin/evilginx main.go
 
-FROM alpine:3.8
+FROM alpine
 
 RUN apk add --update \
     ca-certificates \
