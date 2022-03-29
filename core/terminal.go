@@ -1813,21 +1813,11 @@ func (t *Terminal) notifierIdPrefixCompleter(args string) []string {
 }
 
 func (t *Terminal) notifierValidOnEvents(args string) []string {
-	var ret []string
-	on_events := []string{"authenticated", "visitor", "unauthorized", "heartbeat"}
-	for _, e := range on_events {
-		ret = append(ret, e)
-	}
-	return ret
+	return []string{"authenticated", "visitor", "unauthorized", "heartbeat"}
 }
 
 func (t *Terminal) notifierValidateMethods(args string) []string {
-	var ret []string
-	on_events := []string{"GET", "POST", "E-Mail"}
-	for _, e := range on_events {
-		ret = append(ret, e)
-	}
-	return ret
+	return []string{"GET", "POST", "E-Mail"}
 }
 
 func (t *Terminal) luresIdPrefixCompleter(args string) []string {
