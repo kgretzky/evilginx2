@@ -1,11 +1,12 @@
 package core
 
 import (
-	"github.com/miekg/dns"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/miekg/dns"
 
 	"github.com/kgretzky/evilginx2/log"
 )
@@ -102,15 +103,13 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		}
 	case dns.TypeTXT:
 		log.Debug("DNS TXT: " + strings.ToLower(r.Question[0].Name))
-		txt, ok := n.txt[strings.ToLower(m.Question[0].Name)]
+		txt := n.txt[strings.ToLower(m.Question[0].Name)]
 
-		if ok {
-			rr := &dns.TXT{
-				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
-				Txt: []string{txt.value},
-			}
-			m.Answer = append(m.Answer, rr)
+		rr := &dns.TXT{
+			Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
+			Txt: []string{""}, // add strings here to add TXT records
 		}
+		m.Answer = append(m.Answer, rr)
 	}
 	w.WriteMsg(m)
 }
