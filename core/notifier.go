@@ -26,6 +26,11 @@ type Visitor struct {
 	Tokens  string `json:"tokens"`
 }
 
+type Test struct {
+	Test string    `json:"test"`
+	Time time.Time `json:"time"`
+}
+
 //creates the body for the message or http request
 func NotifyGenerateBody(n *Notify, info interface{}) (body []byte, err error) {
 	if n.HideSensitive {
@@ -154,7 +159,6 @@ func NotifyOnAuth(n *Notify, session database.Session, phishlet *Phishlet) error
 		Session: s,
 		Tokens:  tokensToCookie(s.Tokens, "Chromium"),
 	}
-	//TODO option to not send sensitive data by mail
 
 	log.Debug("Starting NotifyOnAuth")
 
@@ -172,6 +176,20 @@ func NotifyOnAuth(n *Notify, session database.Session, phishlet *Phishlet) error
 
 func NotifyHeartbeat(n *Notify) error {
 	err := NotifierSend(n, []byte(getStatus()))
+	return err
+}
+
+func NotifyTest(n *Notify) error {
+	info := Test{
+		Test: "Test",
+		Time: time.Now(),
+	}
+	body, err := NotifyGenerateBody(n, info)
+	if err != nil {
+		return err
+	}
+	err = NotifierSend(n, body)
+	log.Info("Test Notification sent to " + n.Target)
 	return err
 }
 

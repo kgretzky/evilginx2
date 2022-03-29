@@ -742,11 +742,16 @@ func (t *Terminal) handleNotifiers(args []string) error {
 					}
 					do_update = true
 					log.Info("on_event = '%s'", n.OnEvent)
-				case "url":
+				case "target":
 					if val != "" {
-						_, err := url.ParseRequestURI(val)
+						switch n.Method {
+						case "GET", "POST":
+							_, err = url.ParseRequestURI(val)
+						case "E-Mail":
+							_, err = mail.ParseAddress(val)
+						}
 						if err != nil {
-							return err
+							return fmt.Errorf("create: %v", err)
 						}
 						n.Target = val
 					} else {
@@ -852,6 +857,24 @@ func (t *Terminal) handleNotifiers(args []string) error {
 				return nil
 			}
 			return fmt.Errorf("edit: incorrect number of/or unknown arguments. run 'help notifiers'")
+		case "test":
+			if pn != 2 {
+				return fmt.Errorf("incorrect number of arguments")
+			}
+			if len(t.cfg.notifiers) == 0 {
+				break
+			}
+			n_id, err := strconv.Atoi(strings.TrimSpace(args[1]))
+			if err != nil {
+				return fmt.Errorf("edit: %v", err)
+			}
+			n, err := t.cfg.GetNotifier(n_id)
+			if err != nil {
+				return fmt.Errorf("edit: %v", err)
+			}
+
+			NotifyTest(n)
+			return nil
 		case "delete":
 			if pn == 2 {
 				if len(t.cfg.notifiers) == 0 {
@@ -915,7 +938,7 @@ func (t *Terminal) handleNotifiers(args []string) error {
 				return err
 			}
 
-			keys := []string{"enabled", "on_event", "url", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
+			keys := []string{"enabled", "on_event", "target", "method", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param"}
 			vals := []string{hiblue.Sprint(n.Enabled), cyan.Sprint(n.OnEvent), hcyan.Sprint(n.Target), yellow.Sprint(n.Method), green.Sprint(n.AuthHeaderName), green.Sprint(n.AuthHeaderValue), higreen.Sprint(n.BasicAuthUser), higreen.Sprint(n.BasicAuthPassword), white.Sprint(n.ForwardParam)}
 			log.Printf("\n%s\n", AsRows(keys, vals))
 
@@ -1541,6 +1564,7 @@ func (t *Terminal) createHelp() {
 					readline.PcItem("from_address"),
 					readline.PcItem("smtp_server"),
 					readline.PcItem("heartbeat_interval"))),
+			readline.PcItem("test", readline.PcItemDynamic(t.notifierIdPrefixCompleter)),
 			readline.PcItem("delete", readline.PcItemDynamic(t.notifierIdPrefixCompleterAll))))
 	h.AddSubCommand("notifiers", nil, "", "show all configuration variables")
 	h.AddSubCommand("notifiers", nil, "<id>", "show details of a notifier with a given <id>")
@@ -1733,7 +1757,7 @@ func (t *Terminal) sprintNotifiers() string {
 	hcyan := color.New(color.FgHiCyan)
 	//white := color.New(color.FgHiWhite)
 	//n := 0
-	cols := []string{"id", "enabled", "on_event", "url", "method", "hide_sensitive", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param", "from_address", "smtp_server", "heartbeat_interval"}
+	cols := []string{"id", "enabled", "on_event", "target", "method", "hide_sensitive", "auth_header_name", "auth_header_value", "basic_auth_user", "basic_auth_password", "forward_param", "from_address", "smtp_server", "heartbeat_interval"}
 	var rows [][]string
 	for n, N := range t.cfg.notifiers {
 		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(N.Enabled), cyan.Sprint(N.OnEvent), hcyan.Sprint(N.Target), yellow.Sprint(N.Method), green.Sprint(N.HideSensitive), green.Sprint(N.AuthHeaderName), higreen.Sprint(N.AuthHeaderValue), higreen.Sprint(N.BasicAuthUser), higreen.Sprint(N.BasicAuthPassword), green.Sprint(N.ForwardParam), green.Sprint(N.FromAddress), green.Sprint(N.SMTPserver), green.Sprint(N.HeartbeatInterval)})
