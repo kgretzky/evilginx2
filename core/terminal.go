@@ -2128,21 +2128,11 @@ func (t *Terminal) trafficloggerIdPrefixCompleter(args string) []string {
 }
 
 func (t *Terminal) trafficloggerValidType(args string) []string {
-	var ret []string
-	tltypes := []string{"invalid", "incoming", "outgoing", "dns"}
-	for _, e := range tltypes {
-		ret = append(ret, e)
-	}
-	return ret
+	return []string{"invalid", "incoming", "outgoing", "dns"}
 }
 
 func (t *Terminal) trafficloggerValidDelimiter(args string) []string {
-	var ret []string
-	tldelimiters := []string{",", ";"}
-	for _, e := range tldelimiters {
-		ret = append(ret, e)
-	}
-	return ret
+	return []string{",", ";"}
 }
 
 func (t *Terminal) sprintTrafficloggers() string {
