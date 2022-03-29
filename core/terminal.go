@@ -1572,7 +1572,7 @@ func (t *Terminal) createHelp() {
 					readline.PcItem("type", readline.PcItemDynamic(t.trafficloggerValidType)),
 					readline.PcItem("filename"),
 					readline.PcItem("delimiter", readline.PcItemDynamic(t.trafficloggerValidDelimiter)))),
-			readline.PcItem("delete", readline.PcItem("all"))))
+			readline.PcItem("delete", readline.PcItemDynamic(t.trafficloggerIdPrefixCompleter))))
 	h.AddSubCommand("trafficloggers", nil, "", "show all trafficloggers")
 	h.AddSubCommand("trafficloggers", nil, "<id>", "show details of a trafficlogger with a given <id>")
 	h.AddSubCommand("trafficloggers", []string{"create"}, "create <type> <filename>", "creates new trafficlogger for given <type> that is saved to /app/log/<filename>")
@@ -2131,6 +2131,13 @@ func (t *Terminal) trafficloggerIdPrefixCompleter(args string) []string {
 	for n, _ := range t.cfg.trafficloggers {
 		ret = append(ret, strconv.Itoa(n))
 	}
+	return ret
+}
+
+func (t *Terminal) trafficloggerIdPrefixCompleterAll(args string) []string {
+	var ret []string
+	ret = t.trafficloggerIdPrefixCompleter("")
+	ret = append(ret, "all")
 	return ret
 }
 
