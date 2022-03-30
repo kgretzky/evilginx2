@@ -85,21 +85,16 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		var rr dns.TXT
 
 		if dns.SplitDomainName(strings.ToLower(m.Question[0].Name))[0] == "_dmarc" {
-			// DMARC
+			// DMARC for _dmarc.**
 			rr = dns.TXT{
 				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
 				Txt: []string{n.getDMARC()},
 			}
-			m.Answer = append(m.Answer, &rr)
 		} else if dns.SplitDomainName(strings.ToLower(m.Question[0].Name))[1] == "_domainkey" {
-			// DKIM for *._domainkey.baseDomain
-			if len(n.cfg.dnscfg["dkim"]) > 0 {
-				rr = dns.TXT{
-					Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
-					Txt: []string{n.cfg.dnscfg["dkim"]},
-				}
-			} else {
-				log.Debug("No DKIM records configured")
+			// DKIM for *._domainkey.**
+			rr = dns.TXT{
+				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
+				Txt: []string{n.getDKIM()}, // add strings here to add TXT records
 			}
 		} else {
 			// no special TXT rule caught this, so it will answer default TXT
@@ -107,8 +102,12 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
 				Txt: []string{n.getSPF()}, // add strings here to add TXT records
 			}
-			m.Answer = append(m.Answer, &rr)
 		}
+		if len(rr.Txt[0]) > 255 {
+			// max length of txt is 255, split TXT records into multiple TXT records
+			rr.Txt = stringchunk(rr.Txt[0], 255)
+		}
+		m.Answer = append(m.Answer, &rr)
 	}
 	w.WriteMsg(m)
 }
@@ -130,5 +129,13 @@ func (n *Nameserver) getDMARC() string {
 		return "v=DMARC1; p=none; rua=mailto:postmaster@" + n.cfg.baseDomain
 	} else {
 		return n.cfg.dnscfg["dmarc"]
+	}
+}
+
+func (n *Nameserver) getDKIM() string {
+	if n.cfg.dnscfg["dkim"] == "" {
+		return ""
+	} else {
+		return n.cfg.dnscfg["dkim"]
 	}
 }

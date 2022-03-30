@@ -1151,7 +1151,7 @@ func (t *Terminal) handleDNScfg(args []string) error {
 		} else {
 			return fmt.Errorf("spf: invalid syntax: %s", args)
 		}
-		log.Info("spf = '%s'", t.cfg.dnscfg[args[1]])
+		log.Info("%s = '%s'", args[1], t.cfg.dnscfg[args[1]])
 
 		if do_update {
 			t.cfg.cfg.Set(CFG_DNS, t.cfg.dnscfg)
