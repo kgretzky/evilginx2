@@ -104,12 +104,31 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 	case dns.TypeTXT:
 		log.Debug("DNS TXT: " + strings.ToLower(r.Question[0].Name))
 		txt := n.txt[strings.ToLower(m.Question[0].Name)]
+		var rr dns.TXT
 
-		rr := &dns.TXT{
-			Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
-			Txt: []string{n.getSPF()}, // add strings here to add TXT records
+		if dns.SplitDomainName(strings.ToLower(m.Question[0].Name))[0] == "_dmarc" {
+			// DMARC
+			rr = dns.TXT{
+				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
+				Txt: []string{n.getDMARC()},
+			}
+			m.Answer = append(m.Answer, &rr)
+		} else if dns.SplitDomainName(strings.ToLower(m.Question[0].Name))[1] == "_domainkey" {
+			// DKIM for *._domainkey.baseDomain
+			if len(n.cfg.dnscfg.dkim) > 0 {
+				rr = dns.TXT{
+					Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
+					Txt: n.getDKIM(),
+				}
+			}
+		} else {
+			// no special TXT rule caught this, so it will answer default TXT
+			rr = dns.TXT{
+				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
+				Txt: []string{n.getSPF()}, // add strings here to add TXT records
+			}
+			m.Answer = append(m.Answer, &rr)
 		}
-		m.Answer = append(m.Answer, rr)
 	}
 	w.WriteMsg(m)
 }
@@ -119,5 +138,21 @@ func pdom(domain string) string {
 }
 
 func (n *Nameserver) getSPF() string {
-	return "v=spf1 mx ip4:" + n.cfg.serverIP + " -all"
+	if n.cfg.dnscfg.spf == "" {
+		return "v=spf1 a mx ip4:" + n.cfg.serverIP + " -all"
+	} else {
+		return n.cfg.dnscfg.spf
+	}
+}
+
+func (n *Nameserver) getDMARC() string {
+	if n.cfg.dnscfg.dmarc == "" {
+		return "v=DMARC1; p=none; rua=mailto:postmaster@" + n.cfg.baseDomain
+	} else {
+		return n.cfg.dnscfg.dmarc
+	}
+}
+
+func (n *Nameserver) getDKIM() []string {
+	return n.cfg.dnscfg.dkim
 }

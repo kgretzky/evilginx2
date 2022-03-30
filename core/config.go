@@ -49,6 +49,12 @@ type Trafficlogger struct {
 	Delimiter byte   `mapstructure:"delimiter" yaml:"delimiter"`
 }
 
+type DNScfg struct {
+	spf   string   `mapstructure:"spf" yaml:"spf"` // when empty, use default
+	dmarc string   `mapstructure:"dmarc" yaml:"dmarc"`
+	dkim  []string `mapstructure:"dkim" yaml:"dkim"`
+}
+
 type Config struct {
 	siteDomains       map[string]string
 	baseDomain        string
@@ -73,6 +79,7 @@ type Config struct {
 	lures             []*Lure
 	notifiers         []*Notify
 	trafficloggers    []*Trafficlogger
+	dnscfg            *DNScfg
 	cfg               *viper.Viper
 }
 
@@ -96,6 +103,7 @@ const (
 	CFG_NOTIFIERS          = "notifiers"
 	CFG_TRAFFIC_LOGGERS    = "traffic_loggers"
 	CFG_BLACKLIST_MODE     = "blacklist_mode"
+	CFG_DNS                = "dnscfg"
 )
 
 const DEFAULT_REDIRECT_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
@@ -109,6 +117,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		phishletNames: []string{},
 		lures:         []*Lure{},
 		notifiers:     []*Notify{},
+		dnscfg:        &DNScfg{},
 	}
 
 	c.cfg = viper.New()
