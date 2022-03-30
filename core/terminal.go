@@ -1130,62 +1130,37 @@ func (t *Terminal) handleDNScfg(args []string) error {
 		return nil
 	}
 	if pn > 0 {
-		switch args[0] {
-		case "edit", "delete", "disable", "show":
-			if pn < 2 {
-				return fmt.Errorf("not enough arguments: %s", args)
-			}
-			do_update := false
-			switch args[1] {
-			case "spf":
-				if args[0] == "delete" || args[0] == "disable" {
-					t.cfg.dnscfg.spf = ""
-					do_update = true
-				} else if args[0] == "edit" {
-					t.cfg.dnscfg.spf = args[2]
-					do_update = true
-				} else if args[0] == "show" {
-				} else {
-					return fmt.Errorf("spf: invalid syntax: %s", args)
-				}
-				log.Info("spf = '%s'", t.cfg.dnscfg.spf)
-			case "dmarc":
-				if args[0] == "delete" || args[0] == "disable" {
-					t.cfg.dnscfg.dmarc = ""
-					do_update = true
-				} else if args[0] == "edit" {
-					t.cfg.dnscfg.dmarc = args[2]
-					do_update = true
-				} else if args[0] == "show" {
-				} else {
-					return fmt.Errorf("dmarc: invalid syntax: %s", args)
-				}
-				log.Info("dmarc = '%s'", t.cfg.dnscfg.dmarc)
-			case "dkim":
-				if args[0] == "delete" || args[0] == "disable" {
-					t.cfg.dnscfg.dkim = []string{}
-					do_update = true
-				} else if args[0] == "edit" {
-					t.cfg.dnscfg.dkim = stripquote(args[2:])
-					do_update = true
-				} else if args[0] == "show" {
-				} else {
-					return fmt.Errorf("dkim: invalid syntax: %s", args)
-				}
-				log.Info("dkim = '%s'", t.cfg.dnscfg.dkim)
-			default:
-				return fmt.Errorf("invalid syntax: %s", args)
-			}
-			if do_update {
-				err := t.cfg.cfg.WriteConfig()
-				if err != nil {
-					log.Error("%v", err)
-				}
-			}
-			return nil
-		default:
-			return fmt.Errorf("invalid type: %s", args[1])
+		if args[0] != "edit" && args[0] != "delete" && args[0] != "disable" && args[0] != "show" {
+			return fmt.Errorf("invalid syntax: %s", args[0])
 		}
+		if pn < 2 {
+			return fmt.Errorf("not enough arguments: %s", args)
+		}
+		do_update := false
+		if args[1] != "spf" && args[1] != "dmarc" && args[1] != "dkim" {
+			return fmt.Errorf("invalid config item: %s", args[1])
+		}
+
+		if args[0] == "delete" || args[0] == "disable" {
+			t.cfg.dnscfg[args[1]] = ""
+			do_update = true
+		} else if args[0] == "edit" {
+			t.cfg.dnscfg[args[1]] = args[2]
+			do_update = true
+		} else if args[0] == "show" {
+		} else {
+			return fmt.Errorf("spf: invalid syntax: %s", args)
+		}
+		log.Info("spf = '%s'", t.cfg.dnscfg[args[1]])
+
+		if do_update {
+			t.cfg.cfg.Set(CFG_DNS, t.cfg.dnscfg)
+			err := t.cfg.cfg.WriteConfig()
+			if err != nil {
+				log.Error("%v", err)
+			}
+		}
+		return nil
 	}
 	return fmt.Errorf("invalid syntax: %s", args)
 }
@@ -2285,11 +2260,11 @@ func (t *Terminal) dnsValidConfigOptions(args string) []string {
 
 func (t *Terminal) sprintDNScfg() string {
 	green := color.New(color.FgGreen)
+	cyan := color.New(color.FgCyan)
+	cols := []string{"option", "value"}
 	var rows [][]string
-	rows = [][]string{
-		{"spf", green.Sprint(t.cfg.dnscfg.spf)},
-		{"dmarc", green.Sprint(t.cfg.dnscfg.dmarc)},
-		{"dkim", green.Sprint(t.cfg.dnscfg.dkim)},
+	for k, v := range t.cfg.dnscfg {
+		rows = append(rows, []string{cyan.Sprint(k), green.Sprint(v)})
 	}
-	return AsTable([]string{"key", "value"}, rows)
+	return AsTable(cols, rows)
 }

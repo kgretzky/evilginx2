@@ -49,12 +49,6 @@ type Trafficlogger struct {
 	Delimiter byte   `mapstructure:"delimiter" yaml:"delimiter"`
 }
 
-type DNScfg struct {
-	spf   string   `mapstructure:"spf" yaml:"spf"` // when empty, use default
-	dmarc string   `mapstructure:"dmarc" yaml:"dmarc"`
-	dkim  []string `mapstructure:"dkim" yaml:"dkim"`
-}
-
 type Config struct {
 	siteDomains       map[string]string
 	baseDomain        string
@@ -79,7 +73,7 @@ type Config struct {
 	lures             []*Lure
 	notifiers         []*Notify
 	trafficloggers    []*Trafficlogger
-	dnscfg            *DNScfg
+	dnscfg            map[string]string
 	cfg               *viper.Viper
 }
 
@@ -117,7 +111,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		phishletNames: []string{},
 		lures:         []*Lure{},
 		notifiers:     []*Notify{},
-		dnscfg:        &DNScfg{},
+		dnscfg:        make(map[string]string),
 	}
 
 	c.cfg = viper.New()
@@ -159,6 +153,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c.proxyPassword = c.cfg.GetString(CFG_PROXY_PASSWORD)
 	c.proxyEnabled = c.cfg.GetBool(CFG_PROXY_ENABLED)
 	c.blackListMode = c.cfg.GetString(CFG_BLACKLIST_MODE)
+	c.dnscfg = c.cfg.GetStringMapString(CFG_DNS)
 	s_enabled := c.cfg.GetStringSlice(CFG_SITES_ENABLED)
 	for _, site := range s_enabled {
 		c.sitesEnabled[site] = true

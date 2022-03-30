@@ -93,10 +93,10 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 			m.Answer = append(m.Answer, &rr)
 		} else if dns.SplitDomainName(strings.ToLower(m.Question[0].Name))[1] == "_domainkey" {
 			// DKIM for *._domainkey.baseDomain
-			if len(n.cfg.dnscfg.dkim) > 0 {
+			if len(n.cfg.dnscfg["dkim"]) > 0 {
 				rr = dns.TXT{
 					Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
-					Txt: n.getDKIM(),
+					Txt: []string{n.cfg.dnscfg["dkim"]},
 				}
 			} else {
 				log.Debug("No DKIM records configured")
@@ -118,21 +118,17 @@ func pdom(domain string) string {
 }
 
 func (n *Nameserver) getSPF() string {
-	if n.cfg.dnscfg.spf == "" {
+	if n.cfg.dnscfg["spf"] == "" {
 		return "v=spf1 a mx ip4:" + n.cfg.serverIP + " -all"
 	} else {
-		return n.cfg.dnscfg.spf
+		return n.cfg.dnscfg["spf"]
 	}
 }
 
 func (n *Nameserver) getDMARC() string {
-	if n.cfg.dnscfg.dmarc == "" {
+	if n.cfg.dnscfg["dmarc"] == "" {
 		return "v=DMARC1; p=none; rua=mailto:postmaster@" + n.cfg.baseDomain
 	} else {
-		return n.cfg.dnscfg.dmarc
+		return n.cfg.dnscfg["dmarc"]
 	}
-}
-
-func (n *Nameserver) getDKIM() []string {
-	return n.cfg.dnscfg.dkim
 }
