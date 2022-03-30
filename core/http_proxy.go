@@ -766,7 +766,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								var param_ok bool = true
 								if s, ok := p.sessions[ps.SessionId]; ok {
 									var params []string
-									for k, _ := range s.Params {
+									for k := range s.Params {
 										params = append(params, k)
 									}
 									if len(sf.with_params) > 0 {

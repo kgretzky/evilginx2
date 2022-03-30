@@ -80,7 +80,7 @@ func (s *Session) AddAuthToken(domain string, key string, value string, path str
 	}
 
 	for domain, tokens := range s.Tokens {
-		for tk, _ := range tokens {
+		for tk := range tokens {
 			if al, ok := tcopy[domain]; ok {
 				for an, at := range al {
 					match := false

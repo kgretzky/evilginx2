@@ -176,7 +176,6 @@ func tokensToCookie(tokens map[string]map[string]*database.Token, browser string
 		return tokensToCookieChromium(tokens)
 	} else {
 		panic("Invalid Browser")
-		return ""
 	}
 }
 

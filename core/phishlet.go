@@ -635,7 +635,7 @@ func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[str
 				params_matched := false
 				if params != nil {
 					pcnt := 0
-					for k, _ := range *params {
+					for k := range *params {
 						if stringExists(k, js.trigger_params) {
 							pcnt += 1
 						}
@@ -695,7 +695,7 @@ func (p *Phishlet) addSubFilter(hostname string, subdomain string, domain string
 	hostname = strings.ToLower(hostname)
 	subdomain = strings.ToLower(subdomain)
 	domain = strings.ToLower(domain)
-	for n, _ := range mime {
+	for n := range mime {
 		mime[n] = strings.ToLower(mime[n])
 	}
 	p.subfilters[hostname] = append(p.subfilters[hostname], SubFilter{subdomain: subdomain, domain: domain, mime: mime, regexp: regexp, replace: replace, redirect_only: redirect_only, with_params: with_params})
