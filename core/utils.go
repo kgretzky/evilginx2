@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/disk"
@@ -262,4 +263,11 @@ func DirSize(path string) (int64, error) {
 		return err
 	})
 	return size, err
+}
+
+func stripquote(s []string) []string {
+	for i := 0; i < len(s); i++ {
+		s[i] = strings.Trim(s[i], "\"")
+	}
+	return s
 }

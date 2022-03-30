@@ -98,6 +98,8 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 					Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
 					Txt: n.getDKIM(),
 				}
+			} else {
+				log.Debug("No DKIM records configured")
 			}
 		} else {
 			// no special TXT rule caught this, so it will answer default TXT

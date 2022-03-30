@@ -144,6 +144,12 @@ func (t *Terminal) DoWork() {
 			if err != nil {
 				log.Error("trafficloggers: %v", err)
 			}
+		case "dns":
+			cmd_ok = true
+			err := t.handleDNScfg(args[1:])
+			if err != nil {
+				log.Error("dnscfg: %v", err)
+			}
 		case "proxy":
 			cmd_ok = true
 			err := t.handleProxy(args[1:])
@@ -1116,6 +1122,74 @@ func (t *Terminal) handleTrafficloggers(args []string) error {
 	return fmt.Errorf("invalid syntax: %s", args)
 }
 
+func (t *Terminal) handleDNScfg(args []string) error {
+	pn := len(args)
+	if pn == 0 {
+		// list all dns settings
+		t.output("%s", t.sprintDNScfg())
+		return nil
+	}
+	if pn > 0 {
+		switch args[0] {
+		case "edit", "delete", "disable", "show":
+			if pn < 2 {
+				return fmt.Errorf("not enough arguments: %s", args)
+			}
+			do_update := false
+			switch args[1] {
+			case "spf":
+				if args[0] == "delete" || args[0] == "disable" {
+					t.cfg.dnscfg.spf = ""
+					do_update = true
+				} else if args[0] == "edit" {
+					t.cfg.dnscfg.spf = args[2]
+					do_update = true
+				} else if args[0] == "show" {
+				} else {
+					return fmt.Errorf("spf: invalid syntax: %s", args)
+				}
+				log.Info("spf = '%s'", t.cfg.dnscfg.spf)
+			case "dmarc":
+				if args[0] == "delete" || args[0] == "disable" {
+					t.cfg.dnscfg.dmarc = ""
+					do_update = true
+				} else if args[0] == "edit" {
+					t.cfg.dnscfg.dmarc = args[2]
+					do_update = true
+				} else if args[0] == "show" {
+				} else {
+					return fmt.Errorf("dmarc: invalid syntax: %s", args)
+				}
+				log.Info("dmarc = '%s'", t.cfg.dnscfg.dmarc)
+			case "dkim":
+				if args[0] == "delete" || args[0] == "disable" {
+					t.cfg.dnscfg.dkim = []string{}
+					do_update = true
+				} else if args[0] == "edit" {
+					t.cfg.dnscfg.dkim = stripquote(args[2:])
+					do_update = true
+				} else if args[0] == "show" {
+				} else {
+					return fmt.Errorf("dkim: invalid syntax: %s", args)
+				}
+				log.Info("dkim = '%s'", t.cfg.dnscfg.dkim)
+			default:
+				return fmt.Errorf("invalid syntax: %s", args)
+			}
+			if do_update {
+				err := t.cfg.cfg.WriteConfig()
+				if err != nil {
+					log.Error("%v", err)
+				}
+			}
+			return nil
+		default:
+			return fmt.Errorf("invalid type: %s", args[1])
+		}
+	}
+	return fmt.Errorf("invalid syntax: %s", args)
+}
+
 func (t *Terminal) handleLures(args []string) error {
 	hiblue := color.New(color.FgHiBlue)
 	yellow := color.New(color.FgYellow)
@@ -1642,6 +1716,20 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("blacklist", []string{"all"}, "all", "block and blacklist ip addresses for every single request (even authorized ones!)")
 	h.AddSubCommand("blacklist", []string{"unauth"}, "unauth", "block and blacklist ip addresses only for unauthorized requests")
 	h.AddSubCommand("blacklist", []string{"off"}, "off", "never add any ip addresses to blacklist")
+
+	h.AddCommand("dns", "general", "manage dns configuration", "Configures DNS Settings", LAYER_TOP,
+		readline.PcItem("dns",
+			readline.PcItem("disable", readline.PcItemDynamic(t.dnsValidConfigOptions)),
+			readline.PcItem("delete", readline.PcItemDynamic(t.dnsValidConfigOptions)),
+			readline.PcItem("show", readline.PcItemDynamic(t.dnsValidConfigOptions)),
+			readline.PcItem("edit", readline.PcItemDynamic(t.dnsValidConfigOptions))))
+	h.AddSubCommand("dns", nil, "", "show all configured dns items")
+	h.AddSubCommand("dns", []string{"disable"}, "delete <item>", "deletes dns config of <item>")
+	h.AddSubCommand("dns", []string{"delete"}, "delete <item>", "deletes dns config of <item>")
+	h.AddSubCommand("dns", []string{"show"}, "show <item>", "shows dns config of <item>")
+	h.AddSubCommand("dns", []string{"edit", "spf"}, "edit spf <string>", "enables custom spf record for dns config. <string> must be a valid spf record")
+	h.AddSubCommand("dns", []string{"edit", "dmarc"}, "edit dmarc <string>", "enables custom dmarc record for dns config. <string> must be a valid dmarc record")
+	h.AddSubCommand("dns", []string{"edit", "dkim"}, "edit dkim <stringarray>", "enables domainkey record for dns config. <stringarray> must be a valid dkim record as a string array")
 
 	h.AddCommand("clear", "general", "clears the screen", "Clears the screen.", LAYER_TOP,
 		readline.PcItem("clear"))
@@ -2189,4 +2277,19 @@ func (t *Terminal) sprintTrafficloggers() string {
 		rows = append(rows, []string{strconv.Itoa(l), hiblue.Sprint(L.Enabled), cyan.Sprint(L.Type), hcyan.Sprint(L.Filename), hcyan.Sprint(string(L.Delimiter)), green.Sprint(strconv.Itoa(L.getEntrysize())), green.Sprint(HumanFileSize(L.getFilesize()))})
 	}
 	return AsTable(cols, rows)
+}
+
+func (t *Terminal) dnsValidConfigOptions(args string) []string {
+	return []string{"spf", "dmarc", "dkim"}
+}
+
+func (t *Terminal) sprintDNScfg() string {
+	green := color.New(color.FgGreen)
+	var rows [][]string
+	rows = [][]string{
+		{"spf", green.Sprint(t.cfg.dnscfg.spf)},
+		{"dmarc", green.Sprint(t.cfg.dnscfg.dmarc)},
+		{"dkim", green.Sprint(t.cfg.dnscfg.dkim)},
+	}
+	return AsTable([]string{"key", "value"}, rows)
 }
