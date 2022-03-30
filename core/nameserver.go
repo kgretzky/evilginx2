@@ -15,13 +15,6 @@ type Nameserver struct {
 	srv    *dns.Server
 	cfg    *Config
 	serial uint32
-	txt    map[string]TXTField
-}
-
-type TXTField struct {
-	fqdn  string
-	value string
-	ttl   int
 }
 
 func NewNameserver(cfg *Config) (*Nameserver, error) {
@@ -29,7 +22,6 @@ func NewNameserver(cfg *Config) (*Nameserver, error) {
 		serial: uint32(time.Now().Unix()),
 		cfg:    cfg,
 	}
-	n.txt = make(map[string]TXTField)
 
 	n.Reset()
 
@@ -47,19 +39,6 @@ func (n *Nameserver) Start() {
 			log.Fatal("Failed to start nameserver on port 53")
 		}
 	}()
-}
-
-func (n *Nameserver) AddTXT(fqdn string, value string, ttl int) {
-	txt := TXTField{
-		fqdn:  fqdn,
-		value: value,
-		ttl:   ttl,
-	}
-	n.txt[fqdn] = txt
-}
-
-func (n *Nameserver) ClearTXT() {
-	n.txt = make(map[string]TXTField)
 }
 
 func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
@@ -103,13 +82,12 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		}
 	case dns.TypeTXT:
 		log.Debug("DNS TXT: " + strings.ToLower(r.Question[0].Name))
-		txt := n.txt[strings.ToLower(m.Question[0].Name)]
 		var rr dns.TXT
 
 		if dns.SplitDomainName(strings.ToLower(m.Question[0].Name))[0] == "_dmarc" {
 			// DMARC
 			rr = dns.TXT{
-				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
+				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
 				Txt: []string{n.getDMARC()},
 			}
 			m.Answer = append(m.Answer, &rr)
@@ -117,14 +95,14 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 			// DKIM for *._domainkey.baseDomain
 			if len(n.cfg.dnscfg.dkim) > 0 {
 				rr = dns.TXT{
-					Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
+					Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
 					Txt: n.getDKIM(),
 				}
 			}
 		} else {
 			// no special TXT rule caught this, so it will answer default TXT
 			rr = dns.TXT{
-				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(txt.ttl)},
+				Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 300},
 				Txt: []string{n.getSPF()}, // add strings here to add TXT records
 			}
 			m.Answer = append(m.Answer, &rr)
