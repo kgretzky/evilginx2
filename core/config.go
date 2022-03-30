@@ -43,9 +43,9 @@ type Notify struct {
 }
 
 type Trafficlogger struct {
-	Enabled   bool   `mapstructure:"enabled" yaml: "enabled"`
-	Type      string `mapstructure:"type" yaml: "type"` // invalid, incoming, outgoing, dns
-	Filename  string `mapstructure:"filename" yaml: "filename"`
+	Enabled   bool   `mapstructure:"enabled" yaml:"enabled"`
+	Type      string `mapstructure:"type" yaml:"type"` // invalid, incoming, outgoing, dns
+	Filename  string `mapstructure:"filename" yaml:"filename"`
 	Delimiter byte   `mapstructure:"delimiter" yaml:"delimiter"`
 }
 
