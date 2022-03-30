@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	VERSION = "2.5.0-jle-dev22w12b"
+	VERSION = "2.5.0-jle-dev22w13a"
 )
 
 func putAsciiArt(s string) {

@@ -1,3 +1,9 @@
+2.5.0-jle-dev22w13a
+- Features in DNS:
+    - automatic SPF, DMARC, DKIM entries
+    - configuration in Terminal
+- Fix: DNS TXT entries
+
 2.5.0-jle-dev22w12b
 - Feature: Trafficloggers for incoming, outgoing or innvalid traffic
     - also downloadable via Adminpanel
