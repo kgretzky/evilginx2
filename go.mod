@@ -12,7 +12,7 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/inconshreveable/go-vhost v0.0.0-20160627193104-06d84117953b
 	github.com/mattn/go-colorable v0.1.4 // indirect
-	github.com/miekg/dns v1.1.22
+	github.com/miekg/dns v1.1.25
 	github.com/mwitkow/go-http-dialer v0.0.0-20161116154839-378f744fb2b8
 	github.com/spf13/viper v1.4.0
 	github.com/tidwall/btree v0.0.0-20170113224114-9876f1454cf0 // indirect
