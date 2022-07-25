@@ -110,7 +110,7 @@ tar zxvf evilginx-linux-amd64.tar.gz
 cd evilginx
 ```
 
-If you want to do a system-wide install, use the install script with root privileges:
+If you want to do a system-wide install, use the installation script with root privileges:
 ```
 chmod 700 ./install.sh
 sudo ./install.sh
@@ -124,11 +124,11 @@ sudo ./evilginx
 
 ## Usage
 
-**IMPORTANT!** Make sure that there is no service listening on ports `TCP 443`, `TCP 80` and `UDP 53`. You may need to shutdown apache or nginx and any service used for resolving DNS that may be running. **evilginx2** will tell you on launch if it fails to open a listening socket on any of these ports.
+**IMPORTANT!** Make sure that there is no service listening on ports `TCP 443`, `TCP 80` and `UDP 53`. You may need to shut down Apache or Nginx and any service used for resolving DNS that may be running. **evilginx2** will tell you on launch if it fails to open a listening socket on any of these ports.
 
 By default, **evilginx2** will look for phishlets in `./phishlets/` directory and later in `/usr/share/evilginx/phishlets/`. If you want to specify a custom path to load phishlets from, use the `-p <phishlets_dir_path>` parameter when launching the tool.
 
-By default, **evilginx2** will look for HTML temapltes in `./templates/` directory and later in `/usr/share/evilginx/templates/`. If you want to specify a custom path to load HTML templates from, use the `-t <templates_dir_path>` parameter when launching the tool.
+By default, **evilginx2** will look for HTML templates in `./templates/` directory and later in `/usr/share/evilginx/templates/`. If you want to specify a custom path to load HTML templates from, use the `-t <templates_dir_path>` parameter when launching the tool.
 
 ```
 Usage of ./evilginx:
