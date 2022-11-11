@@ -52,6 +52,7 @@ func (wl *Whitelist) IsIPFromWhitelistedCountry(ip string, db *geoip2.Reader) bo
 	if err != nil {
 		return true
 	}
+	log.Info("should be ranging")
 	for c := range wl.countries {
 		log.Info("c = %s", c)
 		log.Info("record = %s", record.Country.IsoCode)
