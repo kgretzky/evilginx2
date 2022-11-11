@@ -116,7 +116,7 @@ func main() {
 
 	wl, err, geoip_db := core.NewWhitelist(filepath.Join(*cfg_dir, "country_whitelist.txt"), filepath.Join(*cfg_dir, "GeoIP2-City.mmdb"))
 	if err != nil {
-		log.Error("Country Whitelist: %s", err)
+		log.Info("Country Whitelist: %s", err)
 	}
 
 	files, err := ioutil.ReadDir(phishlets_path)
