@@ -210,8 +210,8 @@ func (c *Certifier) getForOrder(domains []string, order acme.ExtendedOrder, bund
 	// Determine certificate name(s) based on the authorization resources
 	commonName := domains[0]
 
-	// ACME draft Section 7.4 "Applying for Certificate Issuance"
-	// https://tools.ietf.org/html/draft-ietf-acme-acme-12#section-7.4
+	// RFC8555 Section 7.4 "Applying for Certificate Issuance"
+	// https://tools.ietf.org/html/rfc8555#section-7.4
 	// says:
 	//   Clients SHOULD NOT make any assumptions about the sort order of
 	//   "identifiers" or "authorizations" elements in the returned order
@@ -232,7 +232,7 @@ func (c *Certifier) getForOrder(domains []string, order acme.ExtendedOrder, bund
 	return c.getForCSR(domains, order, bundle, csr, certcrypto.PEMEncode(privateKey))
 }
 
-func (c *Certifier) getForCSR(domains []string, order acme.ExtendedOrder, bundle bool, csr []byte, privateKeyPem []byte) (*Resource, error) {
+func (c *Certifier) getForCSR(domains []string, order acme.ExtendedOrder, bundle bool, csr, privateKeyPem []byte) (*Resource, error) {
 	respOrder, err := c.core.Orders.UpdateForCSR(order.Finalize, csr)
 	if err != nil {
 		return nil, err
@@ -317,7 +317,7 @@ func (c *Certifier) Revoke(cert []byte) error {
 
 	x509Cert := certificates[0]
 	if x509Cert.IsCA {
-		return fmt.Errorf("certificate bundle starts with a CA certificate")
+		return errors.New("certificate bundle starts with a CA certificate")
 	}
 
 	revokeMsg := acme.RevokeCertMessage{
@@ -502,7 +502,7 @@ func checkOrderStatus(order acme.Order) (bool, error) {
 	}
 }
 
-// https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.1.4
+// https://tools.ietf.org/html/rfc8555#section-7.1.4
 // The domain name MUST be encoded
 //   in the form in which it would appear in a certificate.  That is, it
 //   MUST be encoded according to the rules in Section 7 of [RFC5280].

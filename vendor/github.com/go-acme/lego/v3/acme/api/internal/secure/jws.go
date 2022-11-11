@@ -65,12 +65,12 @@ func (j *JWS) SignContent(url string, content []byte) (*jose.JSONWebSignature, e
 
 	signer, err := jose.NewSigner(signKey, &options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create jose signer -> %v", err)
+		return nil, fmt.Errorf("failed to create jose signer: %w", err)
 	}
 
 	signed, err := signer.Sign(content)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign content -> %v", err)
+		return nil, fmt.Errorf("failed to sign content: %w", err)
 	}
 	return signed, nil
 }
@@ -80,7 +80,7 @@ func (j *JWS) SignEABContent(url, kid string, hmac []byte) (*jose.JSONWebSignatu
 	jwk := jose.JSONWebKey{Key: j.privKey}
 	jwkJSON, err := jwk.Public().MarshalJSON()
 	if err != nil {
-		return nil, fmt.Errorf("acme: error encoding eab jwk key: %v", err)
+		return nil, fmt.Errorf("acme: error encoding eab jwk key: %w", err)
 	}
 
 	signer, err := jose.NewSigner(
@@ -94,12 +94,12 @@ func (j *JWS) SignEABContent(url, kid string, hmac []byte) (*jose.JSONWebSignatu
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create External Account Binding jose signer -> %v", err)
+		return nil, fmt.Errorf("failed to create External Account Binding jose signer: %w", err)
 	}
 
 	signed, err := signer.Sign(jwkJSON)
 	if err != nil {
-		return nil, fmt.Errorf("failed to External Account Binding sign content -> %v", err)
+		return nil, fmt.Errorf("failed to External Account Binding sign content: %w", err)
 	}
 
 	return signed, nil

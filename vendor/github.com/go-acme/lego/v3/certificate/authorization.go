@@ -11,7 +11,7 @@ const (
 	// overallRequestLimit is the overall number of request per second
 	// limited on the "new-reg", "new-authz" and "new-cert" endpoints.
 	// From the documentation the limitation is 20 requests per second,
-	// but using 20 as value doesn't work but 18 do
+	// but using 20 as value doesn't work but 18 do.
 	overallRequestLimit = 18
 )
 
@@ -61,9 +61,21 @@ func (c *Certifier) getAuthorizations(order acme.ExtendedOrder) ([]acme.Authoriz
 }
 
 func (c *Certifier) deactivateAuthorizations(order acme.ExtendedOrder) {
-	for _, auth := range order.Authorizations {
-		if c.core.Authorizations.Deactivate(auth) != nil {
-			log.Infof("Unable to deactivate the authorization: %s", auth)
+	for _, authzURL := range order.Authorizations {
+		auth, err := c.core.Authorizations.Get(authzURL)
+		if err != nil {
+			log.Infof("Unable to get the authorization for: %s", authzURL)
+			continue
+		}
+
+		if auth.Status == acme.StatusValid {
+			log.Infof("Skipping deactivating of valid auth: %s", authzURL)
+			continue
+		}
+
+		log.Infof("Deactivating auth: %s", authzURL)
+		if c.core.Authorizations.Deactivate(authzURL) != nil {
+			log.Infof("Unable to deactivate the authorization: %s", authzURL)
 		}
 	}
 }

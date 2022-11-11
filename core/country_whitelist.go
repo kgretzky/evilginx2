@@ -6,13 +6,14 @@ import (
 	"net"
 	"os"
 	"strings"
+	geoip2 "github.com/oschwald/geoip2-golang"
 )
 
 type Whitelist struct {
 	countries []string
 }
 
-func NewWhitelist(path string) (*Whitelist, error, *Reader) {
+func NewWhitelist(path string) (*Whitelist, error, *geoip2.Reader) {
 	db, err := geoip2.Open("GeoIP2-City.mmdb")
 	if err != nil {
 		return nil, err, nil

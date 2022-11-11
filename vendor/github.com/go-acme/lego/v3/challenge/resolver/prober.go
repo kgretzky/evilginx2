@@ -29,7 +29,7 @@ type sequential interface {
 	Sequential() (bool, time.Duration)
 }
 
-// an authz with the solver we have chosen and the index of the challenge associated with it
+// an authz with the solver we have chosen and the index of the challenge associated with it.
 type selectedAuthSolver struct {
 	authz  acme.Authorization
 	solver solver
@@ -167,7 +167,7 @@ func cleanUp(solvr solver, authz acme.Authorization) {
 		domain := challenge.GetTargetedDomain(authz)
 		err := solvr.CleanUp(authz)
 		if err != nil {
-			log.Warnf("[%s] acme: error cleaning up: %v ", domain, err)
+			log.Warnf("[%s] acme: cleaning up failed: %v ", domain, err)
 		}
 	}
 }

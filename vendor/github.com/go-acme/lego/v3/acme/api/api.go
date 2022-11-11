@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/go-acme/lego/v3/acme"
 	"github.com/go-acme/lego/v3/acme/api/internal/nonces"
 	"github.com/go-acme/lego/v3/acme/api/internal/secure"
@@ -35,7 +35,7 @@ type Core struct {
 }
 
 // New Creates a new Core.
-func New(httpClient *http.Client, userAgent string, caDirURL, kid string, privateKey crypto.PrivateKey) (*Core, error) {
+func New(httpClient *http.Client, userAgent, caDirURL, kid string, privateKey crypto.PrivateKey) (*Core, error) {
 	doer := sender.NewDoer(httpClient, userAgent)
 
 	dir, err := getDirectory(doer, caDirURL)
@@ -71,7 +71,7 @@ func (a *Core) post(uri string, reqBody, response interface{}) (*http.Response, 
 }
 
 // postAsGet performs an HTTP POST ("POST-as-GET") request.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-6.3
+// https://tools.ietf.org/html/rfc8555#section-6.3
 func (a *Core) postAsGet(uri string, response interface{}) (*http.Response, error) {
 	return a.retrievablePost(uri, []byte{}, response)
 }
@@ -93,7 +93,6 @@ func (a *Core) retrievablePost(uri string, content []byte, response interface{})
 			switch err.(type) {
 			// Retry if the nonce was invalidated
 			case *acme.NonceError:
-				log.Infof("nonce error retry: %s", err)
 				return err
 			default:
 				cancel()
@@ -104,7 +103,11 @@ func (a *Core) retrievablePost(uri string, content []byte, response interface{})
 		return nil
 	}
 
-	err := backoff.Retry(operation, backoff.WithContext(bo, ctx))
+	notify := func(err error, duration time.Duration) {
+		log.Infof("retry due to: %v", err)
+	}
+
+	err := backoff.RetryNotify(operation, backoff.WithContext(bo, ctx), notify)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +118,7 @@ func (a *Core) retrievablePost(uri string, content []byte, response interface{})
 func (a *Core) signedPost(uri string, content []byte, response interface{}) (*http.Response, error) {
 	signedContent, err := a.jws.SignContent(uri, content)
 	if err != nil {
-		return nil, fmt.Errorf("failed to post JWS message -> failed to sign content -> %v", err)
+		return nil, fmt.Errorf("failed to post JWS message: failed to sign content: %w", err)
 	}
 
 	signedBody := bytes.NewBuffer([]byte(signedContent.FullSerialize()))
@@ -140,7 +143,7 @@ func (a *Core) signEABContent(newAccountURL, kid string, hmac []byte) ([]byte, e
 	return []byte(eabJWS.FullSerialize()), nil
 }
 
-// GetKeyAuthorization Gets the key authorization
+// GetKeyAuthorization Gets the key authorization.
 func (a *Core) GetKeyAuthorization(token string) (string, error) {
 	return a.jws.GetKeyAuthorization(token)
 }
@@ -152,7 +155,7 @@ func (a *Core) GetDirectory() acme.Directory {
 func getDirectory(do *sender.Doer, caDirURL string) (acme.Directory, error) {
 	var dir acme.Directory
 	if _, err := do.Get(caDirURL, &dir); err != nil {
-		return dir, fmt.Errorf("get directory at '%s': %v", caDirURL, err)
+		return dir, fmt.Errorf("get directory at '%s': %w", caDirURL, err)
 	}
 
 	if dir.NewAccountURL == "" {

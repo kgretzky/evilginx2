@@ -10,7 +10,7 @@ import (
 	"github.com/go-acme/lego/v3/registration"
 )
 
-// Client is the user-friendly way to ACME
+// Client is the user-friendly way to ACME.
 type Client struct {
 	Certificate  *certificate.Certifier
 	Challenge    *resolver.SolverManager
@@ -63,12 +63,12 @@ func NewClient(config *Config) (*Client, error) {
 	}, nil
 }
 
-// GetToSURL returns the current ToS URL from the Directory
+// GetToSURL returns the current ToS URL from the Directory.
 func (c *Client) GetToSURL() string {
 	return c.core.GetDirectory().Meta.TermsOfService
 }
 
-// GetExternalAccountRequired returns the External Account Binding requirement of the Directory
+// GetExternalAccountRequired returns the External Account Binding requirement of the Directory.
 func (c *Client) GetExternalAccountRequired() bool {
 	return c.core.GetDirectory().Meta.ExternalAccountRequired
 }

@@ -1,5 +1,5 @@
 // Package acme contains all objects related the ACME endpoints.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-16
+// https://tools.ietf.org/html/rfc8555
 package acme
 
 import (
@@ -8,7 +8,7 @@ import (
 )
 
 // Challenge statuses
-// https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.1.6
+// https://tools.ietf.org/html/rfc8555#section-7.1.6
 const (
 	StatusPending     = "pending"
 	StatusInvalid     = "invalid"
@@ -20,7 +20,7 @@ const (
 )
 
 // Directory the ACME directory object.
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.1.1
+// - https://tools.ietf.org/html/rfc8555#section-7.1.1
 type Directory struct {
 	NewNonceURL   string `json:"newNonce"`
 	NewAccountURL string `json:"newAccount"`
@@ -32,7 +32,7 @@ type Directory struct {
 }
 
 // Meta the ACME meta object (related to Directory).
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.1.1
+// - https://tools.ietf.org/html/rfc8555#section-7.1.1
 type Meta struct {
 	// termsOfService (optional, string):
 	// A URL identifying the current terms of service.
@@ -65,8 +65,8 @@ type ExtendedAccount struct {
 }
 
 // Account the ACME account Object.
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.1.2
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.3
+// - https://tools.ietf.org/html/rfc8555#section-7.1.2
+// - https://tools.ietf.org/html/rfc8555#section-7.3
 type Account struct {
 	// status (required, string):
 	// The status of this account.
@@ -111,7 +111,7 @@ type ExtendedOrder struct {
 }
 
 // Order the ACME order Object.
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.1.3
+// - https://tools.ietf.org/html/rfc8555#section-7.1.3
 type Order struct {
 	// status (required, string):
 	// The status of this order.
@@ -164,7 +164,7 @@ type Order struct {
 }
 
 // Authorization the ACME authorization object.
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.1.4
+// - https://tools.ietf.org/html/rfc8555#section-7.1.4
 type Authorization struct {
 	// status (required, string):
 	// The status of this authorization.
@@ -206,8 +206,8 @@ type ExtendedChallenge struct {
 }
 
 // Challenge the ACME challenge object.
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.1.5
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-8
+// - https://tools.ietf.org/html/rfc8555#section-7.1.5
+// - https://tools.ietf.org/html/rfc8555#section-8
 type Challenge struct {
 	// type (required, string):
 	// The type of challenge encoded in the object.
@@ -240,23 +240,23 @@ type Challenge struct {
 	// It MUST NOT contain any characters outside the base64url alphabet,
 	// and MUST NOT include base64 padding characters ("=").
 	// See [RFC4086] for additional information on randomness requirements.
-	// https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-8.3
-	// https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-8.4
+	// https://tools.ietf.org/html/rfc8555#section-8.3
+	// https://tools.ietf.org/html/rfc8555#section-8.4
 	Token string `json:"token"`
 
-	// https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-8.1
+	// https://tools.ietf.org/html/rfc8555#section-8.1
 	KeyAuthorization string `json:"keyAuthorization"`
 }
 
 // Identifier the ACME identifier object.
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-9.7.7
+// - https://tools.ietf.org/html/rfc8555#section-9.7.7
 type Identifier struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
 // CSRMessage Certificate Signing Request
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.4
+// - https://tools.ietf.org/html/rfc8555#section-7.4
 type CSRMessage struct {
 	// csr (required, string):
 	// A CSR encoding the parameters for the certificate being requested [RFC2986].
@@ -266,7 +266,7 @@ type CSRMessage struct {
 }
 
 // RevokeCertMessage a certificate revocation message
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.6
+// - https://tools.ietf.org/html/rfc8555#section-7.6
 // - https://tools.ietf.org/html/rfc5280#section-5.3.1
 type RevokeCertMessage struct {
 	// certificate (required, string):
