@@ -14,7 +14,7 @@ type Whitelist struct {
 }
 
 func NewWhitelist(path string) (*Whitelist, error, *geoip2.Reader) {
-	db, err := geoip2.Open("~/.evilginx2/GeoIP2-City.mmdb")
+	db, err := geoip2.Open("~/.evilginx/GeoIP2-City.mmdb")
 	if err != nil {
 		return nil, err, nil
 	}
