@@ -50,6 +50,7 @@ func (wl *Whitelist) IsIPFromWhitelistedCountry(ip string, db *geoip2.Reader) bo
 	ipv4 := net.ParseIP(ip)
 	record, err := db.City(ipv4)
 	if err != nil {
+		log.Error("%s", err)
 		return true
 	}
 	log.Info("should be ranging")
