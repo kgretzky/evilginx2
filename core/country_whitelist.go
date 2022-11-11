@@ -18,7 +18,6 @@ func NewWhitelist(path string, dbPath string) (*Whitelist, error, *geoip2.Reader
 	if err != nil {
 		return nil, err, nil
 	}
-	defer db.Close()
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, err, db

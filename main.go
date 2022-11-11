@@ -165,4 +165,5 @@ func main() {
 	}
 
 	t.DoWork()
+	defer geoip_db.Close()
 }
