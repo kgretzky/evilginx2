@@ -153,6 +153,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				log.Warning("blacklist: request from ip address '%s' was blocked", from_ip)
 				return p.blockRequest(req)
 			}
+			log.Info("test test testicoli")
 			if !p.wl.IsIPFromWhitelistedCountry(from_ip, geoip_db) {
 				log.Warning("country whitelist: request from ip address '%s' was blocked", from_ip)
 				return p.blockRequest(req)
