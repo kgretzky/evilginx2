@@ -13,8 +13,8 @@ type Whitelist struct {
 	countries []string
 }
 
-func NewWhitelist(path string) (*Whitelist, error, *geoip2.Reader) {
-	db, err := geoip2.Open("~/.evilginx/GeoIP2-City.mmdb")
+func NewWhitelist(path string, dbPath string) (*Whitelist, error, *geoip2.Reader) {
+	db, err := geoip2.Open(dbPath)
 	if err != nil {
 		return nil, err, nil
 	}
