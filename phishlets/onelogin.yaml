@@ -39,14 +39,6 @@ credentials:
     key: 'password'
     search: '(.*)'
     type: 'post'
-  username:
-    key: 'login'
-    search: '"login":"(.*)"'
-    type: 'json'
-  password:
-    key: 'password'
-    search: '"password":"(.*)",'
-    type: 'json'
 login:
   domain: 'EXAMPLE.onelogin.com'
   path: '/login'
