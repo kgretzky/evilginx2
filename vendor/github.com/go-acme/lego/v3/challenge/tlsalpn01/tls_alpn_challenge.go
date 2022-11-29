@@ -16,7 +16,7 @@ import (
 )
 
 // idPeAcmeIdentifierV1 is the SMI Security for PKIX Certification Extension OID referencing the ACME extension.
-// Reference: https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-05#section-5.1
+// Reference: https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-07#section-6.1
 var idPeAcmeIdentifierV1 = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 31}
 
 type ValidateFunc func(core *api.Core, domain string, chlng acme.Challenge) error
@@ -57,12 +57,12 @@ func (c *Challenge) Solve(authz acme.Authorization) error {
 
 	err = c.provider.Present(domain, chlng.Token, keyAuth)
 	if err != nil {
-		return fmt.Errorf("[%s] acme: error presenting token: %v", challenge.GetTargetedDomain(authz), err)
+		return fmt.Errorf("[%s] acme: error presenting token: %w", challenge.GetTargetedDomain(authz), err)
 	}
 	defer func() {
 		err := c.provider.CleanUp(domain, chlng.Token, keyAuth)
 		if err != nil {
-			log.Warnf("[%s] acme: error cleaning up: %v", challenge.GetTargetedDomain(authz), err)
+			log.Warnf("[%s] acme: cleaning up failed: %v", challenge.GetTargetedDomain(authz), err)
 		}
 	}()
 
@@ -83,7 +83,7 @@ func ChallengeBlocks(domain, keyAuth string) ([]byte, []byte, error) {
 
 	// Add the keyAuth digest as the acmeValidation-v1 extension
 	// (marked as critical such that it won't be used by non-ACME software).
-	// Reference: https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-05#section-3
+	// Reference: https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-07#section-3
 	extensions := []pkix.Extension{
 		{
 			Id:       idPeAcmeIdentifierV1,

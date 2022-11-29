@@ -60,13 +60,13 @@ func (s *ProviderServer) Present(domain, token, keyAuth string) error {
 
 	// We must set that the `acme-tls/1` application level protocol is supported
 	// so that the protocol negotiation can succeed. Reference:
-	// https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-01#section-5.2
+	// https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-07#section-6.2
 	tlsConf.NextProtos = []string{ACMETLS1Protocol}
 
 	// Create the listener with the created tls.Config.
 	s.listener, err = tls.Listen("tcp", s.GetAddress(), tlsConf)
 	if err != nil {
-		return fmt.Errorf("could not start HTTPS server for challenge -> %v", err)
+		return fmt.Errorf("could not start HTTPS server for challenge: %w", err)
 	}
 
 	// Shut the server down when we're finished.

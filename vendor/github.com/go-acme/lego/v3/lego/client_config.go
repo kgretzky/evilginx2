@@ -27,10 +27,10 @@ const (
 	// the system-wide trusted root list.
 	caServerNameEnvVar = "LEGO_CA_SERVER_NAME"
 
-	// LEDirectoryProduction URL to the Let's Encrypt production
+	// LEDirectoryProduction URL to the Let's Encrypt production.
 	LEDirectoryProduction = "https://acme-v02.api.letsencrypt.org/directory"
 
-	// LEDirectoryStaging URL to the Let's Encrypt staging
+	// LEDirectoryStaging URL to the Let's Encrypt staging.
 	LEDirectoryStaging = "https://acme-staging-v02.api.letsencrypt.org/directory"
 )
 
@@ -61,7 +61,7 @@ type CertificateConfig struct {
 
 // createDefaultHTTPClient Creates an HTTP client with a reasonable timeout value
 // and potentially a custom *x509.CertPool
-// based on the caCertificatesEnvVar environment variable (see the `initCertPool` function)
+// based on the caCertificatesEnvVar environment variable (see the `initCertPool` function).
 func createDefaultHTTPClient() *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
