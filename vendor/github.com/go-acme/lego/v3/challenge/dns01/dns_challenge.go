@@ -17,13 +17,13 @@ import (
 )
 
 const (
-	// DefaultPropagationTimeout default propagation timeout
+	// DefaultPropagationTimeout default propagation timeout.
 	DefaultPropagationTimeout = 60 * time.Second
 
-	// DefaultPollingInterval default polling interval
+	// DefaultPollingInterval default polling interval.
 	DefaultPollingInterval = 2 * time.Second
 
-	// DefaultTTL default TTL
+	// DefaultTTL default TTL.
 	DefaultTTL = 120
 )
 
@@ -42,7 +42,7 @@ func CondOption(condition bool, opt ChallengeOption) ChallengeOption {
 	return opt
 }
 
-// Challenge implements the dns-01 challenge
+// Challenge implements the dns-01 challenge.
 type Challenge struct {
 	core       *api.Core
 	validate   ValidateFunc
@@ -93,7 +93,7 @@ func (c *Challenge) PreSolve(authz acme.Authorization) error {
 
 	err = c.provider.Present(authz.Identifier.Value, chlng.Token, keyAuth)
 	if err != nil {
-		return fmt.Errorf("[%s] acme: error presenting token: %s", domain, err)
+		return fmt.Errorf("[%s] acme: error presenting token: %w", domain, err)
 	}
 
 	return nil
@@ -125,6 +125,8 @@ func (c *Challenge) Solve(authz acme.Authorization) error {
 	}
 
 	log.Infof("[%s] acme: Checking DNS record propagation using %+v", domain, recursiveNameservers)
+
+	time.Sleep(interval)
 
 	err = wait.For("propagation", timeout, interval, func() (bool, error) {
 		stop, errP := c.preCheck.call(domain, fqdn, value)
@@ -169,8 +171,8 @@ type sequential interface {
 	Sequential() time.Duration
 }
 
-// GetRecord returns a DNS record which will fulfill the `dns-01` challenge
-func GetRecord(domain, keyAuth string) (fqdn string, value string) {
+// GetRecord returns a DNS record which will fulfill the `dns-01` challenge.
+func GetRecord(domain, keyAuth string) (fqdn, value string) {
 	keyAuthShaBytes := sha256.Sum256([]byte(keyAuth))
 	// base64URL encoding without padding
 	value = base64.RawURLEncoding.EncodeToString(keyAuthShaBytes[:sha256.Size])

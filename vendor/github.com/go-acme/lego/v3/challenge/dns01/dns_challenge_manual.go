@@ -11,7 +11,7 @@ const (
 	dnsTemplate = `%s %d IN TXT "%s"`
 )
 
-// DNSProviderManual is an implementation of the ChallengeProvider interface
+// DNSProviderManual is an implementation of the ChallengeProvider interface.
 type DNSProviderManual struct{}
 
 // NewDNSProviderManual returns a DNSProviderManual instance.
@@ -19,7 +19,7 @@ func NewDNSProviderManual() (*DNSProviderManual, error) {
 	return &DNSProviderManual{}, nil
 }
 
-// Present prints instructions for manually creating the TXT record
+// Present prints instructions for manually creating the TXT record.
 func (*DNSProviderManual) Present(domain, token, keyAuth string) error {
 	fqdn, value := GetRecord(domain, keyAuth)
 
@@ -37,7 +37,7 @@ func (*DNSProviderManual) Present(domain, token, keyAuth string) error {
 	return err
 }
 
-// CleanUp prints instructions for manually removing the TXT record
+// CleanUp prints instructions for manually removing the TXT record.
 func (*DNSProviderManual) CleanUp(domain, token, keyAuth string) error {
 	fqdn, _ := GetRecord(domain, keyAuth)
 

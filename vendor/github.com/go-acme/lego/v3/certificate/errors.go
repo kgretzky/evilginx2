@@ -10,7 +10,7 @@ import (
 type obtainError map[string]error
 
 func (e obtainError) Error() string {
-	buffer := bytes.NewBufferString("acme: Error -> One or more domains had a problem:\n")
+	buffer := bytes.NewBufferString("error: one or more domains had a problem:\n")
 
 	var domains []string
 	for domain := range e {

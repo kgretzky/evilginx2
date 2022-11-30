@@ -11,12 +11,12 @@ import (
 func For(msg string, timeout, interval time.Duration, f func() (bool, error)) error {
 	log.Infof("Wait for %s [timeout: %s, interval: %s]", msg, timeout, interval)
 
-	var lastErr string
+	var lastErr error
 	timeUp := time.After(timeout)
 	for {
 		select {
 		case <-timeUp:
-			return fmt.Errorf("time limit exceeded: last error: %s", lastErr)
+			return fmt.Errorf("time limit exceeded: last error: %w", lastErr)
 		default:
 		}
 
@@ -25,7 +25,7 @@ func For(msg string, timeout, interval time.Duration, f func() (bool, error)) er
 			return nil
 		}
 		if err != nil {
-			lastErr = err.Error()
+			lastErr = err
 		}
 
 		time.Sleep(interval)

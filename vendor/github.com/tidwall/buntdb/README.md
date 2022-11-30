@@ -3,10 +3,8 @@
     src="logo.png"
     width="307" height="150" border="0" alt="BuntDB">
 <br>
-<a href="https://travis-ci.org/tidwall/buntdb"><img src="https://img.shields.io/travis/tidwall/buntdb.svg?style=flat-square" alt="Build Status"></a>
-<a href="http://gocover.io/github.com/tidwall/buntdb"><img src="https://img.shields.io/badge/coverage-95%25-brightgreen.svg?style=flat-square" alt="Code Coverage"></a>
-<a href="https://goreportcard.com/report/github.com/tidwall/buntdb"><img src="https://goreportcard.com/badge/github.com/tidwall/buntdb?style=flat-square" alt="Go Report Card"></a>
-<a href="https://godoc.org/github.com/tidwall/buntdb"><img src="https://img.shields.io/badge/api-reference-blue.svg?style=flat-square" alt="GoDoc"></a>
+<a href="https://godoc.org/github.com/tidwall/buntdb"><img src="https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square" alt="Godoc"></a>
+<a href="https://github.com/tidwall/buntdb/blob/master/LICENSE"><img src="https://img.shields.io/github/license/tidwall/buntdb.svg?style=flat-square" alt="LICENSE"></a>
 </p>
 
 BuntDB is a low-level, in-memory, key/value store in pure Go.
@@ -29,7 +27,6 @@ Features
 - Flexible [iteration](#iterating) of data; ascending, descending, and ranges
 - [Durable append-only file](#append-only-file) format for persistence
 - Option to evict old items with an [expiration](#data-expiration) TTL
-- Tight codebase, under 2K loc using the `cloc` command
 - ACID semantics with locking [transactions](#transactions) that support rollbacks
 
 
@@ -140,6 +137,7 @@ All keys/value pairs are ordered in the database by the key. To iterate over the
 err := db.View(func(tx *buntdb.Tx) error {
 	err := tx.Ascend("", func(key, value string) bool {
 		fmt.Printf("key: %s, value: %s\n", key, value)
+		return true // continue iteration
 	})
 	return err
 })
@@ -458,8 +456,9 @@ Any index can be put in descending order by wrapping it's less function with `bu
 
 ```go
 db.CreateIndex("last_name_age", "*",
-buntdb.IndexJSON("name.last"),
-buntdb.Desc(buntdb.IndexJSON("age")))
+    buntdb.IndexJSON("name.last"),
+    buntdb.Desc(buntdb.IndexJSON("age")),
+)
 ```
 
 This will create a multi value index where the last name is ascending and the age is descending.
@@ -576,7 +575,7 @@ var config buntdb.Config
 if err := db.ReadConfig(&config); err != nil{
 	log.Fatal(err)
 }
-if err := db.WriteConfig(config); err != nil{
+if err := db.SetConfig(config); err != nil{
 	log.Fatal(err)
 }
 ```

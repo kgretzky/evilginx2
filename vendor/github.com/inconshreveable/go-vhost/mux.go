@@ -129,6 +129,11 @@ func (m *VhostMuxer) handle(conn net.Conn) {
 		m.sendError(conn, fmt.Errorf("Failed to set deadline: %v", err))
 		return
 	}
+	defer func() {
+		if err := conn.SetDeadline(time.Time{}); err != nil {
+			m.sendError(conn, fmt.Errorf("Failed unset connection deadline: %v", err))
+		}
+	}()
 
 	// extract the name
 	vconn, err := m.vhostFn(conn)
@@ -144,11 +149,6 @@ func (m *VhostMuxer) handle(conn net.Conn) {
 	l, ok := m.get(host)
 	if !ok {
 		m.sendError(vconn, NotFound{fmt.Errorf("Host not found: %v", host)})
-		return
-	}
-
-	if err = vconn.SetDeadline(time.Time{}); err != nil {
-		m.sendError(vconn, fmt.Errorf("Failed unset connection deadline: %v", err))
 		return
 	}
 
@@ -302,9 +302,10 @@ func NewTLSMuxer(listener net.Listener, muxTimeout time.Duration) (*TLSMuxer, er
 // connections and Close() it when finished. When you Close() a Listener,
 // the parent muxer will stop listening for connections to the Listener's name.
 type Listener struct {
-	name   string
-	mux    *VhostMuxer
-	accept chan Conn
+	name      string
+	mux       *VhostMuxer
+	accept    chan Conn
+	closeOnce sync.Once
 }
 
 // Accept returns the next mux'd connection for this listener and blocks
@@ -320,8 +321,10 @@ func (l *Listener) Accept() (net.Conn, error) {
 // Close stops the parent muxer from listening for connections to the mux'd
 // virtual host name.
 func (l *Listener) Close() error {
-	l.mux.del(l.name)
-	close(l.accept)
+	l.closeOnce.Do(func() {
+		l.mux.del(l.name)
+		close(l.accept)
+	})
 	return nil
 }
 

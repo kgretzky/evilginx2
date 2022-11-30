@@ -15,6 +15,7 @@ type tomlValue struct {
 	comment   string
 	commented bool
 	multiline bool
+	literal   bool
 	position  Position
 }
 
@@ -23,13 +24,18 @@ type Tree struct {
 	values    map[string]interface{} // string -> *tomlValue, *Tree, []*Tree
 	comment   string
 	commented bool
+	inline    bool
 	position  Position
 }
 
 func newTree() *Tree {
+	return newTreeWithPosition(Position{})
+}
+
+func newTreeWithPosition(pos Position) *Tree {
 	return &Tree{
 		values:   make(map[string]interface{}),
-		position: Position{},
+		position: pos,
 	}
 }
 
@@ -117,12 +123,139 @@ func (t *Tree) GetPath(keys []string) interface{} {
 	}
 }
 
+// GetArray returns the value at key in the Tree.
+// It returns []string, []int64, etc type if key has homogeneous lists
+// Key is a dot-separated path (e.g. a.b.c) without single/double quoted strings.
+// Returns nil if the path does not exist in the tree.
+// If keys is of length zero, the current tree is returned.
+func (t *Tree) GetArray(key string) interface{} {
+	if key == "" {
+		return t
+	}
+	return t.GetArrayPath(strings.Split(key, "."))
+}
+
+// GetArrayPath returns the element in the tree indicated by 'keys'.
+// If keys is of length zero, the current tree is returned.
+func (t *Tree) GetArrayPath(keys []string) interface{} {
+	if len(keys) == 0 {
+		return t
+	}
+	subtree := t
+	for _, intermediateKey := range keys[:len(keys)-1] {
+		value, exists := subtree.values[intermediateKey]
+		if !exists {
+			return nil
+		}
+		switch node := value.(type) {
+		case *Tree:
+			subtree = node
+		case []*Tree:
+			// go to most recent element
+			if len(node) == 0 {
+				return nil
+			}
+			subtree = node[len(node)-1]
+		default:
+			return nil // cannot navigate through other node types
+		}
+	}
+	// branch based on final node type
+	switch node := subtree.values[keys[len(keys)-1]].(type) {
+	case *tomlValue:
+		switch n := node.value.(type) {
+		case []interface{}:
+			return getArray(n)
+		default:
+			return node.value
+		}
+	default:
+		return node
+	}
+}
+
+// if homogeneous array, then return slice type object over []interface{}
+func getArray(n []interface{}) interface{} {
+	var s []string
+	var i64 []int64
+	var f64 []float64
+	var bl []bool
+	for _, value := range n {
+		switch v := value.(type) {
+		case string:
+			s = append(s, v)
+		case int64:
+			i64 = append(i64, v)
+		case float64:
+			f64 = append(f64, v)
+		case bool:
+			bl = append(bl, v)
+		default:
+			return n
+		}
+	}
+	if len(s) == len(n) {
+		return s
+	} else if len(i64) == len(n) {
+		return i64
+	} else if len(f64) == len(n) {
+		return f64
+	} else if len(bl) == len(n) {
+		return bl
+	}
+	return n
+}
+
 // GetPosition returns the position of the given key.
 func (t *Tree) GetPosition(key string) Position {
 	if key == "" {
 		return t.position
 	}
 	return t.GetPositionPath(strings.Split(key, "."))
+}
+
+// SetPositionPath sets the position of element in the tree indicated by 'keys'.
+// If keys is of length zero, the current tree position is set.
+func (t *Tree) SetPositionPath(keys []string, pos Position) {
+	if len(keys) == 0 {
+		t.position = pos
+		return
+	}
+	subtree := t
+	for _, intermediateKey := range keys[:len(keys)-1] {
+		value, exists := subtree.values[intermediateKey]
+		if !exists {
+			return
+		}
+		switch node := value.(type) {
+		case *Tree:
+			subtree = node
+		case []*Tree:
+			// go to most recent element
+			if len(node) == 0 {
+				return
+			}
+			subtree = node[len(node)-1]
+		default:
+			return
+		}
+	}
+	// branch based on final node type
+	switch node := subtree.values[keys[len(keys)-1]].(type) {
+	case *tomlValue:
+		node.position = pos
+		return
+	case *Tree:
+		node.position = pos
+		return
+	case []*Tree:
+		// go to most recent element
+		if len(node) == 0 {
+			return
+		}
+		node[len(node)-1].position = pos
+		return
+	}
 }
 
 // GetPositionPath returns the element in the tree indicated by 'keys'.
@@ -182,6 +315,7 @@ type SetOptions struct {
 	Comment   string
 	Commented bool
 	Multiline bool
+	Literal   bool
 }
 
 // SetWithOptions is the same as Set, but allows you to provide formatting
@@ -194,10 +328,10 @@ func (t *Tree) SetWithOptions(key string, opts SetOptions, value interface{}) {
 // formatting instructions to the key, that will be reused by Marshal().
 func (t *Tree) SetPathWithOptions(keys []string, opts SetOptions, value interface{}) {
 	subtree := t
-	for _, intermediateKey := range keys[:len(keys)-1] {
+	for i, intermediateKey := range keys[:len(keys)-1] {
 		nextTree, exists := subtree.values[intermediateKey]
 		if !exists {
-			nextTree = newTree()
+			nextTree = newTreeWithPosition(Position{Line: t.position.Line + i, Col: t.position.Col})
 			subtree.values[intermediateKey] = nextTree // add new element here
 		}
 		switch node := nextTree.(type) {
@@ -207,7 +341,8 @@ func (t *Tree) SetPathWithOptions(keys []string, opts SetOptions, value interfac
 			// go to most recent element
 			if len(node) == 0 {
 				// create element if it does not exist
-				subtree.values[intermediateKey] = append(node, newTree())
+				node = append(node, newTreeWithPosition(Position{Line: t.position.Line + i, Col: t.position.Col}))
+				subtree.values[intermediateKey] = node
 			}
 			subtree = node[len(node)-1]
 		}
@@ -215,19 +350,29 @@ func (t *Tree) SetPathWithOptions(keys []string, opts SetOptions, value interfac
 
 	var toInsert interface{}
 
-	switch value.(type) {
+	switch v := value.(type) {
 	case *Tree:
-		tt := value.(*Tree)
-		tt.comment = opts.Comment
+		v.comment = opts.Comment
+		v.commented = opts.Commented
 		toInsert = value
 	case []*Tree:
+		for i := range v {
+			v[i].commented = opts.Commented
+		}
 		toInsert = value
 	case *tomlValue:
-		tt := value.(*tomlValue)
-		tt.comment = opts.Comment
-		toInsert = tt
+		v.comment = opts.Comment
+		v.commented = opts.Commented
+		v.multiline = opts.Multiline
+		v.literal = opts.Literal
+		toInsert = v
 	default:
-		toInsert = &tomlValue{value: value, comment: opts.Comment, commented: opts.Commented, multiline: opts.Multiline}
+		toInsert = &tomlValue{value: value,
+			comment:   opts.Comment,
+			commented: opts.Commented,
+			multiline: opts.Multiline,
+			literal:   opts.Literal,
+			position:  Position{Line: subtree.position.Line + len(subtree.values) + 1, Col: subtree.position.Col}}
 	}
 
 	subtree.values[keys[len(keys)-1]] = toInsert
@@ -256,44 +401,35 @@ func (t *Tree) SetPath(keys []string, value interface{}) {
 // SetPathWithComment is the same as SetPath, but allows you to provide comment
 // information to the key, that will be reused by Marshal().
 func (t *Tree) SetPathWithComment(keys []string, comment string, commented bool, value interface{}) {
-	subtree := t
-	for _, intermediateKey := range keys[:len(keys)-1] {
-		nextTree, exists := subtree.values[intermediateKey]
-		if !exists {
-			nextTree = newTree()
-			subtree.values[intermediateKey] = nextTree // add new element here
-		}
-		switch node := nextTree.(type) {
-		case *Tree:
-			subtree = node
-		case []*Tree:
-			// go to most recent element
-			if len(node) == 0 {
-				// create element if it does not exist
-				subtree.values[intermediateKey] = append(node, newTree())
-			}
-			subtree = node[len(node)-1]
-		}
+	t.SetPathWithOptions(keys, SetOptions{Comment: comment, Commented: commented}, value)
+}
+
+// Delete removes a key from the tree.
+// Key is a dot-separated path (e.g. a.b.c).
+func (t *Tree) Delete(key string) error {
+	keys, err := parseKey(key)
+	if err != nil {
+		return err
 	}
+	return t.DeletePath(keys)
+}
 
-	var toInsert interface{}
-
-	switch value.(type) {
+// DeletePath removes a key from the tree.
+// Keys is an array of path elements (e.g. {"a","b","c"}).
+func (t *Tree) DeletePath(keys []string) error {
+	keyLen := len(keys)
+	if keyLen == 1 {
+		delete(t.values, keys[0])
+		return nil
+	}
+	tree := t.GetPath(keys[:keyLen-1])
+	item := keys[keyLen-1]
+	switch node := tree.(type) {
 	case *Tree:
-		tt := value.(*Tree)
-		tt.comment = comment
-		toInsert = value
-	case []*Tree:
-		toInsert = value
-	case *tomlValue:
-		tt := value.(*tomlValue)
-		tt.comment = comment
-		toInsert = tt
-	default:
-		toInsert = &tomlValue{value: value, comment: comment, commented: commented}
+		delete(node.values, item)
+		return nil
 	}
-
-	subtree.values[keys[len(keys)-1]] = toInsert
+	return errors.New("no such key to delete")
 }
 
 // createSubTree takes a tree and a key and create the necessary intermediate
@@ -305,11 +441,12 @@ func (t *Tree) SetPathWithComment(keys []string, comment string, commented bool,
 // Returns nil on success, error object on failure
 func (t *Tree) createSubTree(keys []string, pos Position) error {
 	subtree := t
-	for _, intermediateKey := range keys {
+	for i, intermediateKey := range keys {
 		nextTree, exists := subtree.values[intermediateKey]
 		if !exists {
-			tree := newTree()
+			tree := newTreeWithPosition(Position{Line: t.position.Line + i, Col: t.position.Col})
 			tree.position = pos
+			tree.inline = subtree.inline
 			subtree.values[intermediateKey] = tree
 			nextTree = tree
 		}
@@ -334,11 +471,40 @@ func LoadBytes(b []byte) (tree *Tree, err error) {
 			if _, ok := r.(runtime.Error); ok {
 				panic(r)
 			}
-			err = errors.New(r.(string))
+			err = fmt.Errorf("%s", r)
 		}
 	}()
+
+	if len(b) >= 4 && (hasUTF32BigEndianBOM4(b) || hasUTF32LittleEndianBOM4(b)) {
+		b = b[4:]
+	} else if len(b) >= 3 && hasUTF8BOM3(b) {
+		b = b[3:]
+	} else if len(b) >= 2 && (hasUTF16BigEndianBOM2(b) || hasUTF16LittleEndianBOM2(b)) {
+		b = b[2:]
+	}
+
 	tree = parseToml(lexToml(b))
 	return
+}
+
+func hasUTF16BigEndianBOM2(b []byte) bool {
+	return b[0] == 0xFE && b[1] == 0xFF
+}
+
+func hasUTF16LittleEndianBOM2(b []byte) bool {
+	return b[0] == 0xFF && b[1] == 0xFE
+}
+
+func hasUTF8BOM3(b []byte) bool {
+	return b[0] == 0xEF && b[1] == 0xBB && b[2] == 0xBF
+}
+
+func hasUTF32BigEndianBOM4(b []byte) bool {
+	return b[0] == 0x00 && b[1] == 0x00 && b[2] == 0xFE && b[3] == 0xFF
+}
+
+func hasUTF32LittleEndianBOM4(b []byte) bool {
+	return b[0] == 0xFF && b[1] == 0xFE && b[2] == 0x00 && b[3] == 0x00
 }
 
 // LoadReader creates a Tree from any io.Reader.

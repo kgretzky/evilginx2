@@ -256,6 +256,9 @@ func readClientHello(rd io.Reader) (*ClientHelloMsg, error) {
 	}
 
 	data := hand.Bytes()
+	if len(data) < 4 {
+		return nil, alertUnexpectedMessage
+	}
 	n := int(data[1])<<16 | int(data[2])<<8 | int(data[3])
 	if n > maxHandshake {
 		return nil, alertInternalError
