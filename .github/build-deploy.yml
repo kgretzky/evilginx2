@@ -1,0 +1,26 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Docker
+        uses: docker/setup-docker@v1
+      - name: Build image
+        run: |
+          docker build -t evilginx2 .
+          docker tag evilginx2 docker.pkg.github.com/jarp0l/evilginx2/evilginx2:latest
+      - name: Login to GitHub Container Registry
+        run: |
+          ghcr login -u ${{ secrets.GITHUB_ACTOR }} -p ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy image
+        run: |
+          ghcr push docker.pkg.github.com/jarp0l/evilginx2/evilginx2:latest
