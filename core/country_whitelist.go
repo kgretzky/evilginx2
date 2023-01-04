@@ -10,7 +10,8 @@ import (
 )
 
 type Whitelist struct {
-	countries []string
+	countries []string,
+	file_path string
 }
 
 func NewWhitelist(path string, dbPath string) (*Whitelist, error, *geoip2.Reader) {
@@ -37,11 +38,52 @@ func NewWhitelist(path string, dbPath string) (*Whitelist, error, *geoip2.Reader
 		}
 		l = strings.Trim(l, " ")
 		if len(l) > 0 {
-			wl.countries = append(wl.countries, l)
+			wl.countries = append(wl.countries, strings.ToUpper(l))
 		}
 	}
 	log.Info("country whitelist: loaded %d country code", len(wl.countries))
+	wl.file_path = path 
 	return wl, nil, db
+}
+
+func (wl *Whitelist)WriteToFile(){
+	// Open a file for writing
+	file, err := os.Create(wl.file_path)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+
+	// Write the list to the file
+	for _, s := range wl.countries {
+		_, err := file.WriteString(s + "\n")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+}
+
+func (wl *Whitelist)AddCountry(c string){
+	c = strings.Trim(c, " ")
+	if len(c) > 0 {
+		wl.countries = append(wl.countries, strings.ToUpper(c))
+	}
+	log.Info("country whitelist: %s country code added to whitelist", c)
+	wl.WriteToFile()
+}
+
+func (wl *Whitelist)DeleteCountry(c string){
+    out := make([]string, 0)
+    for _, element := range wl.countries {
+        if element != c {
+            out = append(out, element)
+        }
+    }
+    wl.countries = out
+    log.Info("country whitelist: %s country code removed from whitelist", c)
+    wl.WriteToFile()
 }
 
 func (wl *Whitelist) IsIPFromWhitelistedCountry(ip string, db *geoip2.Reader) bool {
