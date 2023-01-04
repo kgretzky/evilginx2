@@ -158,7 +158,7 @@ func main() {
 	hp, _ := core.NewHttpProxy("", 443, cfg, crt_db, db, bl, wl, geoip_db, *developer_mode)
 	hp.Start()
 
-	t, err := core.NewTerminal(hp, cfg, crt_db, db, *developer_mode)
+	t, err := core.NewTerminal(hp, cfg, crt_db, db, geoip_db, *developer_mode)
 	if err != nil {
 		log.Fatal("%v", err)
 		return
