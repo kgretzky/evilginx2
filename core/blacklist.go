@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"evilginx2/log"
+	"log"
 )
 
 const (
