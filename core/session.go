@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/kgretzky/Brasco/database"
+	"github.com/Brasco/database"
 )
 
 type Session struct {
