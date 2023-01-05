@@ -46,7 +46,7 @@ func (n *Manager) Push(nonce string) {
 	n.nonces = append(n.nonces, nonce)
 }
 
-// Nonce implement jose.NonceSource
+// Nonce implement jose.NonceSource.
 func (n *Manager) Nonce() (string, error) {
 	if nonce, ok := n.Pop(); ok {
 		return nonce, nil
@@ -57,7 +57,7 @@ func (n *Manager) Nonce() (string, error) {
 func (n *Manager) getNonce() (string, error) {
 	resp, err := n.do.Head(n.nonceURL)
 	if err != nil {
-		return "", fmt.Errorf("failed to get nonce from HTTP HEAD -> %v", err)
+		return "", fmt.Errorf("failed to get nonce from HTTP HEAD: %w", err)
 	}
 
 	return GetFromResponse(resp)
@@ -71,7 +71,7 @@ func GetFromResponse(resp *http.Response) (string, error) {
 
 	nonce := resp.Header.Get("Replay-Nonce")
 	if nonce == "" {
-		return "", fmt.Errorf("server did not respond with a proper nonce header")
+		return "", errors.New("server did not respond with a proper nonce header")
 	}
 
 	return nonce, nil

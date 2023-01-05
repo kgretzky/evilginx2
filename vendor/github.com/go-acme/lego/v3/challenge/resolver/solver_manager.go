@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/go-acme/lego/v3/acme"
 	"github.com/go-acme/lego/v3/acme/api"
 	"github.com/go-acme/lego/v3/challenge"
@@ -79,7 +79,7 @@ func (c *SolverManager) chooseSolver(authz acme.Authorization) solver {
 func validate(core *api.Core, domain string, chlg acme.Challenge) error {
 	chlng, err := core.Challenges.New(chlg.URL)
 	if err != nil {
-		return fmt.Errorf("failed to initiate challenge: %v", err)
+		return fmt.Errorf("failed to initiate challenge: %w", err)
 	}
 
 	valid, err := checkChallengeStatus(chlng)

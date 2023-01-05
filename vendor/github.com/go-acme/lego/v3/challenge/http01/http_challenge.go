@@ -11,7 +11,7 @@ import (
 
 type ValidateFunc func(core *api.Core, domain string, chlng acme.Challenge) error
 
-// ChallengePath returns the URL path for the `http-01` challenge
+// ChallengePath returns the URL path for the `http-01` challenge.
 func ChallengePath(token string) string {
 	return "/.well-known/acme-challenge/" + token
 }
@@ -51,12 +51,12 @@ func (c *Challenge) Solve(authz acme.Authorization) error {
 
 	err = c.provider.Present(authz.Identifier.Value, chlng.Token, keyAuth)
 	if err != nil {
-		return fmt.Errorf("[%s] acme: error presenting token: %v", domain, err)
+		return fmt.Errorf("[%s] acme: error presenting token: %w", domain, err)
 	}
 	defer func() {
 		err := c.provider.CleanUp(authz.Identifier.Value, chlng.Token, keyAuth)
 		if err != nil {
-			log.Warnf("[%s] acme: error cleaning up: %v", domain, err)
+			log.Warnf("[%s] acme: cleaning up failed: %v", domain, err)
 		}
 	}()
 

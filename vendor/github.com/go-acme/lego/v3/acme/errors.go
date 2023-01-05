@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// Errors types
+// Errors types.
 const (
 	errNS       = "urn:ietf:params:acme:error:"
 	BadNonceErr = errNS + "badNonce"
@@ -12,7 +12,7 @@ const (
 
 // ProblemDetails the problem details object
 // - https://tools.ietf.org/html/rfc7807#section-3.1
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-7.3.3
+// - https://tools.ietf.org/html/rfc8555#section-7.3.3
 type ProblemDetails struct {
 	Type        string       `json:"type,omitempty"`
 	Detail      string       `json:"detail,omitempty"`
@@ -26,7 +26,7 @@ type ProblemDetails struct {
 }
 
 // SubProblem a "subproblems"
-// - https://tools.ietf.org/html/draft-ietf-acme-acme-16#section-6.7.1
+// - https://tools.ietf.org/html/rfc8555#section-6.7.1
 type SubProblem struct {
 	Type       string     `json:"type,omitempty"`
 	Detail     string     `json:"detail,omitempty"`

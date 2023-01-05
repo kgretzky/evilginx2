@@ -10,7 +10,7 @@ import (
 	"github.com/go-acme/lego/v3/log"
 )
 
-// ProviderServer implements ChallengeProvider for `http-01` challenge
+// ProviderServer implements ChallengeProvider for `http-01` challenge.
 // It may be instantiated without using the NewProviderServer function if
 // you want only to use the default values.
 type ProviderServer struct {
@@ -37,7 +37,7 @@ func (s *ProviderServer) Present(domain, token, keyAuth string) error {
 	var err error
 	s.listener, err = net.Listen("tcp", s.GetAddress())
 	if err != nil {
-		return fmt.Errorf("could not start HTTP server for challenge -> %v", err)
+		return fmt.Errorf("could not start HTTP server for challenge: %w", err)
 	}
 
 	s.done = make(chan bool)
@@ -49,7 +49,7 @@ func (s *ProviderServer) GetAddress() string {
 	return net.JoinHostPort(s.iface, s.port)
 }
 
-// CleanUp closes the HTTP server and removes the token from `ChallengePath(token)`
+// CleanUp closes the HTTP server and removes the token from `ChallengePath(token)`.
 func (s *ProviderServer) CleanUp(domain, token, keyAuth string) error {
 	if s.listener == nil {
 		return nil
@@ -65,12 +65,12 @@ func (s *ProviderServer) CleanUp(domain, token, keyAuth string) error {
 // When the server runs behind a proxy server, this is not the correct place to look at;
 // Apache and NGINX have traditionally moved the original Host header into a new header named "X-Forwarded-Host".
 // Other webservers might use different names;
-// and RFC7239 has standadized a new header named "Forwarded" (with slightly different semantics).
+// and RFC7239 has standardized a new header named "Forwarded" (with slightly different semantics).
 //
 // The exact behavior depends on the value of headerName:
 // - "" (the empty string) and "Host" will restore the default and only check the Host header
 // - "Forwarded" will look for a Forwarded header, and inspect it according to https://tools.ietf.org/html/rfc7239
-// - any other value will check the header value with the same name
+// - any other value will check the header value with the same name.
 func (s *ProviderServer) SetProxyHeader(headerName string) {
 	switch h := textproto.CanonicalMIMEHeaderKey(headerName); h {
 	case "", "Host":

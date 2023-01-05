@@ -71,13 +71,13 @@ func (c *CertificateService) get(certURL string) ([]byte, string, error) {
 
 	// The issuer certificate link may be supplied via an "up" link
 	// in the response headers of a new certificate.
-	// See https://tools.ietf.org/html/draft-ietf-acme-acme-12#section-7.4.2
+	// See https://tools.ietf.org/html/rfc8555#section-7.4.2
 	up := getLink(resp.Header, "up")
 
 	return cert, up, err
 }
 
-// getIssuerFromLink requests the issuer certificate
+// getIssuerFromLink requests the issuer certificate.
 func (c *CertificateService) getIssuerFromLink(up string) ([]byte, error) {
 	if len(up) == 0 {
 		return nil, nil

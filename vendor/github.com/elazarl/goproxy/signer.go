@@ -44,11 +44,9 @@ func signHost(ca tls.Certificate, hosts []string) (cert *tls.Certificate, err er
 	if x509ca, err = x509.ParseCertificate(ca.Certificate[0]); err != nil {
 		return
 	}
-	start := time.Unix(0, 0)
-	end, err := time.Parse("2006-01-02", "2049-12-31")
-	if err != nil {
-		panic(err)
-	}
+
+	start := time.Unix(time.Now().Unix()-2592000, 0) // 2592000  = 30 day
+	end := time.Unix(time.Now().Unix()+31536000, 0)  // 31536000 = 365 day
 
 	serial := big.NewInt(rand.Int63())
 	template := x509.Certificate{

@@ -3,6 +3,7 @@ package certcrypto
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -13,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ocsp"
@@ -38,7 +40,7 @@ const (
 	OCSPServerFailed = ocsp.ServerFailed
 )
 
-// Constants for OCSP must staple
+// Constants for OCSP must staple.
 var (
 	tlsFeatureExtensionOID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 24}
 	ocspMustStapleFeature  = []byte{0x30, 0x03, 0x02, 0x01, 0x05}
@@ -77,17 +79,35 @@ func ParsePEMBundle(bundle []byte) ([]*x509.Certificate, error) {
 	return certificates, nil
 }
 
+// ParsePEMPrivateKey parses a private key from key, which is a PEM block.
+// Borrowed from Go standard library, to handle various private key and PEM block types.
+// https://github.com/golang/go/blob/693748e9fa385f1e2c3b91ca9acbb6c0ad2d133d/src/crypto/tls/tls.go#L291-L308
+// https://github.com/golang/go/blob/693748e9fa385f1e2c3b91ca9acbb6c0ad2d133d/src/crypto/tls/tls.go#L238)
 func ParsePEMPrivateKey(key []byte) (crypto.PrivateKey, error) {
-	keyBlock, _ := pem.Decode(key)
+	keyBlockDER, _ := pem.Decode(key)
 
-	switch keyBlock.Type {
-	case "RSA PRIVATE KEY":
-		return x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
-	case "EC PRIVATE KEY":
-		return x509.ParseECPrivateKey(keyBlock.Bytes)
-	default:
-		return nil, errors.New("unknown PEM header value")
+	if keyBlockDER.Type != "PRIVATE KEY" && !strings.HasSuffix(keyBlockDER.Type, " PRIVATE KEY") {
+		return nil, fmt.Errorf("unknown PEM header %q", keyBlockDER.Type)
 	}
+
+	if key, err := x509.ParsePKCS1PrivateKey(keyBlockDER.Bytes); err == nil {
+		return key, nil
+	}
+
+	if key, err := x509.ParsePKCS8PrivateKey(keyBlockDER.Bytes); err == nil {
+		switch key := key.(type) {
+		case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
+			return key, nil
+		default:
+			return nil, fmt.Errorf("found unknown private key type in PKCS#8 wrapping: %T", key)
+		}
+	}
+
+	if key, err := x509.ParseECPrivateKey(keyBlockDER.Bytes); err == nil {
+		return key, nil
+	}
+
+	return nil, errors.New("failed to parse private key")
 }
 
 func GeneratePrivateKey(keyType KeyType) (crypto.PrivateKey, error) {
@@ -147,7 +167,7 @@ func PEMBlock(data interface{}) *pem.Block {
 func pemDecode(data []byte) (*pem.Block, error) {
 	pemBlock, _ := pem.Decode(data)
 	if pemBlock == nil {
-		return nil, fmt.Errorf("PEM decode did not yield a valid block. Is the certificate in the right format?")
+		return nil, errors.New("PEM decode did not yield a valid block. Is the certificate in the right format?")
 	}
 
 	return pemBlock, nil
@@ -160,7 +180,7 @@ func PemDecodeTox509CSR(pem []byte) (*x509.CertificateRequest, error) {
 	}
 
 	if pemBlock.Type != "CERTIFICATE REQUEST" {
-		return nil, fmt.Errorf("PEM block is not a certificate request")
+		return nil, errors.New("PEM block is not a certificate request")
 	}
 
 	return x509.ParseCertificateRequest(pemBlock.Bytes)
@@ -179,7 +199,10 @@ func ParsePEMCertificate(cert []byte) (*x509.Certificate, error) {
 }
 
 func ExtractDomains(cert *x509.Certificate) []string {
-	domains := []string{cert.Subject.CommonName}
+	var domains []string
+	if cert.Subject.CommonName != "" {
+		domains = append(domains, cert.Subject.CommonName)
+	}
 
 	// Check for SAN certificate
 	for _, sanDomain := range cert.DNSNames {
@@ -193,7 +216,10 @@ func ExtractDomains(cert *x509.Certificate) []string {
 }
 
 func ExtractDomainsCSR(csr *x509.CertificateRequest) []string {
-	domains := []string{csr.Subject.CommonName}
+	var domains []string
+	if csr.Subject.CommonName != "" {
+		domains = append(domains, csr.Subject.CommonName)
+	}
 
 	// loop over the SubjectAltName DNS names
 	for _, sanName := range csr.DNSNames {

