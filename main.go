@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"core"
-	"database"
-	"log"
+	"github.com/Brasco/evilginx2/core"
+	"github.com/Brasco/evilginx2/database"
+	"github.com/Brasco/evilginx2/log"
 )
 
 var phishlets_dir = flag.String("p", "", "Phishlets directory path")
