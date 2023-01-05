@@ -2,7 +2,7 @@ package core
 
 import (
 	"bufio"
-	"github.com/kgretzky/evilginx2/log"
+	"github.com/Brasco/evilginx2/log"
 	"net"
 	"os"
 	"strings"
