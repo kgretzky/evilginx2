@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"log"
+	"github.com/Brasco/evilginx2/log"
 )
 
 const (
