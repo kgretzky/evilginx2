@@ -10,7 +10,7 @@ import (
 )
 
 type Whitelist struct {
-	countries []string,
+	countries []string
 	file_path string
 }
 
