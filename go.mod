@@ -1,4 +1,4 @@
-module evilnginx2/vendor
+module evilnginx2
 
 go 1.19
 
