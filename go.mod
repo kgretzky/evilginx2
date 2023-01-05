@@ -1,4 +1,4 @@
-module evilnginx2
+module github.com/Brasco/evilnginx2
 
 go 1.19
 
