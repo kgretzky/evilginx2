@@ -9,7 +9,7 @@ require (
 	github.com/go-acme/lego/v3 v3.9.0
 	github.com/gorilla/mux v1.8.0
 	github.com/inconshreveable/go-vhost v1.0.0
-	github.com/Brasco/evilginx2 v0.1.0
+	github.com/Brasco/evilginx2 v0.1.1
 	github.com/miekg/dns v1.1.50
 	github.com/mwitkow/go-http-dialer v0.0.0-20161116154839-378f744fb2b8
 	github.com/oschwald/geoip2-golang v1.8.0
