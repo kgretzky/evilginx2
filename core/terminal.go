@@ -191,7 +191,7 @@ func (t *Terminal) handleConfig(args []string) error {
 		vals := []string{t.cfg.baseDomain, t.cfg.serverIP, t.cfg.redirectParam, t.cfg.verificationParam, t.cfg.verificationToken, t.cfg.redirectUrl}
 		log.Printf("\n%s\n", AsRows(keys, vals))
 		return nil
-	} else if pn == 2 {
+	} else if pn > 1 {
 		switch args[0] {
 		case "domain":
 			t.cfg.SetBaseDomain(args[1])
