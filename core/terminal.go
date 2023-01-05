@@ -225,10 +225,10 @@ func (t *Terminal) handleConfig(args []string) error {
 				if len(args) == 3 {
 					switch args[1]{
 					case "add":
-						p.wl.AddCountry(args[3])
+						t.p.wl.AddCountry(args[3])
 						return nil
 					case "delete":
-						p.wl.DeleteCountry(args[3])
+						t.p.wl.DeleteCountry(args[3])
 						return nil
 					}
 				}
