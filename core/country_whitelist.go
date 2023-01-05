@@ -25,7 +25,7 @@ func NewWhitelist(path string, dbPath string) (*Whitelist, error, *geoip2.Reader
 	}
 	defer f.Close()
 
-	wl := &Whitelist{[]string{}}
+	wl := &Whitelist{[]string{}, path}
 
 	fs := bufio.NewScanner(f)
 	fs.Split(bufio.ScanLines)
@@ -42,7 +42,6 @@ func NewWhitelist(path string, dbPath string) (*Whitelist, error, *geoip2.Reader
 		}
 	}
 	log.Info("country whitelist: loaded %d country code", len(wl.countries))
-	wl.file_path = path 
 	return wl, nil, db
 }
 
@@ -50,7 +49,7 @@ func (wl *Whitelist)WriteToFile(){
 	// Open a file for writing
 	file, err := os.Create(wl.file_path)
 	if err != nil {
-		fmt.Println(err)
+		log.Error("%s", err)
 		return
 	}
 	defer file.Close()
@@ -59,7 +58,7 @@ func (wl *Whitelist)WriteToFile(){
 	for _, s := range wl.countries {
 		_, err := file.WriteString(s + "\n")
 		if err != nil {
-			fmt.Println(err)
+			log.Error("%s", err)
 			return
 		}
 	}
