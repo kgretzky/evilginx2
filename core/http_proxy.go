@@ -37,8 +37,8 @@ import (
 	"github.com/mwitkow/go-http-dialer"
   	geoip2 "github.com/oschwald/geoip2-golang"
 
-	"github.com/kgretzky/evilginx2/database"
-	"github.com/kgretzky/evilginx2/log"
+	"github.com/Brasco/evilginx2/database"
+	"github.com/Brasco/evilginx2/log"
 )
 
 const (
