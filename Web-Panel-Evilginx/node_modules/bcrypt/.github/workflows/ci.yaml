@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y python3 make g++
+      - name: Test
+        run: npm test
+
+  build-alpine:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node-version: [14, 16, 18]
+    container:
+      image: node:${{ matrix.node-version }}-alpine
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          apk add make g++ python3
+      - name: Test
+        run: |
+          npm test --unsafe-perm

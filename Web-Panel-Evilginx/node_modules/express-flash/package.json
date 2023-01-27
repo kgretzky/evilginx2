@@ -1,0 +1,31 @@
+{
+  "name": "express-flash",
+  "version": "0.0.2",
+  "description": "Flash Messages for your Express Application",
+  "homepage": "https://github.com/RGBboy/express-flash",
+  "keywords": ["express", "flash", "messages"],
+  "author": "RGBboy <me@rgbboy.com>",
+  "repository" : {
+    "type" : "git",
+    "url" : "http://github.com/RGBboy/express-flash"
+  },
+  "main": "index",
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "dependencies": {
+    "connect-flash": "0.1.x"
+  },
+  "devDependencies": {
+    "express": "3.x.x",
+    "jade": "0.x.x",
+    "mocha": "1.x.x",
+    "superagent": "0.x.x",
+    "should": "1.x.x"
+  },
+  "scripts" : {
+    "test" : "make test",
+    "unit" : "make unit",
+    "spec" : "make spec"
+  }
+}
