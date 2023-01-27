@@ -1,0 +1,116 @@
+@import url(https://fonts.googleapis.com/css?family=Actor);
+
+* {
+    box-sizing: border-box;
+    font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+    text-decoration: none;
+    /* \background-color: black; */
+  }
+  body{ background-image: url('../img/photo.jpeg'); 
+    background-repeat:no-repeat; 
+    background-size: cover;"
+  align-items: center;
+  text-align: center;
+  vertical-align: middle;}
+
+  .header {
+    height: 150px;
+    background-attachment: fixed;
+    width: 100%;
+    /* margin-top: -px; */
+    /* background-image:linear-gradient(to right bottom,#ffc847,#3cb371); */
+    background-image:
+    linear-gradient(to right bottom,
+    rgba(255, 102, 48, 0.3),
+    rgba(30, 108, 217, 0.8)),
+    url('/img/evilginx3.jpeg');
+  background-size: cover;
+  background-position: top;
+  position: relative;
+    filter: drop-shadow(2px 4px 6px black);
+    text-align: center;
+    color: white;  
+    padding: 20px;
+  }
+
+  .header img{
+    align-items: center;
+    width: 180px;
+    height: 80px;
+    margin-top: -10px;
+  }
+
+  .header h1
+  {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 2.0rem;
+    text-transform: uppercase;
+    text-shadow: 0px 2px 4px rgba(0, 0, 0, .4);
+  }
+
+  .session
+  {
+    width: 50%;
+    margin-top: 20px;
+    position: relative;
+    filter: drop-shadow(2px 4px 6px black);
+    height: auto;
+    width:100%;
+  }
+
+  table, th,td{
+    /* border: 2px solid black; */
+    border-collapse: collapse;
+    text-align: center;
+    /* padding: 15px; */
+    width:10%;
+    /* font-family: 'Actor'; */
+  }
+
+  th
+  {
+    background-color:black;
+    font-size:120%;
+    font-family: 'Actor';
+    padding: 10px ;
+    color: white;
+    font-weight: 500;
+    border-bottom: 1pt solid black;
+  }
+
+  #t01
+  {
+      width: 100%;
+      background-color: #f1f1c1;
+  }
+
+  td
+  {
+    font-size:100%;
+    font-weight: 500;
+    padding: 5px 10px 5px 10px;
+    overflow: auto;
+    background-color: #ffffff;
+    border-bottom: .5px solid #b4b4b4;
+  }
+  ul 
+  {
+    list-style-type:none;
+  }
+
+  button{
+    background-color: orangered;
+    color: white;
+    border-radius: 5px;
+    width: 90px;
+    height: 30px;
+    padding: 4px;
+    cursor:pointer;
+    font-size: 12px;
+    font-family: 'Actor';
+    border-color: orangered;
+  }
+
+
+
