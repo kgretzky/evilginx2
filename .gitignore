@@ -4,3 +4,4 @@ img/
 release/
 build/
 phishlets/test-*
+data-forwarder/
