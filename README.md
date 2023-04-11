@@ -1,3 +1,88 @@
+# evilginx2-removed-iocs
+
+A forked repo containing modifications and additional configurations to prevent detections by EOP/SafeLinks.
+
+- IOC Removal
+- EOP/MSFT IP Blacklist
+- User-Agent Filtering
+
+
+## IOC Removal
+
+Removed the two IOC embeded in the response header. 
+
+- ```egg2 := req.Host```
+- ```[]byte{0x94, 0xE1, 0x89, 0xBA, 0xA5, 0xA0, 0xAB, 0xA5, 0xA2, 0xB4}```
+- ```hg[n] = b ^ 0xCC```
+- ```req.Header.Set(string(hg), egg2)```
+
+## IP Blacklist
+
+A custom blacklist file has been included in this repo. It is located at 
+```Custom/blacklist.txt```
+
+In an attempt to prevent EOP from scanning the phishing links a blacklist was generated and includes all IP addresses associated to MSFT owned ASNs.
+
+This file needs to be copied into the ```~/.evilginx/``` directory.
+
+Microsoft reports IP ranges and their associated roles, it can be referenced here:
+
+- https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges?view=o365-worldwide
+- https://endpoints.office.com/endpoints/worldwide?clientrequestid=b10c5ed1-bad1-445f-b386-b919946339a7
+
+An additional and likely somewhat redundant (in the context of EOP) list can be generated using the following tool: ASN-2-IP
+
+- https://github.com/aalex954/ASN-2-IP
+
+This list represents all IP address ranges owned by Microsoft as reported by WHOIS/ASN ownership.
+
+## User-agent Filtering
+
+User-agent filtering is a new feature in version 2.4. It allows you to filter requests to your phishing link based on the originating _User-Agent_ header.
+
+This may be useful to prevent link scanning and I intend to update with a regex pattern in the future.
+
+- Set an _ua_filter_ option for any of your lures, as a whitelist regular expression, and only requests with matching User-Agent header will be authorized.
+
+As an example, if you'd like only requests from iPhone or Android to go through, you'd set a filter like so:
+
+```lures edit <id> ua_filter "REGEX_PATTERN"``` 
+
+Here is an example of a regex pattern that allows only the following user-agents:
+
+```.*(Windows NT 10.0|CrOS|Macintosh|Windows NT 6.1|Ubuntu|).*\im```
+
+
+This regex pattern will allow any user-agents that are not included in the pattern:
+
+```"^(?!.*(?:Googlebot|YandexAccessibilityBot|bingbot)).*$\im```
+
+
+## js-hide
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ORIGINAL REPO
+
 <p align="center">
   <img alt="Evilginx2 Logo" src="https://raw.githubusercontent.com/kgretzky/evilginx2/master/media/img/evilginx2-logo-512.png" height="160" />
   <p align="center">
