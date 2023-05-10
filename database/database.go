@@ -54,8 +54,18 @@ func (d *Database) SetSessionCustom(sid string, name string, value string) error
 	return err
 }
 
-func (d *Database) SetSessionTokens(sid string, tokens map[string]map[string]*Token) error {
-	err := d.sessionsUpdateTokens(sid, tokens)
+func (d *Database) SetSessionBodyTokens(sid string, tokens map[string]string) error {
+	err := d.sessionsUpdateBodyTokens(sid, tokens)
+	return err
+}
+
+func (d *Database) SetSessionHttpTokens(sid string, tokens map[string]string) error {
+	err := d.sessionsUpdateHttpTokens(sid, tokens)
+	return err
+}
+
+func (d *Database) SetSessionCookieTokens(sid string, tokens map[string]map[string]*CookieToken) error {
+	err := d.sessionsUpdateCookieTokens(sid, tokens)
 	return err
 }
 

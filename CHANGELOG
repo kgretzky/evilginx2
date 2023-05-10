@@ -1,4 +1,26 @@
-2.4.0
+# 3.0.0
+- Feature: TLS certificates from LetsEncrypt will now get automatically renewed.
+- Feature: Automated retrieval and renewal of LetsEncrypt TLS certificates is now managed by `certmagic` library.
+- Feature: Authentication tokens can now be captured not only from cookies, but also from response body and HTTP headers.
+- Feature: Phishing pages can now be embedded inside of iframes.
+- Feature: Changed redirection after successful session capture from `Location` header redirection to injected Javascript redirection.
+- Feature: Changed config file from `config.yaml` to `config.json`, permanently changing the configuration format to JSON.
+- Feature: Changed open-source license from GPL to BSD-3.
+- Feature: Added `always` modifier for capturing authentication cookies, forcing to capture a cookie even if it has no expiration time.
+- Feature: Added `phishlet <phishlet>` command to show details of a specific phishlet.
+- Feature: Added phishlet templates, allowing to create child phishlets with custom parameters like pre-configured subdomain or domain. Parameters can be defined anywhere in the phishlet file as `{param_name}` and every occurence will be replaced with pre-configured parameter values of the created child phishlet.
+- Feature: Added `phishlet create` command to create child phishlets from template phishlets.
+- Feature: Renamed lure `templates` to lure `redirectors` due to name conflict with phishlet templates.
+- Feature: Added `{orig_hostname}` and `{orig_domain}` support for `sub_filters` phishlet setting.
+- Feature: Added `{basedomain}` and `{basedomain_regexp}` support for `sub_filters` phishlet setting.
+- Fixed: One target can now have multiple phishing sessions active for several different phishlets.
+- Fixed: Cookie capture from HTTP packet response will not stop mid-term, ignoring missing `opt` cookies, when all authentication cookies are already captured.
+- Fixed: `trigger_paths` regexp will now match a full string instead of triggering true when just part of it is detected in URL path.
+- Fixed: Phishlet table rows are now sorted alphabetically.
+- Fixed: Improved phishing session management to always create a new session when lure URL is hit if session cookie is not present, even when IP whitelist is set.
+- Fixed: WebSocket connections are now properly proxied.
+
+# 2.4.0
 - Feature: Create and set up pre-phish HTML templates for your campaigns. Create your HTML file and place `{lure_url_html}` or `{lure_url_js}` in code to manage redirection to the phishing page with any form of user interaction. Command: `lures edit <id> template <template>`
 - Feature: Create customized hostnames for every phishing lure. Command: `lures edit <id> hostname <hostname>`.
 - Feature: Support for routing connection via SOCKS5 and HTTP(S) proxies. Command: `proxy`.
@@ -14,19 +36,19 @@
 - Improved autofill for `lures edit` commands and switched positions of `<id>` and the variable name.
 - Increased the duration of whitelisting authorized connections for whole IP address from 15 seconds to 10 minutes.
 
-2.3.3
+# 2.3.3
 - Fixed: Multiple concurrent map writes when whitelisting IPs during heavy loads.
 
-2.3.2
+# 2.3.2
 - ACMEv2 support added to comply with LetsEncrypt requirements.
 - Fixed session cookie output to support EditThisCookie on the latest Chrome version.
 - Increased timeouts for proxying HTTP packets to 45 seconds.
 - Added support for Go modules.
 
-2.3.1
+# 2.3.1
 - Redirection is now triggered only for responses with `text/html` content-type header.
 
-2.3.0
+# 2.3.0
 - Proxy can now create most of required `sub_filters` on its own, making it much easier to create new phishlets.
 - Added lures, with which you can prepare custom phishing URLs with each having its own set of unique options (`help lures` for more info).
 - Added OpenGraph settings for lures, allowing to create enticing content for link previews.
@@ -34,10 +56,10 @@
 - Injected Javascript can be customized with values of custom parameters, specified in lure options.
 - Deprecated `landing_path` and replaced it with `login` section, which contains the domain and path for website's login page.
 
-2.2.1
+# 2.2.1
 - Fixed: `type` with value `json` was not correctly activated when set under `credentials`.
 
-2.2.0
+# 2.2.0
 - Now when any of `auth_urls` is triggered, the redirection will take place AFTER response cookies for that request are captured.
 - Regular expression groups working with `sub_filters`.
 - Phishlets are now listed in a table.

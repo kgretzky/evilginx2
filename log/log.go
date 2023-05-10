@@ -144,7 +144,7 @@ func format_msg(lvl int, format string, args ...interface{}) string {
 		//msg = color.New(color.Reset, color.FgHiBlue)
 		msg = color.New(color.Reset)
 	case WARNING:
-		sign = color.New(color.FgBlack, color.BgYellow)
+		sign = color.New(color.FgHiYellow, color.BgBlack)
 		//msg = color.New(color.Reset, color.FgYellow)
 		msg = color.New(color.Reset)
 	case ERROR:
