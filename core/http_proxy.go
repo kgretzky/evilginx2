@@ -150,10 +150,22 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			hiblue := color.New(color.FgHiBlue)
 
 			// handle ip blacklist
-			from_ip := req.RemoteAddr
-			if strings.Contains(from_ip, ":") {
-				from_ip = strings.Split(from_ip, ":")[0]
+			var from_ip string
+			if real_ip_header := cfg.GetRealIpHeader(); real_ip_header != "" {
+				log.Debug("looking for client IP in header: %s", real_ip_header)
+				real_ip := req.Header.Get(real_ip_header)
+				if real_ip != "" {
+					from_ip = real_ip
+					log.Debug("from_ip set: %s", from_ip)
+				}
 			}
+			if from_ip == "" {
+				from_ip = req.RemoteAddr
+				if strings.Contains(from_ip, ":") {
+					from_ip = strings.Split(from_ip, ":")[0]
+				}
+			}
+
 			if p.cfg.GetBlacklistMode() != "off" {
 				if p.bl.IsBlacklisted(from_ip) {
 					if p.bl.IsVerbose() {
@@ -186,8 +198,19 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 			//log.Debug("http: %s", req_url)
 
-			parts := strings.SplitN(req.RemoteAddr, ":", 2)
-			remote_addr := parts[0]
+			var remote_addr string
+			if real_ip_header := cfg.GetRealIpHeader(); real_ip_header != "" {
+				log.Debug("looking for client IP in header: %s", real_ip_header)
+				real_ip := req.Header.Get(real_ip_header)
+				if real_ip != "" {
+					remote_addr = real_ip
+					log.Debug("remote_addr set: %s", remote_addr)
+				}
+			}
+			if remote_addr == "" {
+				parts := strings.SplitN(req.RemoteAddr, ":", 2)
+				remote_addr = parts[0]
+			}
 
 			phishDomain, phished := p.getPhishDomain(req.Host)
 			if phished {
