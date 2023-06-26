@@ -56,11 +56,12 @@ type CertificatesConfig struct {
 }
 
 type GeneralConfig struct {
-	Domain      string `mapstructure:"domain" json:"domain" yaml:"domain"`
-	Ipv4        string `mapstructure:"ipv4" json:"ipv4" yaml:"ipv4"`
-	RedirectUrl string `mapstructure:"redirect_url" json:"redirect_url" yaml:"redirect_url"`
-	HttpsPort   int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
-	DnsPort     int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
+	Domain       string `mapstructure:"domain" json:"domain" yaml:"domain"`
+	Ipv4         string `mapstructure:"ipv4" json:"ipv4" yaml:"ipv4"`
+	RedirectUrl  string `mapstructure:"redirect_url" json:"redirect_url" yaml:"redirect_url"`
+	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
+	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
+	RealIpHeader string `mapstructure:"real_ip_header" json:"real_ip_header" yaml:"real_ip_header"`
 }
 
 type Config struct {
@@ -221,6 +222,13 @@ func (c *Config) SetDnsPort(port int) {
 	c.general.DnsPort = port
 	c.cfg.Set(CFG_GENERAL, c.general)
 	log.Info("dns port set to: %d", port)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetRealIpHeader(header_name string) {
+	c.general.RealIpHeader = header_name
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("real IP header set to: %s", header_name)
 	c.cfg.WriteConfig()
 }
 
@@ -663,6 +671,10 @@ func (c *Config) GetHttpsPort() int {
 
 func (c *Config) GetDnsPort() int {
 	return c.general.DnsPort
+}
+
+func (c *Config) GetRealIpHeader() string {
+	return c.general.RealIpHeader
 }
 
 func (c *Config) GetRedirectorsDir() string {
