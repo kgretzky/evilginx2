@@ -120,6 +120,7 @@ type Phishlet struct {
 	js_inject        []JsInject
 	customParams     map[string]string
 	isTemplate       bool
+	redirect_url	 string
 }
 
 type ConfigParam struct {
@@ -211,6 +212,7 @@ type ConfigPhishlet struct {
 	LandingPath *[]string          `mapstructure:"landing_path"`
 	LoginItem   *ConfigLogin       `mapstructure:"login"`
 	JsInject    *[]ConfigJsInject  `mapstructure:"js_inject"`
+	RedirectUrl string             `mapstructure:"redirect_url"`
 }
 
 func NewPhishlet(site string, path string, customParams *map[string]string, cfg *Config) (*Phishlet, error) {
