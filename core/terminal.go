@@ -181,8 +181,8 @@ func (t *Terminal) DoWork() {
 func (t *Terminal) handleConfig(args []string) error {
 	pn := len(args)
 	if pn == 0 {
-		keys := []string{"domain", "ipv4", "https_port", "dns_port", "redirect_url"}
-		vals := []string{t.cfg.general.Domain, t.cfg.general.Ipv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.RedirectUrl}
+		keys := []string{"domain", "external_ipv4", "bind_ipv4", "https_port", "dns_port", "redirect_url"}
+		vals := []string{t.cfg.general.Domain, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.RedirectUrl}
 		log.Printf("\n%s\n", AsRows(keys, vals))
 		return nil
 	} else if pn == 2 {
@@ -193,7 +193,7 @@ func (t *Terminal) handleConfig(args []string) error {
 			t.manageCertificates(false)
 			return nil
 		case "ipv4":
-			t.cfg.SetServerIP(args[1])
+			t.cfg.SetServerExternalIP(args[1])
 			return nil
 		case "redirect_url":
 			if len(args[1]) > 0 {
@@ -204,6 +204,18 @@ func (t *Terminal) handleConfig(args []string) error {
 			}
 			t.cfg.SetRedirectUrl(args[1])
 			return nil
+		}
+	} else if pn == 3 {
+		switch args[0] {
+		case "ipv4":
+			switch args[1] {
+			case "external":
+				t.cfg.SetServerExternalIP(args[2])
+				return nil
+			case "bind":
+				t.cfg.SetServerBindIP(args[2])
+				return nil
+			}
 		}
 	}
 	return fmt.Errorf("invalid syntax: %s", args)
@@ -387,12 +399,15 @@ func (t *Terminal) handleSessions(args []string) error {
 				log.Printf("\n%s\n", AsRows(keys, vals))
 
 				if len(s.Custom) > 0 {
-					var ckeys []string = []string{"custom", "value"}
-					var cvals [][]string
+					tkeys := []string{}
+					tvals := []string{}
+
 					for k, v := range s.Custom {
-						cvals = append(cvals, []string{dgray.Sprint(k), cyan.Sprint(v)})
+						tkeys = append(tkeys, k)
+						tvals = append(tvals, cyan.Sprint(v))
 					}
-					log.Printf("%s\n", AsTable(ckeys, cvals))
+
+					log.Printf("[ %s ]\n%s\n", white.Sprint("custom"), AsRows(tkeys, tvals))
 				}
 
 				if len(s.CookieTokens) > 0 || len(s.BodyTokens) > 0 || len(s.HttpTokens) > 0 {
@@ -602,7 +617,7 @@ func (t *Terminal) handlePhishlets(args []string) error {
 				if n > 0 {
 					out += "\n"
 				}
-				out += t.cfg.GetServerIP() + " " + h
+				out += t.cfg.GetServerExternalIP() + " " + h
 			}
 			t.output("%s\n", out)
 			return nil
@@ -1009,10 +1024,12 @@ func (t *Terminal) handleLures(args []string) error {
 func (t *Terminal) createHelp() {
 	h, _ := NewHelp()
 	h.AddCommand("config", "general", "manage general configuration", "Shows values of all configuration variables and allows to change them.", LAYER_TOP,
-		readline.PcItem("config", readline.PcItem("domain"), readline.PcItem("ipv4"), readline.PcItem("redirect_url")))
+		readline.PcItem("config", readline.PcItem("domain"), readline.PcItem("ipv4", readline.PcItem("external"), readline.PcItem("bind")), readline.PcItem("redirect_url"), readline.PcItem("wildcards")))
 	h.AddSubCommand("config", nil, "", "show all configuration variables")
 	h.AddSubCommand("config", []string{"domain"}, "domain <domain>", "set base domain for all phishlets (e.g. evilsite.com)")
-	h.AddSubCommand("config", []string{"ipv4"}, "ipv4 <ip_address>", "set ipv4 external address of the current server")
+	h.AddSubCommand("config", []string{"ipv4"}, "ipv4 <ipv4_address>", "set ipv4 external address of the current server")
+	h.AddSubCommand("config", []string{"ipv4", "external"}, "ipv4 external <ipv4_address>", "set ipv4 external address of the current server")
+	h.AddSubCommand("config", []string{"ipv4", "bind"}, "ipv4 bind <ipv4_address>", "set ipv4 bind address of the current server")
 	h.AddSubCommand("config", []string{"redirect_url"}, "redirect_url <url>", "change the url where all unauthorized requests will be redirected to (phishing urls will need to be regenerated)")
 
 	h.AddCommand("proxy", "general", "manage proxy configuration", "Configures proxy which will be used to proxy the connection to remote website", LAYER_TOP,
@@ -1144,8 +1161,8 @@ func (t *Terminal) checkStatus() {
 	if t.cfg.GetBaseDomain() == "" {
 		log.Warning("server domain not set! type: config domain <domain>")
 	}
-	if t.cfg.GetServerIP() == "" {
-		log.Warning("server ip not set! type: config ipv4 <ip_address>")
+	if t.cfg.GetServerExternalIP() == "" {
+		log.Warning("server external ip not set! type: config ipv4 external <external_ipv4_address>")
 	}
 }
 

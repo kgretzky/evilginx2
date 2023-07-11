@@ -1,3 +1,8 @@
+# 3.1.0
+- Feature: Listening IP and external IP can now be separated with `config ipv4 bind <bind_ipv4_addr>` and `config ipv4 external <external_ipv4_addr>` to help with properly setting up networking.
+- Fixed: Session cookies (cookies with no expiry date set) are now correctly captured every time. There is no need to specify `:always` key modifier for `auth_tokens` to capture them.
+- Fixed: Captured custom tokens are now displayed properly and values are not truncated.
+
 # 3.0.0
 - Feature: TLS certificates from LetsEncrypt will now get automatically renewed.
 - Feature: Automated retrieval and renewal of LetsEncrypt TLS certificates is now managed by `certmagic` library.
