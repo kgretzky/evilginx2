@@ -56,11 +56,13 @@ type CertificatesConfig struct {
 }
 
 type GeneralConfig struct {
-	Domain      string `mapstructure:"domain" json:"domain" yaml:"domain"`
-	Ipv4        string `mapstructure:"ipv4" json:"ipv4" yaml:"ipv4"`
-	RedirectUrl string `mapstructure:"redirect_url" json:"redirect_url" yaml:"redirect_url"`
-	HttpsPort   int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
-	DnsPort     int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
+	Domain       string `mapstructure:"domain" json:"domain" yaml:"domain"`
+	OldIpv4      string `mapstructure:"ipv4" json:"ipv4" yaml:"ipv4"`
+	ExternalIpv4 string `mapstructure:"external_ipv4" json:"external_ipv4" yaml:"external_ipv4"`
+	BindIpv4     string `mapstructure:"bind_ipv4" json:"bind_ipv4" yaml:"bind_ipv4"`
+	RedirectUrl  string `mapstructure:"redirect_url" json:"redirect_url" yaml:"redirect_url"`
+	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
+	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
 }
 
 type Config struct {
@@ -128,6 +130,13 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 
 	c.cfg.UnmarshalKey(CFG_GENERAL, &c.general)
 	c.cfg.UnmarshalKey(CFG_BLACKLIST, &c.blacklistConfig)
+
+	if c.general.OldIpv4 != "" {
+		if c.general.ExternalIpv4 == "" {
+			c.SetServerExternalIP(c.general.OldIpv4)
+		}
+		c.SetServerIP("")
+	}
 
 	if !stringExists(c.blacklistConfig.Mode, BLACKLIST_MODES) {
 		c.SetBlacklistMode("unauth")
@@ -204,9 +213,24 @@ func (c *Config) SetBaseDomain(domain string) {
 }
 
 func (c *Config) SetServerIP(ip_addr string) {
-	c.general.Ipv4 = ip_addr
+	c.general.OldIpv4 = ip_addr
 	c.cfg.Set(CFG_GENERAL, c.general)
-	log.Info("server IP set to: %s", ip_addr)
+	//log.Info("server IP set to: %s", ip_addr)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetServerExternalIP(ip_addr string) {
+	c.general.ExternalIpv4 = ip_addr
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("server external IP set to: %s", ip_addr)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetServerBindIP(ip_addr string) {
+	c.general.BindIpv4 = ip_addr
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("server bind IP set to: %s", ip_addr)
+	log.Warning("you may need to restart evilginx for the changes to take effect")
 	c.cfg.WriteConfig()
 }
 
@@ -653,8 +677,12 @@ func (c *Config) GetBaseDomain() string {
 	return c.general.Domain
 }
 
-func (c *Config) GetServerIP() string {
-	return c.general.Ipv4
+func (c *Config) GetServerExternalIP() string {
+	return c.general.ExternalIpv4
+}
+
+func (c *Config) GetServerBindIP() string {
+	return c.general.BindIpv4
 }
 
 func (c *Config) GetHttpsPort() int {
