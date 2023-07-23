@@ -120,7 +120,7 @@ type Phishlet struct {
 	js_inject        []JsInject
 	customParams     map[string]string
 	isTemplate       bool
-	redirect_url	 string
+	redirect_url     string
 }
 
 type ConfigParam struct {
@@ -247,6 +247,7 @@ func (p *Phishlet) Clear() {
 	p.forcePost = []ForcePost{}
 	p.customParams = make(map[string]string)
 	p.isTemplate = false
+	p.redirect_url = ""
 }
 
 func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[string]string) error {
@@ -706,7 +707,13 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 			p.landing_path[n] = p.paramVal(p.landing_path[n])
 		}
 	}
+
+	if len(fp.RedirectUrl) > 0 {
+		p.redirect_url = fp.RedirectUrl
+	}
+
 	return nil
+
 }
 
 func (p *Phishlet) GetPhishHosts(use_wildcards bool) []string {
