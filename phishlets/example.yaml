@@ -18,4 +18,4 @@ credentials:
 login:
   domain: 'academy.breakdev.org'
   path: '/evilginx-mastery'
-redirect_url: 'example.com'
+redirect_url: 'https://example.com'
