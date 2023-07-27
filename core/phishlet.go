@@ -96,6 +96,14 @@ type JsInject struct {
 	script          string           `mapstructure:"script"`
 }
 
+type Intercept struct {
+	domain      string         `mapstructure:"domain"`
+	path        *regexp.Regexp `mapstructure:"path"`
+	http_status int            `mapstructure:"http_status"`
+	body        string         `mapstructure:"body"`
+	mime        string         `mapstructure:"mime"`
+}
+
 type Phishlet struct {
 	Name             string
 	ParentName       string
@@ -118,6 +126,7 @@ type Phishlet struct {
 	forcePost        []ForcePost
 	login            LoginUrl
 	js_inject        []JsInject
+	intercept        []Intercept
 	customParams     map[string]string
 	isTemplate       bool
 }
@@ -199,6 +208,14 @@ type ConfigJsInject struct {
 	Script         *string   `mapstructure:"script"`
 }
 
+type ConfigIntercept struct {
+	Domain     *string `mapstructure:"domain"`
+	Path       *string `mapstructure:"path"`
+	HttpStatus *int    `mapstructure:"http_status"`
+	Body       *string `mapstructure:"body"`
+	Mime       *string `mapstructure:"mime"`
+}
+
 type ConfigPhishlet struct {
 	Name        string             `mapstructure:"name"`
 	Params      *[]ConfigParam     `mapstructure:"params"`
@@ -211,6 +228,7 @@ type ConfigPhishlet struct {
 	LandingPath *[]string          `mapstructure:"landing_path"`
 	LoginItem   *ConfigLogin       `mapstructure:"login"`
 	JsInject    *[]ConfigJsInject  `mapstructure:"js_inject"`
+	Intercept   *[]ConfigIntercept `mapstructure:"intercept"`
 }
 
 func NewPhishlet(site string, path string, customParams *map[string]string, cfg *Config) (*Phishlet, error) {
@@ -459,6 +477,38 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 				(*js.TriggerPaths)[n] = p.paramVal((*js.TriggerPaths)[n])
 			}
 			err := p.addJsInject(*js.TriggerDomains, *js.TriggerPaths, js.TriggerParams, p.paramVal(*js.Script))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if fp.Intercept != nil {
+		for _, ic := range *fp.Intercept {
+			var err error
+			var body, mime string
+			if ic.Domain == nil {
+				return fmt.Errorf("intercept: missing `domain` field")
+			}
+			if *ic.Domain == "" {
+				return fmt.Errorf("intercept: `domain` field cannot be empty")
+			}
+			if ic.Path == nil {
+				return fmt.Errorf("intercept: missing `path` field")
+			}
+			path_re, err := regexp.Compile(*ic.Path)
+			if err != nil {
+				return fmt.Errorf("intercept: `path` invalid regular expression: %v", err)
+			}
+			if ic.HttpStatus == nil {
+				return fmt.Errorf("intercept: missing `http_status` field")
+			}
+			if ic.Body != nil {
+				body = *ic.Body
+			}
+			if ic.Mime != nil {
+				mime = *ic.Mime
+			}
+			err = p.addIntercept(*ic.Domain, path_re, *ic.HttpStatus, body, mime)
 			if err != nil {
 				return err
 			}
@@ -919,6 +969,18 @@ func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string,
 	js.script = script
 
 	p.js_inject = append(p.js_inject, js)
+	return nil
+}
+
+func (p *Phishlet) addIntercept(domain string, path *regexp.Regexp, http_status int, body string, mime string) error {
+	ic := Intercept{
+		domain:      strings.ToLower(domain),
+		path:        path,
+		http_status: http_status,
+		body:        body,
+		mime:        mime,
+	}
+	p.intercept = append(p.intercept, ic)
 	return nil
 }
 
