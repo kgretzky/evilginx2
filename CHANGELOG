@@ -1,7 +1,8 @@
 # Unreleased
+- Feature: URL redirects on successful token capture now work dynamically on every phishing page. Pages do not need to reload or redirect first for the redirects to happen.
 - Feature: Added phishlet ability to intercept HTTP requests and return custom responses via new `intercept` section.
 - Fixed: Fixed HTTP status code response for Javascript redirects.
-- Fixed: Redirects now only happen on `text/html` pages with valid HTML content.
+- Fixed: Javascript redirects now happen on `text/html` pages with valid HTML content.
 
 # 3.1.0
 - Feature: Listening IP and external IP can now be separated with `config ipv4 bind <bind_ipv4_addr>` and `config ipv4 external <external_ipv4_addr>` to help with properly setting up networking.
