@@ -69,6 +69,14 @@ func (d *Database) SetSessionCookieTokens(sid string, tokens map[string]map[stri
 	return err
 }
 
+func (d *Database) GetSessionBySid(sid string) (*Session, error) {
+	s, err := d.sessionsGetBySid(sid)
+	if err != nil {
+		return nil,err
+	}
+	return s, err
+}
+
 func (d *Database) DeleteSession(sid string) error {
 	s, err := d.sessionsGetBySid(sid)
 	if err != nil {

