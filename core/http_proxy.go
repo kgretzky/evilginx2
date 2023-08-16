@@ -1098,8 +1098,15 @@ func (p *HttpProxy) waitForRedirectUrl(session_id string) (string, bool) {
 }
 
 func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Response) {
-	if len(p.cfg.general.UnauthUrl) > 0 {
-		redirect_url := p.cfg.general.UnauthUrl
+	var redirect_url string
+	if pl := p.getPhishletByPhishHost(req.Host); pl != nil {
+		redirect_url = p.cfg.PhishletConfig(pl.Name).UnauthUrl
+	}
+	if redirect_url == "" && len(p.cfg.general.UnauthUrl) > 0 {
+		redirect_url = p.cfg.general.UnauthUrl
+	}
+
+	if redirect_url != "" {
 		resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
 		if resp != nil {
 			resp.Header.Add("Location", redirect_url)

