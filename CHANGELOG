@@ -1,11 +1,13 @@
 # Unreleased
 - Feature: URL redirects on successful token capture now work dynamically on every phishing page. Pages do not need to reload or redirect first for the redirects to happen.
+- Feature: Lures can now be paused for fixed time duration with `lures pause <id>`. Useful when you want to briefy redirect your lure URL when you know sandboxes will try to scan them.
 - Feature: Added phishlet ability to intercept HTTP requests and return custom responses via new `intercept` section.
 - Feature: Added default `redirect_url` in phishlets to hold a default redirect URL, to redirect to once tokens are captured, when it is not set in used phishing lure. `redirect_url` set for the lure will override this.
 - Feature: You can now override global unauthorized redirect URL per phishlet with `phishlet unauth_url <phishlet> <url>`.
 - Fixed: Changed `redirect_url` to `unauth_url` in global config to avoid confusion.
 - Fixed: Fixed HTTP status code response for Javascript redirects.
 - Fixed: Javascript redirects now happen on `text/html` pages with valid HTML content.
+- Fixed: Removed `ua_filter` column from lures list view. It is still viewable in lure detailed view.
 
 # 3.1.0
 - Feature: Listening IP and external IP can now be separated with `config ipv4 bind <bind_ipv4_addr>` and `config ipv4 external <external_ipv4_addr>` to help with properly setting up networking.

@@ -88,6 +88,7 @@ func (t *Terminal) DoWork() {
 	t.manageCertificates(true)
 
 	t.output("%s", t.sprintPhishletStatus(""))
+	go t.monitorLurePause()
 
 	for !do_quit {
 		line, err := t.rl.Readline()
@@ -649,6 +650,7 @@ func (t *Terminal) handlePhishlets(args []string) error {
 func (t *Terminal) handleLures(args []string) error {
 	hiblue := color.New(color.FgHiBlue)
 	yellow := color.New(color.FgYellow)
+	higreen := color.New(color.FgHiGreen)
 	green := color.New(color.FgGreen)
 	//hiwhite := color.New(color.FgHiWhite)
 	hcyan := color.New(color.FgHiCyan)
@@ -799,6 +801,53 @@ func (t *Terminal) handleLures(args []string) error {
 				return nil
 			}
 			return fmt.Errorf("incorrect number of arguments")
+		case "pause":
+			if pn == 3 {
+				l_id, err := strconv.Atoi(strings.TrimSpace(args[1]))
+				if err != nil {
+					return fmt.Errorf("pause: %v", err)
+				}
+				l, err := t.cfg.GetLure(l_id)
+				if err != nil {
+					return fmt.Errorf("pause: %v", err)
+				}
+				s_duration := args[2]
+
+				t_dur, err := ParseDurationString(s_duration)
+				if err != nil {
+					return fmt.Errorf("pause: %v", err)
+				}
+				t_now := time.Now()
+				log.Info("current time: %s", t_now.Format("2006-01-02 15:04:05"))
+				log.Info("unpauses at:  %s", t_now.Add(t_dur).Format("2006-01-02 15:04:05"))
+
+				l.PausedUntil = t_now.Add(t_dur).Unix()
+				err = t.cfg.SetLure(l_id, l)
+				if err != nil {
+					return fmt.Errorf("edit: %v", err)
+				}
+				return nil
+			}
+		case "unpause":
+			if pn == 2 {
+				l_id, err := strconv.Atoi(strings.TrimSpace(args[1]))
+				if err != nil {
+					return fmt.Errorf("pause: %v", err)
+				}
+				l, err := t.cfg.GetLure(l_id)
+				if err != nil {
+					return fmt.Errorf("pause: %v", err)
+				}
+
+				log.Info("lure for phishlet '%s' unpaused", l.Phishlet)
+
+				l.PausedUntil = 0
+				err = t.cfg.SetLure(l_id, l)
+				if err != nil {
+					return fmt.Errorf("edit: %v", err)
+				}
+				return nil
+			}
 		case "edit":
 			if pn == 4 {
 				l_id, err := strconv.Atoi(strings.TrimSpace(args[1]))
@@ -1017,8 +1066,10 @@ func (t *Terminal) handleLures(args []string) error {
 				return err
 			}
 
-			keys := []string{"phishlet", "hostname", "path", "redirector", "ua_filter", "redirect_url", "info", "og_title", "og_desc", "og_image", "og_url"}
-			vals := []string{hiblue.Sprint(l.Phishlet), cyan.Sprint(l.Hostname), hcyan.Sprint(l.Path), white.Sprint(l.Redirector), green.Sprint(l.UserAgentFilter), yellow.Sprint(l.RedirectUrl), l.Info, dgray.Sprint(l.OgTitle), dgray.Sprint(l.OgDescription), dgray.Sprint(l.OgImageUrl), dgray.Sprint(l.OgUrl)}
+			var s_paused string = higreen.Sprint(GetDurationString(time.Now(), time.Unix(l.PausedUntil, 0)))
+
+			keys := []string{"phishlet", "hostname", "path", "redirector", "ua_filter", "redirect_url", "paused", "info", "og_title", "og_desc", "og_image", "og_url"}
+			vals := []string{hiblue.Sprint(l.Phishlet), cyan.Sprint(l.Hostname), hcyan.Sprint(l.Path), white.Sprint(l.Redirector), green.Sprint(l.UserAgentFilter), yellow.Sprint(l.RedirectUrl), s_paused, l.Info, dgray.Sprint(l.OgTitle), dgray.Sprint(l.OgDescription), dgray.Sprint(l.OgImageUrl), dgray.Sprint(l.OgUrl)}
 			log.Printf("\n%s\n", AsRows(keys, vals))
 
 			return nil
@@ -1026,6 +1077,33 @@ func (t *Terminal) handleLures(args []string) error {
 	}
 
 	return fmt.Errorf("invalid syntax: %s", args)
+}
+
+func (t *Terminal) monitorLurePause() {
+	var pausedLures map[string]int64
+	pausedLures = make(map[string]int64)
+
+	for {
+		t_cur := time.Now()
+
+		for n, l := range t.cfg.lures {
+			if l.PausedUntil > 0 {
+				l_id := t.cfg.lureIds[n]
+				t_pause := time.Unix(l.PausedUntil, 0)
+				if t_pause.After(t_cur) {
+					pausedLures[l_id] = l.PausedUntil
+				} else {
+					if _, ok := pausedLures[l_id]; ok {
+						log.Info("[%s] lure (%d) is now active", l.Phishlet, n)
+					}
+					pausedLures[l_id] = 0
+					l.PausedUntil = 0
+				}
+			}
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
 }
 
 func (t *Terminal) createHelp() {
@@ -1076,7 +1154,7 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("sessions", []string{"delete", "all"}, "delete all", "delete all logged sessions")
 
 	h.AddCommand("lures", "general", "manage lures for generation of phishing urls", "Shows all create lures and allows to edit or delete them.", LAYER_TOP,
-		readline.PcItem("lures", readline.PcItem("create", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url"),
+		readline.PcItem("lures", readline.PcItem("create", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-url"), readline.PcItem("pause"), readline.PcItem("unpause"),
 			readline.PcItem("edit", readline.PcItemDynamic(t.luresIdPrefixCompleter, readline.PcItem("hostname"), readline.PcItem("path"), readline.PcItem("redirect_url"), readline.PcItem("phishlet"), readline.PcItem("info"), readline.PcItem("og_title"), readline.PcItem("og_desc"), readline.PcItem("og_image"), readline.PcItem("og_url"), readline.PcItem("params"), readline.PcItem("ua_filter"), readline.PcItem("redirector", readline.PcItemDynamic(t.redirectorsPrefixCompleter)))),
 			readline.PcItem("delete", readline.PcItem("all"))))
 
@@ -1087,6 +1165,8 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("lures", []string{"delete", "all"}, "delete all", "deletes all created lures")
 	h.AddSubCommand("lures", []string{"get-url"}, "get-url <id> <key1=value1> <key2=value2>", "generates a phishing url for a lure with a given <id>, with optional parameters")
 	h.AddSubCommand("lures", []string{"get-url"}, "get-url <id> import <params_file> export <urls_file> <text|csv|json>", "generates phishing urls, importing parameters from <import_path> file and exporting them to <export_path>")
+	h.AddSubCommand("lures", []string{"pause"}, "pause <id> <1d2h3m4s>", "pause lure <id> for specific amount of time and redirect visitors to `unauth_url`")
+	h.AddSubCommand("lures", []string{"unpause"}, "unpause <id>", "unpause lure <id> and make it available again")
 	h.AddSubCommand("lures", []string{"edit", "hostname"}, "edit <id> hostname <hostname>", "sets custom phishing <hostname> for a lure with a given <id>")
 	h.AddSubCommand("lures", []string{"edit", "path"}, "edit <id> path <path>", "sets custom url <path> for a lure with a given <id>")
 	h.AddSubCommand("lures", []string{"edit", "redirector"}, "edit <id> redirector <path>", "sets an html redirector directory <path> for a lure with a given <id>")
@@ -1273,15 +1353,13 @@ func (t *Terminal) sprintIsEnabled(enabled bool) string {
 
 func (t *Terminal) sprintLures() string {
 	higreen := color.New(color.FgHiGreen)
-	green := color.New(color.FgGreen)
-	//hired := color.New(color.FgHiRed)
 	hiblue := color.New(color.FgHiBlue)
 	yellow := color.New(color.FgYellow)
 	cyan := color.New(color.FgCyan)
 	hcyan := color.New(color.FgHiCyan)
 	white := color.New(color.FgHiWhite)
 	//n := 0
-	cols := []string{"id", "phishlet", "hostname", "path", "redirector", "ua_filter", "redirect_url", "og"}
+	cols := []string{"id", "phishlet", "hostname", "path", "redirector", "redirect_url", "paused", "og"}
 	var rows [][]string
 	for n, l := range t.cfg.lures {
 		var og string
@@ -1305,7 +1383,10 @@ func (t *Terminal) sprintLures() string {
 		} else {
 			og += "-"
 		}
-		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(l.Phishlet), cyan.Sprint(l.Hostname), hcyan.Sprint(l.Path), white.Sprint(l.Redirector), green.Sprint(l.UserAgentFilter), yellow.Sprint(l.RedirectUrl), og})
+
+		var s_paused string = higreen.Sprint(GetDurationString(time.Now(), time.Unix(l.PausedUntil, 0)))
+
+		rows = append(rows, []string{strconv.Itoa(n), hiblue.Sprint(l.Phishlet), cyan.Sprint(l.Hostname), hcyan.Sprint(l.Path), white.Sprint(l.Redirector), yellow.Sprint(l.RedirectUrl), s_paused, og})
 	}
 	return AsTable(cols, rows)
 }

