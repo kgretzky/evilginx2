@@ -8,7 +8,8 @@ function getRedirect(sid) {
 		method: "GET",
 		headers: {
 			"Content-Type": "application/json"
-		}
+		},
+		credentials: "include"
 	})
 		.then((response) => {
 

