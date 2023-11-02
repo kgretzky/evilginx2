@@ -431,11 +431,6 @@ func (c *Config) SetBlacklistMode(mode string) {
 }
 
 func (c *Config) SetUnauthUrl(_url string) {
-	_, err := url.ParseRequestURI(_url)
-	if err != nil {
-		log.Error("invalid URL: %s", err)
-		return
-	}
 	c.general.UnauthUrl = _url
 	c.cfg.Set(CFG_GENERAL, c.general)
 	log.Info("unauthorized request redirection URL set to: %s", _url)
