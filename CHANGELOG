@@ -1,4 +1,5 @@
 # Unreleased
+- Feature: Added phishlet ability to edit headers of intercepted HTTP requests via the `intercept` section.
 - Fixed: Added support for exported cookies with names prefixed with `__Host-` and `__Secure-`.
 
 # 3.2.0
