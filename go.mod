@@ -14,6 +14,7 @@ require (
 	github.com/mwitkow/go-http-dialer v0.0.0-20161116154839-378f744fb2b8
 	github.com/spf13/viper v1.10.1
 	github.com/tidwall/buntdb v1.1.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.21.0
 )
 
@@ -42,9 +43,7 @@ require (
 	github.com/tidwall/rtree v0.0.0-20180113144539-6cd427091e0e // indirect
 	github.com/tidwall/tinyqueue v0.0.0-20180302190814-1e39f5511563 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.20.0 // indirect
 	golang.org/x/mod v0.15.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect

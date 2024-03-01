@@ -137,8 +137,6 @@ github.com/zeebo/blake3/internal/alg/hash/hash_avx2
 github.com/zeebo/blake3/internal/alg/hash/hash_pure
 github.com/zeebo/blake3/internal/consts
 github.com/zeebo/blake3/internal/utils
-# go.uber.org/atomic v1.11.0
-## explicit; go 1.18
 # go.uber.org/multierr v1.11.0
 ## explicit; go 1.19
 go.uber.org/multierr
