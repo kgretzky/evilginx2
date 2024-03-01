@@ -71,9 +71,7 @@ func (jm *jobManager) worker() {
 		jm.queue = jm.queue[1:]
 		jm.mu.Unlock()
 		if err := next.job(); err != nil {
-			if next.logger != nil {
-				next.logger.Error("job failed", zap.Error(err))
-			}
+			next.logger.Error("job failed", zap.Error(err))
 		}
 		if next.name != "" {
 			jm.mu.Lock()
@@ -116,22 +114,19 @@ func doWithRetry(ctx context.Context, log *zap.Logger, f func(context.Context) e
 				intervalIndex++
 			}
 			if time.Since(start) < maxRetryDuration {
-				if log != nil {
-					log.Error("will retry",
-						zap.Error(err),
-						zap.Int("attempt", attempts),
-						zap.Duration("retrying_in", retryIntervals[intervalIndex]),
-						zap.Duration("elapsed", time.Since(start)),
-						zap.Duration("max_duration", maxRetryDuration))
-				}
+				log.Error("will retry",
+					zap.Error(err),
+					zap.Int("attempt", attempts),
+					zap.Duration("retrying_in", retryIntervals[intervalIndex]),
+					zap.Duration("elapsed", time.Since(start)),
+					zap.Duration("max_duration", maxRetryDuration))
+
 			} else {
-				if log != nil {
-					log.Error("final attempt; giving up",
-						zap.Error(err),
-						zap.Int("attempt", attempts),
-						zap.Duration("elapsed", time.Since(start)),
-						zap.Duration("max_duration", maxRetryDuration))
-				}
+				log.Error("final attempt; giving up",
+					zap.Error(err),
+					zap.Int("attempt", attempts),
+					zap.Duration("elapsed", time.Since(start)),
+					zap.Duration("max_duration", maxRetryDuration))
 				return nil
 			}
 		}
@@ -160,8 +155,8 @@ var AttemptsCtxKey retryStateCtxKey
 // front. We figure that intermittent errors would be
 // resolved after the first retry, but any errors after
 // that would probably require at least a few minutes
-// to clear up: either for DNS to propagate, for the
-// administrator to fix their DNS or network properties,
+// or hours to clear up: either for DNS to propagate, for
+// the administrator to fix their DNS or network config,
 // or some other external factor needs to change. We
 // chose intervals that we think will be most useful
 // without introducing unnecessary delay. The last
@@ -173,13 +168,26 @@ var retryIntervals = []time.Duration{
 	2 * time.Minute,
 	5 * time.Minute, // elapsed: 10 min
 	10 * time.Minute,
-	20 * time.Minute,
+	10 * time.Minute,
+	10 * time.Minute,
 	20 * time.Minute, // elapsed: 1 hr
+	20 * time.Minute,
+	20 * time.Minute,
+	20 * time.Minute, // elapsed: 2 hr
 	30 * time.Minute,
-	30 * time.Minute, // elapsed: 2 hr
+	30 * time.Minute, // elapsed: 3 hr
+	30 * time.Minute,
+	30 * time.Minute, // elapsed: 4 hr
+	30 * time.Minute,
+	30 * time.Minute, // elapsed: 5 hr
+	1 * time.Hour,    // elapsed: 6 hr
 	1 * time.Hour,
-	3 * time.Hour, // elapsed: 6 hr
-	6 * time.Hour, // for up to maxRetryDuration
+	1 * time.Hour, // elapsed: 8 hr
+	2 * time.Hour,
+	2 * time.Hour, // elapsed: 12 hr
+	3 * time.Hour,
+	3 * time.Hour, // elapsed: 18 hr
+	6 * time.Hour, // repeat for up to maxRetryDuration
 }
 
 // maxRetryDuration is the maximum duration to try

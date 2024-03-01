@@ -149,10 +149,15 @@ func (s *FileStorage) Filename(key string) string {
 	return filepath.Join(s.Path, filepath.FromSlash(key))
 }
 
-// Lock obtains a lock named by the given key. It blocks
+// Lock obtains a lock named by the given name. It blocks
 // until the lock can be obtained or an error is returned.
-func (s *FileStorage) Lock(ctx context.Context, key string) error {
-	filename := s.lockFilename(key)
+func (s *FileStorage) Lock(ctx context.Context, name string) error {
+	filename := s.lockFilename(name)
+
+	// sometimes the lockfiles read as empty (size 0) - this is either a stale lock or it
+	// is currently being written; we can retry a few times in this case, as it has been
+	// shown to help (issue #232)
+	var emptyCount int
 
 	for {
 		err := createLockfile(filename)
@@ -172,7 +177,25 @@ func (s *FileStorage) Lock(ctx context.Context, key string) error {
 		if err == nil {
 			err2 := json.NewDecoder(f).Decode(&meta)
 			f.Close()
-			if err2 != nil {
+			if errors.Is(err2, io.EOF) {
+				emptyCount++
+				if emptyCount < 8 {
+					// wait for brief time and retry; could be that the file is in the process
+					// of being written or updated (which involves truncating) - see issue #232
+					select {
+					case <-time.After(250 * time.Millisecond):
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+					continue
+				} else {
+					// lockfile is empty or truncated multiple times; I *think* we can assume
+					// the previous acquirer either crashed or had some sort of failure that
+					// caused them to be unable to fully acquire or retain the lock, therefore
+					// we should treat it as if the lockfile did not exist
+					log.Printf("[INFO][%s] %s: Empty lockfile (%v) - likely previous process crashed or storage medium failure; treating as stale", s, filename, err2)
+				}
+			} else if err2 != nil {
 				return fmt.Errorf("decoding lockfile contents: %w", err2)
 			}
 		}
@@ -193,10 +216,10 @@ func (s *FileStorage) Lock(ctx context.Context, key string) error {
 			// or must give up on perfect mutual exclusivity; however, these cases are rare,
 			// so we prefer the simpler solution that avoids infinite loops)
 			log.Printf("[INFO][%s] Lock for '%s' is stale (created: %s, last update: %s); removing then retrying: %s",
-				s, key, meta.Created, meta.Updated, filename)
+				s, name, meta.Created, meta.Updated, filename)
 			if err = os.Remove(filename); err != nil { // hopefully we can replace the lock file quickly!
 				if !errors.Is(err, fs.ErrNotExist) {
-					return fmt.Errorf("unable to delete stale lock; deadlocked: %w", err)
+					return fmt.Errorf("unable to delete stale lockfile; deadlocked: %w", err)
 				}
 			}
 			continue
@@ -215,16 +238,16 @@ func (s *FileStorage) Lock(ctx context.Context, key string) error {
 }
 
 // Unlock releases the lock for name.
-func (s *FileStorage) Unlock(_ context.Context, key string) error {
-	return os.Remove(s.lockFilename(key))
+func (s *FileStorage) Unlock(_ context.Context, name string) error {
+	return os.Remove(s.lockFilename(name))
 }
 
 func (s *FileStorage) String() string {
 	return "FileStorage:" + s.Path
 }
 
-func (s *FileStorage) lockFilename(key string) string {
-	return filepath.Join(s.lockDir(), StorageKeys.Safe(key)+".lock")
+func (s *FileStorage) lockFilename(name string) string {
+	return filepath.Join(s.lockDir(), StorageKeys.Safe(name)+".lock")
 }
 
 func (s *FileStorage) lockDir() string {
@@ -305,6 +328,8 @@ func updateLockfileFreshness(filename string) (bool, error) {
 	}
 	var meta lockMeta
 	if err := json.Unmarshal(metaBytes, &meta); err != nil {
+		// see issue #232: this can error if the file is empty,
+		// which happens sometimes when the disk is REALLY slow
 		return true, err
 	}
 

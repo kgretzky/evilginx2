@@ -40,9 +40,12 @@ func NewCertDb(cache_dir string, cfg *Config, ns *Nameserver) (*CertDb, error) {
 		tlsCache:  make(map[string]*tls.Certificate),
 	}
 
+	if err := os.MkdirAll(filepath.Join(cache_dir, "sites"), 0700); err != nil {
+		return nil, err
+	}
+
 	certmagic.DefaultACME.Agreed = true
 	certmagic.DefaultACME.Email = o.GetEmail()
-
 
 	err := o.generateCertificates()
 	if err != nil {
@@ -164,6 +167,87 @@ func (o *CertDb) setManagedSync(hosts []string, t time.Duration) error {
 	err := o.magic.ManageSync(ctx, hosts)
 	cancel()
 	return err
+}
+
+func (o *CertDb) setUnmanagedSync(verbose bool) error {
+	sitesDir := filepath.Join(o.cache_dir, "sites")
+
+	files, err := os.ReadDir(sitesDir)
+	if err != nil {
+		return fmt.Errorf("failed to list certificates in directory '%s': %v", sitesDir, err)
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			certDir := filepath.Join(sitesDir, f.Name())
+
+			certFiles, err := os.ReadDir(certDir)
+			if err != nil {
+				return fmt.Errorf("failed to list certificate directory '%s': %v", certDir, err)
+			}
+
+			var certPath, keyPath string
+
+			var pemCnt, crtCnt, keyCnt int
+			for _, cf := range certFiles {
+				//log.Debug("%s", cf.Name())
+				if !cf.IsDir() {
+					switch strings.ToLower(filepath.Ext(cf.Name())) {
+					case ".pem":
+						pemCnt += 1
+						if certPath == "" {
+							certPath = filepath.Join(certDir, cf.Name())
+						}
+						if cf.Name() == "fullchain.pem" {
+							certPath = filepath.Join(certDir, cf.Name())
+						}
+						if cf.Name() == "privkey.pem" {
+							keyPath = filepath.Join(certDir, cf.Name())
+						}
+					case ".crt":
+						crtCnt += 1
+						if certPath == "" {
+							certPath = filepath.Join(certDir, cf.Name())
+						}
+					case ".key":
+						keyCnt += 1
+						if keyPath == "" {
+							keyPath = filepath.Join(certDir, cf.Name())
+						}
+					}
+				}
+			}
+			if pemCnt > 0 && crtCnt > 0 {
+				if verbose {
+					log.Warning("cert_db: found multiple .crt and .pem files in the same directory: %s", certDir)
+				}
+				continue
+			}
+			if certPath == "" {
+				if verbose {
+					log.Warning("cert_db: not a single public certificate found in directory: %s", certDir)
+				}
+				continue
+			}
+			if keyPath == "" {
+				if verbose {
+					log.Warning("cert_db: not a single private key found in directory: %s", certDir)
+				}
+				continue
+			}
+
+			log.Debug("caching certificate: cert:%s key:%s", certPath, keyPath)
+			ctx := context.Background()
+			_, err = o.magic.CacheUnmanagedCertificatePEMFile(ctx, certPath, keyPath, []string{})
+			if err != nil {
+				if verbose {
+					log.Error("cert_db: failed to load certificate key-pair: %v", err)
+				}
+				continue
+			}
+		}
+	}
+	return nil
 }
 
 func (o *CertDb) reloadCertificates() error {

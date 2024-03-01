@@ -133,7 +133,9 @@ func dnsQuery(fqdn string, rtype uint16, nameservers []string, recursive bool) (
 func createDNSMsg(fqdn string, rtype uint16, recursive bool) *dns.Msg {
 	m := new(dns.Msg)
 	m.SetQuestion(fqdn, rtype)
-	m.SetEdns0(4096, false)
+
+	// See: https://caddy.community/t/hard-time-getting-a-response-on-a-dns-01-challenge/15721/16
+	m.SetEdns0(1232, false)
 	if !recursive {
 		m.RecursionDesired = false
 	}
@@ -235,13 +237,13 @@ func checkDNSPropagation(fqdn, value string, resolvers []string) (bool, error) {
 // checkAuthoritativeNss queries each of the given nameservers for the expected TXT record.
 func checkAuthoritativeNss(fqdn, value string, nameservers []string) (bool, error) {
 	for _, ns := range nameservers {
-		r, err := dnsQuery(fqdn, dns.TypeTXT, []string{net.JoinHostPort(ns, "53")}, false)
+		r, err := dnsQuery(fqdn, dns.TypeTXT, []string{net.JoinHostPort(ns, "53")}, true)
 		if err != nil {
 			return false, err
 		}
 
 		if r.Rcode != dns.RcodeSuccess {
-			if r.Rcode == dns.RcodeNameError {
+			if r.Rcode == dns.RcodeNameError || r.Rcode == dns.RcodeServerFailure {
 				// if Present() succeeded, then it must show up eventually, or else
 				// something is really broken in the DNS provider or their API;
 				// no need for error here, simply have the caller try again

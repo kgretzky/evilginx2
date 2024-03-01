@@ -182,8 +182,13 @@ func (t *Terminal) DoWork() {
 func (t *Terminal) handleConfig(args []string) error {
 	pn := len(args)
 	if pn == 0 {
-		keys := []string{"domain", "external_ipv4", "bind_ipv4", "https_port", "dns_port", "unauth_url"}
-		vals := []string{t.cfg.general.Domain, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.UnauthUrl}
+		autocertOnOff := "off"
+		if t.cfg.IsAutocertEnabled() {
+			autocertOnOff = "on"
+		}
+
+		keys := []string{"domain", "external_ipv4", "bind_ipv4", "https_port", "dns_port", "unauth_url", "autocert"}
+		vals := []string{t.cfg.general.Domain, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.UnauthUrl, autocertOnOff}
 		log.Printf("\n%s\n", AsRows(keys, vals))
 		return nil
 	} else if pn == 2 {
@@ -205,6 +210,17 @@ func (t *Terminal) handleConfig(args []string) error {
 			}
 			t.cfg.SetUnauthUrl(args[1])
 			return nil
+		case "autocert":
+			switch args[1] {
+			case "on":
+				t.cfg.EnableAutocert(true)
+				t.manageCertificates(true)
+				return nil
+			case "off":
+				t.cfg.EnableAutocert(false)
+				t.manageCertificates(true)
+				return nil
+			}
 		}
 	} else if pn == 3 {
 		switch args[0] {
@@ -1109,13 +1125,14 @@ func (t *Terminal) monitorLurePause() {
 func (t *Terminal) createHelp() {
 	h, _ := NewHelp()
 	h.AddCommand("config", "general", "manage general configuration", "Shows values of all configuration variables and allows to change them.", LAYER_TOP,
-		readline.PcItem("config", readline.PcItem("domain"), readline.PcItem("ipv4", readline.PcItem("external"), readline.PcItem("bind")), readline.PcItem("unauth_url"), readline.PcItem("wildcards")))
+		readline.PcItem("config", readline.PcItem("domain"), readline.PcItem("ipv4", readline.PcItem("external"), readline.PcItem("bind")), readline.PcItem("unauth_url"), readline.PcItem("autocert", readline.PcItem("on"), readline.PcItem("off"))))
 	h.AddSubCommand("config", nil, "", "show all configuration variables")
 	h.AddSubCommand("config", []string{"domain"}, "domain <domain>", "set base domain for all phishlets (e.g. evilsite.com)")
 	h.AddSubCommand("config", []string{"ipv4"}, "ipv4 <ipv4_address>", "set ipv4 external address of the current server")
 	h.AddSubCommand("config", []string{"ipv4", "external"}, "ipv4 external <ipv4_address>", "set ipv4 external address of the current server")
 	h.AddSubCommand("config", []string{"ipv4", "bind"}, "ipv4 bind <ipv4_address>", "set ipv4 bind address of the current server")
 	h.AddSubCommand("config", []string{"unauth_url"}, "unauth_url <url>", "change the url where all unauthorized requests will be redirected to")
+	h.AddSubCommand("config", []string{"autocert"}, "autocert <on|off>", "enable or disable the automated certificate retrieval from letsencrypt")
 
 	h.AddCommand("proxy", "general", "manage proxy configuration", "Configures proxy which will be used to proxy the connection to remote website", LAYER_TOP,
 		readline.PcItem("proxy", readline.PcItem("enable"), readline.PcItem("disable"), readline.PcItem("type"), readline.PcItem("address"), readline.PcItem("port"), readline.PcItem("username"), readline.PcItem("password")))
@@ -1262,21 +1279,30 @@ func (t *Terminal) checkStatus() {
 
 func (t *Terminal) manageCertificates(verbose bool) {
 	if !t.p.developer {
-		hosts := t.p.cfg.GetActiveHostnames("")
-		//wc_host := t.p.cfg.GetWildcardHostname()
-		//hosts := []string{wc_host}
-		//hosts = append(hosts, t.p.cfg.GetActiveHostnames("")...)
-		if verbose {
-			log.Info("obtaining and setting up %d TLS certificates - please wait up to 60 seconds...", len(hosts))
-		}
-		err := t.p.crt_db.setManagedSync(hosts, 60*time.Second)
-		if err != nil {
-			log.Error("failed to set up TLS certificates: %s", err)
-			log.Error("run 'test-certs' command to retry")
-			return
-		}
-		if verbose {
-			log.Info("successfully set up all TLS certificates")
+		if t.cfg.IsAutocertEnabled() {
+			hosts := t.p.cfg.GetActiveHostnames("")
+			//wc_host := t.p.cfg.GetWildcardHostname()
+			//hosts := []string{wc_host}
+			//hosts = append(hosts, t.p.cfg.GetActiveHostnames("")...)
+			if verbose {
+				log.Info("obtaining and setting up %d TLS certificates - please wait up to 60 seconds...", len(hosts))
+			}
+			err := t.p.crt_db.setManagedSync(hosts, 60*time.Second)
+			if err != nil {
+				log.Error("failed to set up TLS certificates: %s", err)
+				log.Error("run 'test-certs' command to retry")
+				return
+			}
+			if verbose {
+				log.Info("successfully set up all TLS certificates")
+			}
+		} else {
+			err := t.p.crt_db.setUnmanagedSync(verbose)
+			if err != nil {
+				log.Error("failed to set up TLS certificates: %s", err)
+				log.Error("run 'test-certs' command to retry")
+				return
+			}
 		}
 	}
 }
