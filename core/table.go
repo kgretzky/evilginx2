@@ -125,21 +125,21 @@ func AsTable(columns []string, rows [][]string) string {
 	// header
 	table += dg.Sprintf("%s\n", lineSep)
 	for colIndex, colHeader := range columns {
-		table += dg.Sprintf("|") + fmt.Sprintf("%s", padded(colHeader, colPaddings[colIndex], AlignCenter))
+		table += dg.Sprint("|") + fmt.Sprintf("%s", padded(colHeader, colPaddings[colIndex], AlignCenter))
 	}
-	table += dg.Sprintf("|\n")
+	table += dg.Sprint("|\n")
 	table += dg.Sprintf("%s\n", lineSep)
 
 	// rows
 	for _, row := range rows {
 		for colIndex, cell := range row {
-			table += dg.Sprintf("|") + fmt.Sprintf("%s", padded(cell, colPaddings[colIndex], AlignLeft))
+			table += dg.Sprint("|") + fmt.Sprintf("%s", padded(cell, colPaddings[colIndex], AlignLeft))
 		}
-		table += dg.Sprintf("|\n")
+		table += dg.Sprint("|\n")
 	}
 
 	// footer
-	table += dg.Sprintf(lineSep) + "\n"
+	table += dg.Sprint(lineSep) + "\n"
 
 	return table
 }
