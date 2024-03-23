@@ -1,6 +1,7 @@
 # Unreleased
 - Feature: Added support to load custom TLS certificates from a public certificate file and a private key file stored in `~/.evilginx/crt/sites/<hostname>/`. Will load `fullchain.pem` and `privkey.pem` pair or a combination of a `.pem`/`.crt` (public certificate) and a `.key` (private key) file. Make sure to run without `-developer` flag and disable autocert retrieval with `config autocert off`.
 - Feature: Added ability to disable automated TLS certificate retrieval from LetsEncrypt with `config autocert <on/off>`.
+- Feature: Evilginx will now properly recognize origin IP for requests coming from behind a reverse proxy (nginx/apache2/cloudflare/azure).
 - Fixed: Added support for exported cookies with names prefixed with `__Host-` and `__Secure-`.
 - Fixed: Global `unauth_url` can now be set to an empty string to have the server return `403` on unauthorized requests.
 - Fixed: Unauthorized redirects and blacklisting would be ignored for `proxy_hosts` with `session: false` (default) making it easy to detect evilginx by external scanners.
