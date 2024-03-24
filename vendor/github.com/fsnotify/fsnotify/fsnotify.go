@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !plan9
 // +build !plan9
 
 // Package fsnotify provides a platform-independent interface for file system notifications.
@@ -63,4 +64,6 @@ func (e Event) String() string {
 }
 
 // Common errors that can be reported by a watcher
-var ErrEventOverflow = errors.New("fsnotify queue overflow")
+var (
+	ErrEventOverflow = errors.New("fsnotify queue overflow")
+)

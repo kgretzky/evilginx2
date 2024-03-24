@@ -22,7 +22,7 @@ type ProxyCtx struct {
 	// Will connect a request to a response
 	Session   int64
 	certStore CertStorage
-	proxy     *ProxyHttpServer
+	Proxy     *ProxyHttpServer
 }
 
 type RoundTripper interface {
@@ -43,11 +43,11 @@ func (ctx *ProxyCtx) RoundTrip(req *http.Request) (*http.Response, error) {
 	if ctx.RoundTripper != nil {
 		return ctx.RoundTripper.RoundTrip(req, ctx)
 	}
-	return ctx.proxy.Tr.RoundTrip(req)
+	return ctx.Proxy.Tr.RoundTrip(req)
 }
 
 func (ctx *ProxyCtx) printf(msg string, argv ...interface{}) {
-	ctx.proxy.Logger.Printf("[%03d] "+msg+"\n", append([]interface{}{ctx.Session & 0xFF}, argv...)...)
+	ctx.Proxy.Logger.Printf("[%03d] "+msg+"\n", append([]interface{}{ctx.Session & 0xFF}, argv...)...)
 }
 
 // Logf prints a message to the proxy's log. Should be used in a ProxyHttpServer's filter
@@ -59,7 +59,7 @@ func (ctx *ProxyCtx) printf(msg string, argv ...interface{}) {
 //		return r, nil
 //	})
 func (ctx *ProxyCtx) Logf(msg string, argv ...interface{}) {
-	if ctx.proxy.Verbose {
+	if ctx.Proxy.Verbose {
 		ctx.printf("INFO: "+msg, argv...)
 	}
 }

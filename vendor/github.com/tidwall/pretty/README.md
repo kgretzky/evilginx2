@@ -1,8 +1,6 @@
 # Pretty
-[![Build Status](https://img.shields.io/travis/tidwall/pretty.svg?style=flat-square)](https://travis-ci.org/tidwall/prettty)
-[![Coverage Status](https://img.shields.io/badge/coverage-100%25-brightgreen.svg?style=flat-square)](http://gocover.io/github.com/tidwall/pretty)
-[![GoDoc](https://img.shields.io/badge/api-reference-blue.svg?style=flat-square)](https://godoc.org/github.com/tidwall/pretty) 
 
+[![GoDoc](https://img.shields.io/badge/api-reference-blue.svg?style=flat-square)](https://pkg.go.dev/github.com/tidwall/pretty) 
 
 Pretty is a Go package that provides [fast](#performance) methods for formatting JSON for human readability, or to compact JSON for smaller payloads.
 
@@ -81,7 +79,6 @@ Will format the json to:
 {"name":{"first":"Tom","last":"Anderson"},"age":37,"children":["Sara","Alex","Jack"],"fav.movie":"Deer Hunter","friends":[{"first":"Janet","last":"Murphy","age":44}]}```
 ```
 
-
 ## Customized output
 
 There's a `PrettyOptions(json, opts)` function which allows for customizing the output with the following options:
@@ -106,14 +103,15 @@ type Options struct {
 
 Benchmarks of Pretty alongside the builtin `encoding/json` Indent/Compact methods.
 ```
-BenchmarkPretty-8            1000000     1283 ns/op      720 B/op      2 allocs/op
-BenchmarkUgly-8              3000000      426 ns/op      240 B/op      1 allocs/op
-BenchmarkUglyInPlace-8       5000000      340 ns/op        0 B/op      0 allocs/op
-BenchmarkJSONIndent-8         300000     4628 ns/op     1069 B/op      4 allocs/op
-BenchmarkJSONCompact-8       1000000     2469 ns/op      758 B/op      4 allocs/op
+BenchmarkPretty-16           1000000    1034 ns/op    720 B/op     2 allocs/op
+BenchmarkPrettySortKeys-16    586797    1983 ns/op   2848 B/op    14 allocs/op
+BenchmarkUgly-16             4652365     254 ns/op    240 B/op     1 allocs/op
+BenchmarkUglyInPlace-16      6481233     183 ns/op      0 B/op     0 allocs/op
+BenchmarkJSONIndent-16        450654    2687 ns/op   1221 B/op     0 allocs/op
+BenchmarkJSONCompact-16       685111    1699 ns/op    442 B/op     0 allocs/op
 ```
 
-*These benchmarks were run on a MacBook Pro 15" 2.8 GHz Intel Core i7 using Go 1.7.*
+*These benchmarks were run on a MacBook Pro 2.4 GHz 8-Core Intel Core i9.*
 
 ## Contact
 Josh Baker [@tidwall](http://twitter.com/tidwall)

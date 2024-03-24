@@ -148,7 +148,7 @@ func AsRows(keys []string, vals []string) string {
 	clr := color.New(color.FgHiBlack)
 	mLen := maxLen(keys)
 	var table string
-	for i, _ := range keys {
+	for i := range keys {
 		table += clr.Sprintf(" %s : ", padded(keys[i], mLen, AlignLeft)) + fmt.Sprintf("%s\n", vals[i])
 	}
 	return table
@@ -157,7 +157,7 @@ func AsRows(keys []string, vals []string) string {
 func AsDescription(keys []string, vals []string) string {
 	clr := color.New(color.FgHiBlack)
 	var table string
-	for i, _ := range keys {
+	for i := range keys {
 		table += clr.Sprintf(" %s", keys[i]) + fmt.Sprintf("\n   %s\n", vals[i])
 	}
 	return table
