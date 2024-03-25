@@ -1,0 +1,5 @@
+sudo apt-get -y install git make 
+git clone https://github.com/kgretzky/evilginx2.git 
+cd evilginx2 
+make 
+run using evilginx -p ./phishlets/ 
