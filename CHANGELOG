@@ -9,6 +9,7 @@
 - Fixed: Global `unauth_url` can now be set to an empty string to have the server return `403` on unauthorized requests.
 - Fixed: Unauthorized redirects and blacklisting would be ignored for `proxy_hosts` with `session: false` (default) making it easy to detect evilginx by external scanners.
 - Fixed: IP address `127.0.0.1` is now ignored from being added to the IP blacklist.
+- Fixed: Added support for more TLDs to use with phishing domains (e.g. `xyz`, `art`, `tech`, `wiki`, `lol` & more)
 
 # 3.2.0
 - Feature: URL redirects on successful token capture now work dynamically on every phishing page. Pages do not need to reload or redirect first for the redirects to happen.
