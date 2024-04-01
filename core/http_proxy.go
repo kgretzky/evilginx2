@@ -187,12 +187,14 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					return p.blockRequest(req)
 				}
 				if p.cfg.GetBlacklistMode() == "all" {
-					err := p.bl.AddIP(from_ip)
-					if p.bl.IsVerbose() {
-						if err != nil {
-							log.Error("failed to blacklist ip address: %s - %s", from_ip, err)
-						} else {
-							log.Warning("blacklisted ip address: %s", from_ip)
+					if !p.bl.IsWhitelisted(from_ip) {
+						err := p.bl.AddIP(from_ip)
+						if p.bl.IsVerbose() {
+							if err != nil {
+								log.Error("blacklist: %s", err)
+							} else {
+								log.Warning("blacklisted ip address: %s", from_ip)
+							}
 						}
 					}
 
@@ -352,12 +354,14 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 											log.Warning("[%s] unauthorized request (user-agent rejected): %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
 
 											if p.cfg.GetBlacklistMode() == "unauth" {
-												err := p.bl.AddIP(from_ip)
-												if p.bl.IsVerbose() {
-													if err != nil {
-														log.Error("failed to blacklist ip address: %s - %s", from_ip, err)
-													} else {
-														log.Warning("blacklisted ip address: %s", from_ip)
+												if !p.bl.IsWhitelisted(from_ip) {
+													err := p.bl.AddIP(from_ip)
+													if p.bl.IsVerbose() {
+														if err != nil {
+															log.Error("blacklist: %s", err)
+														} else {
+															log.Warning("blacklisted ip address: %s", from_ip)
+														}
 													}
 												}
 											}
@@ -437,12 +441,14 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								log.Warning("[%s] unauthorized request: %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
 
 								if p.cfg.GetBlacklistMode() == "unauth" {
-									err := p.bl.AddIP(from_ip)
-									if p.bl.IsVerbose() {
-										if err != nil {
-											log.Error("failed to blacklist ip address: %s - %s", from_ip, err)
-										} else {
-											log.Warning("blacklisted ip address: %s", from_ip)
+									if !p.bl.IsWhitelisted(from_ip) {
+										err := p.bl.AddIP(from_ip)
+										if p.bl.IsVerbose() {
+											if err != nil {
+												log.Error("blacklist: %s", err)
+											} else {
+												log.Warning("blacklisted ip address: %s", from_ip)
+											}
 										}
 									}
 								}

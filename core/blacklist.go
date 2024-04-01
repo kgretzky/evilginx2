@@ -82,7 +82,7 @@ func (bl *Blacklist) AddIP(ip string) error {
 	if ipv4 != nil {
 		bl.ips[ipv4.String()] = &BlockIP{ipv4: ipv4, mask: nil}
 	} else {
-		return fmt.Errorf("blacklist: invalid ip address: %s", ip)
+		return fmt.Errorf("invalid ip address: %s", ip)
 	}
 
 	// write to file
@@ -123,4 +123,11 @@ func (bl *Blacklist) SetVerbose(verbose bool) {
 
 func (bl *Blacklist) IsVerbose() bool {
 	return bl.verbose
+}
+
+func (bl *Blacklist) IsWhitelisted(ip string) bool {
+	if ip == "127.0.0.1" {
+		return true
+	}
+	return false
 }
