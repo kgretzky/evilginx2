@@ -59,6 +59,12 @@ type BlacklistConfig struct {
 type CertificatesConfig struct {
 }
 
+type GoPhishConfig struct {
+	AdminUrl    string `mapstructure:"admin_url" json:"admin_url" yaml:"admin_url"`
+	ApiKey      string `mapstructure:"api_key" json:"api_key" yaml:"api_key"`
+	InsecureTLS bool   `mapstructure:"insecure" json:"insecure" yaml:"insecure"`
+}
+
 type GeneralConfig struct {
 	Domain       string `mapstructure:"domain" json:"domain" yaml:"domain"`
 	OldIpv4      string `mapstructure:"ipv4" json:"ipv4" yaml:"ipv4"`
@@ -74,6 +80,7 @@ type Config struct {
 	general         *GeneralConfig
 	certificates    *CertificatesConfig
 	blacklistConfig *BlacklistConfig
+	gophishConfig   *GoPhishConfig
 	proxyConfig     *ProxyConfig
 	phishletConfig  map[string]*PhishletConfig
 	phishlets       map[string]*Phishlet
@@ -94,6 +101,7 @@ const (
 	CFG_PHISHLETS    = "phishlets"
 	CFG_BLACKLIST    = "blacklist"
 	CFG_SUBPHISHLETS = "subphishlets"
+	CFG_GOPHISH      = "gophish"
 )
 
 const DEFAULT_UNAUTH_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
@@ -102,6 +110,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c := &Config{
 		general:         &GeneralConfig{},
 		certificates:    &CertificatesConfig{},
+		gophishConfig:   &GoPhishConfig{},
 		phishletConfig:  make(map[string]*PhishletConfig),
 		phishlets:       make(map[string]*Phishlet),
 		phishletNames:   []string{},
@@ -141,6 +150,8 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	}
 
 	c.cfg.UnmarshalKey(CFG_BLACKLIST, &c.blacklistConfig)
+
+	c.cfg.UnmarshalKey(CFG_GOPHISH, &c.gophishConfig)
 
 	if c.general.OldIpv4 != "" {
 		if c.general.ExternalIpv4 == "" {
@@ -339,6 +350,33 @@ func (c *Config) SetProxyPassword(password string) {
 	c.proxyConfig.Password = password
 	c.cfg.Set(CFG_PROXY, c.proxyConfig)
 	log.Info("proxy password set to: %s", password)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetGoPhishAdminUrl(k string) {
+	u, err := url.ParseRequestURI(k)
+	if err != nil {
+		log.Error("invalid url: %s", err)
+		return
+	}
+
+	c.gophishConfig.AdminUrl = u.String()
+	c.cfg.Set(CFG_GOPHISH, c.gophishConfig)
+	log.Info("gophish admin url set to: %s", u.String())
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetGoPhishApiKey(k string) {
+	c.gophishConfig.ApiKey = k
+	c.cfg.Set(CFG_GOPHISH, c.gophishConfig)
+	log.Info("gophish api key set to: %s", k)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetGoPhishInsecureTLS(k bool) {
+	c.gophishConfig.InsecureTLS = k
+	c.cfg.Set(CFG_GOPHISH, c.gophishConfig)
+	log.Info("gophish insecure set to: %v", k)
 	c.cfg.WriteConfig()
 }
 
@@ -767,4 +805,16 @@ func (c *Config) GetBlacklistMode() string {
 
 func (c *Config) IsAutocertEnabled() bool {
 	return c.general.Autocert
+}
+
+func (c *Config) GetGoPhishAdminUrl() string {
+	return c.gophishConfig.AdminUrl
+}
+
+func (c *Config) GetGoPhishApiKey() string {
+	return c.gophishConfig.ApiKey
+}
+
+func (c *Config) GetGoPhishInsecureTLS() bool {
+	return c.gophishConfig.InsecureTLS
 }

@@ -1,5 +1,7 @@
-# Unreleased
+# 3.3.0
+- Feature: Official GoPhish integration, using the fork: https://github.com/kgretzky/gophish
 - Feature: Added support to load custom TLS certificates from a public certificate file and a private key file stored in `~/.evilginx/crt/sites/<hostname>/`. Will load `fullchain.pem` and `privkey.pem` pair or a combination of a `.pem`/`.crt` (public certificate) and a `.key` (private key) file. Make sure to run without `-developer` flag and disable autocert retrieval with `config autocert off`.
+- Feature: Added ability to inject `force_post` POST parameters into JSON content body (by [@yudasm_](https://twitter.com/yudasm_)).
 - Feature: Added ability to disable automated TLS certificate retrieval from LetsEncrypt with `config autocert <on/off>`.
 - Feature: Evilginx will now properly recognize origin IP for requests coming from behind a reverse proxy (nginx/apache2/cloudflare/azure).
 - Fixed: Added support for exported cookies with names prefixed with `__Host-` and `__Secure-`.
