@@ -778,7 +778,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 			}
-
+			log.Debug("req.URL:%s", req.URL)
 			return req, nil
 		})
 
