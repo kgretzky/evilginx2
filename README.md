@@ -38,7 +38,7 @@ https://academy.breakdev.org/evilginx-mastery
 If you'd like to use Gophish to send out phishing links compatible with Evilginx, please use the official Gophish integration with Evilginx 3.3.
 You can find the custom version here in the forked repository: [Gophish with Evilginx integration](https://github.com/kgretzky/gophish/)
 
-If you want to learn more about how to set it up, please follow the instructions in [this blog post](breakdev.org/evilginx-3-3-go-phish/)
+If you want to learn more about how to set it up, please follow the instructions in [this blog post](https://breakdev.org/evilginx-3-3-go-phish/)
 
 ## Write-ups
 
@@ -58,7 +58,7 @@ If you want to learn more about reverse proxy phishing, I've published extensive
 
 [Evilginx 3.2](https://breakdev.org/evilginx-3-2/)
 
-[Evilginx 3.3](breakdev.org/evilginx-3-3-go-phish/)
+[Evilginx 3.3](https://breakdev.org/evilginx-3-3-go-phish/)
 
 ## Help
 
