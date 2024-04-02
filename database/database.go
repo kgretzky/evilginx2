@@ -54,6 +54,11 @@ func (d *Database) SetSessionCustom(sid string, name string, value string) error
 	return err
 }
 
+func (d *Database) SetSessionAccessUrl(sid string, url string) error {
+	err := d.sessionsUpdateAccessUrl(sid, url)
+	return err
+}
+
 func (d *Database) SetSessionBodyTokens(sid string, tokens map[string]string) error {
 	err := d.sessionsUpdateBodyTokens(sid, tokens)
 	return err

