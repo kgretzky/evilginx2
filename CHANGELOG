@@ -10,6 +10,7 @@
 - Fixed: Unauthorized redirects and blacklisting would be ignored for `proxy_hosts` with `session: false` (default) making it easy to detect evilginx by external scanners.
 - Fixed: IP address `127.0.0.1` is now ignored from being added to the IP blacklist.
 - Fixed: Added support for more TLDs to use with phishing domains (e.g. `xyz`, `art`, `tech`, `wiki`, `lol` & more)
+- Fixed: Credentials will now be captured also from intercepted requests.
 
 # 3.2.0
 - Feature: URL redirects on successful token capture now work dynamically on every phishing page. Pages do not need to reload or redirect first for the redirects to happen.

