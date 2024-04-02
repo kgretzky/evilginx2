@@ -2,13 +2,16 @@ package certmagic
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mholt/acmez"
@@ -107,11 +110,29 @@ type ACMEIssuer struct {
 	// certificate chains
 	PreferredChains ChainPreference
 
-	// Set a logger to enable logging
+	// Set a logger to configure logging; a default
+	// logger must always be set; if no logging is
+	// desired, set this to zap.NewNop().
 	Logger *zap.Logger
+
+	// Set a http proxy to use when issuing a certificate.
+	// Default is http.ProxyFromEnvironment
+	HTTPProxy func(*http.Request) (*url.URL, error)
 
 	config     *Config
 	httpClient *http.Client
+
+	// Some fields are changed on-the-fly during
+	// certificate management. For example, the
+	// email might be implicitly discovered if not
+	// explicitly configured, and agreement might
+	// happen during the flow. Changing the exported
+	// fields field is racey (issue #195) so we
+	// control unexported fields that we can
+	// synchronize properly.
+	email  string
+	agreed bool
+	mu     *sync.Mutex // protects the above grouped fields, as well as entire struct during NewAccountFunc calls
 }
 
 // NewACMEIssuer constructs a valid ACMEIssuer based on a template
@@ -181,7 +202,55 @@ func NewACMEIssuer(cfg *Config, template ACMEIssuer) *ACMEIssuer {
 	if template.Logger == nil {
 		template.Logger = DefaultACME.Logger
 	}
+
+	// absolutely do not allow a nil logger; that would panic
+	if template.Logger == nil {
+		template.Logger = defaultLogger
+	}
+
+	if template.HTTPProxy == nil {
+		template.HTTPProxy = DefaultACME.HTTPProxy
+	}
+	if template.HTTPProxy == nil {
+		template.HTTPProxy = http.ProxyFromEnvironment
+	}
+
 	template.config = cfg
+	template.mu = new(sync.Mutex)
+
+	// set up the dialer and transport / HTTP client
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 2 * time.Minute,
+	}
+	if template.Resolver != "" {
+		dialer.Resolver = &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+				return (&net.Dialer{
+					Timeout: 15 * time.Second,
+				}).DialContext(ctx, network, template.Resolver)
+			},
+		}
+	}
+	transport := &http.Transport{
+		Proxy:                 template.HTTPProxy,
+		DialContext:           dialer.DialContext,
+		TLSHandshakeTimeout:   30 * time.Second, // increase to 30s requested in #175
+		ResponseHeaderTimeout: 30 * time.Second, // increase to 30s requested in #175
+		ExpectContinueTimeout: 2 * time.Second,
+		ForceAttemptHTTP2:     true,
+	}
+	if template.TrustedRoots != nil {
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs: template.TrustedRoots,
+		}
+	}
+	template.httpClient = &http.Client{
+		Transport: transport,
+		Timeout:   HTTPTimeout,
+	}
+
 	return &template
 }
 
@@ -213,12 +282,24 @@ func (*ACMEIssuer) issuerKey(ca string) string {
 	return key
 }
 
+func (iss *ACMEIssuer) getEmail() string {
+	iss.mu.Lock()
+	defer iss.mu.Unlock()
+	return iss.email
+}
+
+func (iss *ACMEIssuer) isAgreed() bool {
+	iss.mu.Lock()
+	defer iss.mu.Unlock()
+	return iss.agreed
+}
+
 // PreCheck performs a few simple checks before obtaining or
 // renewing a certificate with ACME, and returns whether this
 // batch is eligible for certificates if using Let's Encrypt.
 // It also ensures that an email address is available.
 func (am *ACMEIssuer) PreCheck(ctx context.Context, names []string, interactive bool) error {
-	publicCA := strings.Contains(am.CA, "api.letsencrypt.org") || strings.Contains(am.CA, "acme.zerossl.com")
+	publicCA := strings.Contains(am.CA, "api.letsencrypt.org") || strings.Contains(am.CA, "acme.zerossl.com") || strings.Contains(am.CA, "api.pki.goog")
 	if publicCA {
 		for _, name := range names {
 			if !SubjectQualifiesForPublicCert(name) {
@@ -226,7 +307,7 @@ func (am *ACMEIssuer) PreCheck(ctx context.Context, names []string, interactive 
 			}
 		}
 	}
-	return am.getEmail(ctx, interactive)
+	return am.setEmail(ctx, interactive)
 }
 
 // Issue implements the Issuer interface. It obtains a certificate for the given csr using
@@ -335,7 +416,7 @@ func (am *ACMEIssuer) doIssue(ctx context.Context, csr *x509.CertificateRequest,
 // processing. If there are no matches, the first chain is returned.
 func (am *ACMEIssuer) selectPreferredChain(certChains []acme.Certificate) acme.Certificate {
 	if len(certChains) == 1 {
-		if am.Logger != nil && (len(am.PreferredChains.AnyCommonName) > 0 || len(am.PreferredChains.RootCommonName) > 0) {
+		if len(am.PreferredChains.AnyCommonName) > 0 || len(am.PreferredChains.RootCommonName) > 0 {
 			am.Logger.Debug("there is only one chain offered; selecting it regardless of preferences",
 				zap.String("chain_url", certChains[0].URL))
 		}
@@ -360,11 +441,9 @@ func (am *ACMEIssuer) selectPreferredChain(certChains []acme.Certificate) acme.C
 		for i, chain := range certChains {
 			certs, err := parseCertsFromPEMBundle(chain.ChainPEM)
 			if err != nil {
-				if am.Logger != nil {
-					am.Logger.Error("unable to parse PEM certificate chain",
-						zap.Int("chain", i),
-						zap.Error(err))
-				}
+				am.Logger.Error("unable to parse PEM certificate chain",
+					zap.Int("chain", i),
+					zap.Error(err))
 				continue
 			}
 			decodedChains[i] = certs
@@ -375,11 +454,9 @@ func (am *ACMEIssuer) selectPreferredChain(certChains []acme.Certificate) acme.C
 				for i, chain := range decodedChains {
 					for _, cert := range chain {
 						if cert.Issuer.CommonName == prefAnyCN {
-							if am.Logger != nil {
-								am.Logger.Debug("found preferred certificate chain by issuer common name",
-									zap.String("preference", prefAnyCN),
-									zap.Int("chain", i))
-							}
+							am.Logger.Debug("found preferred certificate chain by issuer common name",
+								zap.String("preference", prefAnyCN),
+								zap.Int("chain", i))
 							return certChains[i]
 						}
 					}
@@ -391,20 +468,16 @@ func (am *ACMEIssuer) selectPreferredChain(certChains []acme.Certificate) acme.C
 			for _, prefRootCN := range am.PreferredChains.RootCommonName {
 				for i, chain := range decodedChains {
 					if chain[len(chain)-1].Issuer.CommonName == prefRootCN {
-						if am.Logger != nil {
-							am.Logger.Debug("found preferred certificate chain by root common name",
-								zap.String("preference", prefRootCN),
-								zap.Int("chain", i))
-						}
+						am.Logger.Debug("found preferred certificate chain by root common name",
+							zap.String("preference", prefRootCN),
+							zap.Int("chain", i))
 						return certChains[i]
 					}
 				}
 			}
 		}
 
-		if am.Logger != nil {
-			am.Logger.Warn("did not find chain matching preferences; using first")
-		}
+		am.Logger.Warn("did not find chain matching preferences; using first")
 	}
 
 	return certChains[0]
@@ -444,8 +517,10 @@ type ChainPreference struct {
 // DefaultACME specifies default settings to use for ACMEIssuers.
 // Using this value is optional but can be convenient.
 var DefaultACME = ACMEIssuer{
-	CA:     LetsEncryptProductionCA,
-	TestCA: LetsEncryptStagingCA,
+	CA:        LetsEncryptProductionCA,
+	TestCA:    LetsEncryptStagingCA,
+	Logger:    defaultLogger,
+	HTTPProxy: http.ProxyFromEnvironment,
 }
 
 // Some well-known CA endpoints available to use.

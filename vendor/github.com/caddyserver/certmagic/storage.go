@@ -25,81 +25,128 @@ import (
 	"go.uber.org/zap"
 )
 
-// Storage is a type that implements a key-value store.
-// Keys are prefix-based, with forward slash '/' as separators
-// and without a leading slash.
+// Storage is a type that implements a key-value store with
+// basic file system (folder path) semantics. Keys use the
+// forward slash '/' to separate path components and have no
+// leading or trailing slashes.
 //
-// Processes running in a cluster will wish to use the
-// same Storage value (its implementation and configuration)
-// in order to share certificates and other TLS resources
-// with the cluster.
+// A "prefix" of a key is defined on a component basis,
+// e.g. "a" is a prefix of "a/b" but not "ab/c".
+//
+// A "file" is a key with a value associated with it.
+//
+// A "directory" is a key with no value, but which may be
+// the prefix of other keys.
+//
+// Keys passed into Load and Store always have "file" semantics,
+// whereas "directories" are only implicit by leading up to the
+// file.
 //
 // The Load, Delete, List, and Stat methods should return
 // fs.ErrNotExist if the key does not exist.
 //
-// Implementations of Storage must be safe for concurrent use
-// and honor context cancellations.
+// Processes running in a cluster should use the same Storage
+// value (with the same configuration) in order to share
+// certificates and other TLS resources with the cluster.
+//
+// Implementations of Storage MUST be safe for concurrent use
+// and honor context cancellations. Methods should block until
+// their operation is complete; that is, Load() should always
+// return the value from the last call to Store() for a given
+// key, and concurrent calls to Store() should not corrupt a
+// file.
+//
+// For simplicity, this is not a streaming API and is not
+// suitable for very large files.
 type Storage interface {
-	// Locker provides atomic synchronization
-	// operations, making Storage safe to share.
+	// Locker enables the storage backend to synchronize
+	// operational units of work.
+	//
+	// The use of Locker is NOT employed around every
+	// Storage method call (Store, Load, etc), as these
+	// should already be thread-safe. Locker is used for
+	// high-level jobs or transactions that need
+	// synchronization across a cluster; it's a simple
+	// distributed lock. For example, CertMagic uses the
+	// Locker interface to coordinate the obtaining of
+	// certificates.
 	Locker
 
-	// Store puts value at key.
+	// Store puts value at key. It creates the key if it does
+	// not exist and overwrites any existing value at this key.
 	Store(ctx context.Context, key string, value []byte) error
 
 	// Load retrieves the value at key.
 	Load(ctx context.Context, key string) ([]byte, error)
 
-	// Delete deletes key. An error should be
-	// returned only if the key still exists
+	// Delete deletes the named key. If the name is a
+	// directory (i.e. prefix of other keys), all keys
+	// prefixed by this key should be deleted. An error
+	// should be returned only if the key still exists
 	// when the method returns.
 	Delete(ctx context.Context, key string) error
 
-	// Exists returns true if the key exists
+	// Exists returns true if the key exists either as
+	// a directory (prefix to other keys) or a file,
 	// and there was no error checking.
 	Exists(ctx context.Context, key string) bool
 
-	// List returns all keys that match prefix.
+	// List returns all keys in the given path.
+	//
 	// If recursive is true, non-terminal keys
 	// will be enumerated (i.e. "directories"
 	// should be walked); otherwise, only keys
 	// prefixed exactly by prefix will be listed.
-	List(ctx context.Context, prefix string, recursive bool) ([]string, error)
+	List(ctx context.Context, path string, recursive bool) ([]string, error)
 
 	// Stat returns information about key.
 	Stat(ctx context.Context, key string) (KeyInfo, error)
 }
 
-// Locker facilitates synchronization of certificate tasks across
-// machines and networks.
+// Locker facilitates synchronization across machines and networks.
+// It essentially provides a distributed named-mutex service so
+// that multiple consumers can coordinate tasks and share resources.
+//
+// If possible, a Locker should implement a coordinated distributed
+// locking mechanism by generating fencing tokens (see
+// https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html).
+// This typically requires a central server or consensus algorithm
+// However, if that is not feasible, Lockers may implement an
+// alternative mechanism that uses timeouts to detect node or network
+// failures and avoid deadlocks. For example, the default FileStorage
+// writes a timestamp to the lock file every few seconds, and if another
+// node acquiring the lock sees that timestamp is too old, it may
+// assume the lock is stale.
+//
+// As not all Locker implementations use fencing tokens, code relying
+// upon Locker must be tolerant of some mis-synchronizations but can
+// expect them to be rare.
+//
+// This interface should only be used for coordinating expensive
+// operations across nodes in a cluster; not for internal, extremely
+// short-lived, or high-contention locks.
 type Locker interface {
-	// Lock acquires the lock for key, blocking until the lock
-	// can be obtained or an error is returned. Note that, even
-	// after acquiring a lock, an idempotent operation may have
-	// already been performed by another process that acquired
-	// the lock before - so always check to make sure idempotent
-	// operations still need to be performed after acquiring the
-	// lock.
+	// Lock acquires the lock for name, blocking until the lock
+	// can be obtained or an error is returned. Only one lock
+	// for the given name can exist at a time. A call to Lock for
+	// a name which already exists blocks until the named lock
+	// is released or becomes stale.
 	//
-	// The actual implementation of obtaining of a lock must be
-	// an atomic operation so that multiple Lock calls at the
-	// same time always results in only one caller receiving the
-	// lock at any given time.
+	// If the named lock represents an idempotent operation, callers
+	// should always check to make sure the work still needs to be
+	// completed after acquiring the lock. You never know if another
+	// process already completed the task while you were waiting to
+	// acquire it.
 	//
-	// To prevent deadlocks, all implementations (where this concern
-	// is relevant) should put a reasonable expiration on the lock in
-	// case Unlock is unable to be called due to some sort of network
-	// failure or system crash. Additionally, implementations should
-	// honor context cancellation as much as possible (in case the
-	// caller wishes to give up and free resources before the lock
-	// can be obtained).
-	Lock(ctx context.Context, key string) error
+	// Implementations should honor context cancellation.
+	Lock(ctx context.Context, name string) error
 
-	// Unlock releases the lock for key. This method must ONLY be
-	// called after a successful call to Lock, and only after the
-	// critical section is finished, even if it errored or timed
-	// out. Unlock cleans up any resources allocated during Lock.
-	Unlock(ctx context.Context, key string) error
+	// Unlock releases named lock. This method must ONLY be called
+	// after a successful call to Lock, and only after the critical
+	// section is finished, even if it errored or timed out. Unlock
+	// cleans up any resources allocated during Lock. Unlock should
+	// only return an error if the lock was unable to be released.
+	Unlock(ctx context.Context, name string) error
 }
 
 // KeyInfo holds information about a key in storage.
@@ -113,7 +160,7 @@ type KeyInfo struct {
 	Key        string
 	Modified   time.Time
 	Size       int64
-	IsTerminal bool // false for keys that only contain other keys (like directories)
+	IsTerminal bool // false for directories (keys that act as prefix for other keys)
 }
 
 // storeTx stores all the values or none at all.
@@ -220,16 +267,14 @@ func CleanUpOwnLocks(ctx context.Context, logger *zap.Logger) {
 	locksMu.Lock()
 	defer locksMu.Unlock()
 	for lockKey, storage := range locks {
-		err := storage.Unlock(ctx, lockKey)
-		if err == nil {
-			delete(locks, lockKey)
-		} else if logger != nil {
+		if err := storage.Unlock(ctx, lockKey); err != nil {
 			logger.Error("unable to clean up lock in storage backend",
 				zap.Any("storage", storage),
 				zap.String("lock_key", lockKey),
-				zap.Error(err),
-			)
+				zap.Error(err))
+			continue
 		}
+		delete(locks, lockKey)
 	}
 }
 
@@ -244,7 +289,7 @@ func acquireLock(ctx context.Context, storage Storage, lockKey string) error {
 }
 
 func releaseLock(ctx context.Context, storage Storage, lockKey string) error {
-	err := storage.Unlock(ctx, lockKey)
+	err := storage.Unlock(context.TODO(), lockKey) // TODO: in Go 1.21, use WithoutCancel (see #247)
 	if err == nil {
 		locksMu.Lock()
 		delete(locks, lockKey)

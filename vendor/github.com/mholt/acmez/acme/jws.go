@@ -89,7 +89,7 @@ func jwsEncodeEAB(accountKey crypto.PublicKey, hmacKey []byte, kid keyID, url st
 // See https://tools.ietf.org/html/rfc7515#section-7.
 //
 // If nonce is empty, it will not be encoded into the header.
-func jwsEncodeJSON(claimset interface{}, key crypto.Signer, kid keyID, nonce, url string) ([]byte, error) {
+func jwsEncodeJSON(claimset any, key crypto.Signer, kid keyID, nonce, url string) ([]byte, error) {
 	alg, sha := jwsHasher(key.Public())
 	if alg == "" || !sha.Available() {
 		return nil, errUnsupportedKey

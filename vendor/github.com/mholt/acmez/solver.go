@@ -70,3 +70,16 @@ type Solver interface {
 type Waiter interface {
 	Wait(context.Context, acme.Challenge) error
 }
+
+// Payloader is an optional interface for Solvers to implement. Its purpose is
+// to return the payload sent to the CA when responding to a challenge. This
+// interface is applicable when responding to "device-attest-01" challenges
+//
+// If implemented, it will be called after Present() and if a Waiter is
+// implemented it will be called after Wait(), just before the challenge is
+// initiated with the server.
+//
+// Implementations MUST honor context cancellation.
+type Payloader interface {
+	Payload(context.Context, acme.Challenge) (any, error)
+}

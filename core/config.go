@@ -67,6 +67,7 @@ type GeneralConfig struct {
 	UnauthUrl    string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
 	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
 	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
+	Autocert     bool   `mapstructure:"autocert" json:"autocert" yaml:"autocert"`
 }
 
 type Config struct {
@@ -134,6 +135,11 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	}
 
 	c.cfg.UnmarshalKey(CFG_GENERAL, &c.general)
+	if c.cfg.Get("general.autocert") == nil {
+		c.cfg.Set("general.autocert", true)
+		c.general.Autocert = true
+	}
+
 	c.cfg.UnmarshalKey(CFG_BLACKLIST, &c.blacklistConfig)
 
 	if c.general.OldIpv4 != "" {
@@ -156,6 +162,9 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	if c.general.DnsPort == 0 {
 		c.SetDnsPort(53)
 	}
+	if created_cfg {
+		c.EnableAutocert(true)
+	}
 
 	c.lures = []*Lure{}
 	c.cfg.UnmarshalKey(CFG_LURES, &c.lures)
@@ -168,6 +177,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		c.lureIds = append(c.lureIds, GenRandomToken())
 	}
 
+	c.cfg.WriteConfig()
 	return c, nil
 }
 
@@ -431,14 +441,20 @@ func (c *Config) SetBlacklistMode(mode string) {
 }
 
 func (c *Config) SetUnauthUrl(_url string) {
-	_, err := url.ParseRequestURI(_url)
-	if err != nil {
-		log.Error("invalid URL: %s", err)
-		return
-	}
 	c.general.UnauthUrl = _url
 	c.cfg.Set(CFG_GENERAL, c.general)
 	log.Info("unauthorized request redirection URL set to: %s", _url)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) EnableAutocert(enabled bool) {
+	c.general.Autocert = enabled
+	if enabled {
+		log.Info("autocert is now enabled")
+	} else {
+		log.Info("autocert is now disabled")
+	}
+	c.cfg.Set(CFG_GENERAL, c.general)
 	c.cfg.WriteConfig()
 }
 
@@ -581,17 +597,15 @@ func (c *Config) VerifyPhishlets() {
 			continue
 		}
 		for _, ph := range pl.proxyHosts {
-			if ph.is_landing || ph.handle_session {
-				phish_host := combineHost(ph.phish_subdomain, ph.domain)
-				orig_host := combineHost(ph.orig_subdomain, ph.domain)
-				if c_site, ok := hosts[phish_host]; ok {
-					log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", phish_host, site, c_site)
-				} else if c_site, ok := hosts[orig_host]; ok {
-					log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", orig_host, site, c_site)
-				}
-				hosts[phish_host] = site
-				hosts[orig_host] = site
+			phish_host := combineHost(ph.phish_subdomain, ph.domain)
+			orig_host := combineHost(ph.orig_subdomain, ph.domain)
+			if c_site, ok := hosts[phish_host]; ok {
+				log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", phish_host, site, c_site)
+			} else if c_site, ok := hosts[orig_host]; ok {
+				log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", orig_host, site, c_site)
 			}
+			hosts[phish_host] = site
+			hosts[orig_host] = site
 		}
 	}
 }
@@ -749,4 +763,8 @@ func (c *Config) GetRedirectorsDir() string {
 
 func (c *Config) GetBlacklistMode() string {
 	return c.blacklistConfig.Mode
+}
+
+func (c *Config) IsAutocertEnabled() bool {
+	return c.general.Autocert
 }

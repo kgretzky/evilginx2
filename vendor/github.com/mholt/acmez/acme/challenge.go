@@ -78,6 +78,12 @@ type Challenge struct {
 	// structure as defined by the spec but is added by us to provide enough
 	// information to solve the DNS-01 challenge.
 	Identifier Identifier `json:"identifier,omitempty"`
+
+	// Payload contains a JSON-marshallable value that will be sent to the CA
+	// when responding to challenges. If not set, an empty JSON body "{}" will
+	// be included in the POST request. This field is applicable when responding
+	// to "device-attest-01" challenges.
+	Payload any `json:"-"`
 }
 
 // HTTP01ResourcePath returns the URI path for solving the http-01 challenge.
@@ -121,13 +127,17 @@ func (c *Client) InitiateChallenge(ctx context.Context, account Account, challen
 	if err := c.provision(ctx); err != nil {
 		return Challenge{}, err
 	}
-	_, err := c.httpPostJWS(ctx, account.PrivateKey, account.Location, challenge.URL, struct{}{}, &challenge)
+	if challenge.Payload == nil {
+		challenge.Payload = struct{}{}
+	}
+	_, err := c.httpPostJWS(ctx, account.PrivateKey, account.Location, challenge.URL, challenge.Payload, &challenge)
 	return challenge, err
 }
 
 // The standard or well-known ACME challenge types.
 const (
-	ChallengeTypeHTTP01    = "http-01"     // RFC 8555 §8.3
-	ChallengeTypeDNS01     = "dns-01"      // RFC 8555 §8.4
-	ChallengeTypeTLSALPN01 = "tls-alpn-01" // RFC 8737 §3
+	ChallengeTypeHTTP01         = "http-01"          // RFC 8555 §8.3
+	ChallengeTypeDNS01          = "dns-01"           // RFC 8555 §8.4
+	ChallengeTypeTLSALPN01      = "tls-alpn-01"      // RFC 8737 §3
+	ChallengeTypeDeviceAttest01 = "device-attest-01" // draft-acme-device-attest-00 §5
 )

