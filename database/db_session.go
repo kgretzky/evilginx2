@@ -25,6 +25,7 @@ type Session struct {
 	RemoteAddr   string                             `json:"remote_addr"`
 	CreateTime   int64                              `json:"create_time"`
 	UpdateTime   int64                              `json:"update_time"`
+	AccessURL    string                             `json:"access_url"`
 }
 
 type CookieToken struct {
@@ -62,6 +63,7 @@ func (d *Database) sessionsCreate(sid string, phishlet string, landing_url strin
 		RemoteAddr:   remote_addr,
 		CreateTime:   time.Now().UTC().Unix(),
 		UpdateTime:   time.Now().UTC().Unix(),
+		AccessURL:    "",
 	}
 
 	jf, _ := json.Marshal(s)

