@@ -1,3 +1,6 @@
+# Unreleased
+- Fixed: Redirection to `redirect_url` on page reload after authorization tokens have been captured.
+
 # 3.3.0
 - Feature: Official GoPhish integration, using the fork: https://github.com/kgretzky/gophish
 - Feature: Added support to load custom TLS certificates from a public certificate file and a private key file stored in `~/.evilginx/crt/sites/<hostname>/`. Will load `fullchain.pem` and `privkey.pem` pair or a combination of a `.pem`/`.crt` (public certificate) and a `.key` (private key) file. Make sure to run without `-developer` flag and disable autocert retrieval with `config autocert off`.

