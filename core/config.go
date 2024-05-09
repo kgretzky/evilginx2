@@ -76,6 +76,11 @@ type GeneralConfig struct {
 	Autocert     bool   `mapstructure:"autocert" json:"autocert" yaml:"autocert"`
 }
 
+type DNSEntry struct {
+	Type  string `mapstructure:"type" json:"type" yaml:"type"`
+	Value string `mapstructure:"value" json:"value" yaml:"value"`
+}
+
 type Config struct {
 	general         *GeneralConfig
 	certificates    *CertificatesConfig
@@ -91,6 +96,7 @@ type Config struct {
 	lureIds         []string
 	subphishlets    []*SubPhishlet
 	cfg             *viper.Viper
+	dnsentries      map[string]*DNSEntry
 }
 
 const (
@@ -102,6 +108,7 @@ const (
 	CFG_BLACKLIST    = "blacklist"
 	CFG_SUBPHISHLETS = "subphishlets"
 	CFG_GOPHISH      = "gophish"
+	CFG_DNSENTRIES   = "dnsentries"
 )
 
 const DEFAULT_UNAUTH_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
@@ -116,6 +123,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		phishletNames:   []string{},
 		lures:           []*Lure{},
 		blacklistConfig: &BlacklistConfig{},
+		dnsentries:      make(map[string]*DNSEntry),
 	}
 
 	c.cfg = viper.New()
@@ -183,6 +191,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c.cfg.UnmarshalKey(CFG_PROXY, &c.proxyConfig)
 	c.cfg.UnmarshalKey(CFG_PHISHLETS, &c.phishletConfig)
 	c.cfg.UnmarshalKey(CFG_CERTIFICATES, &c.certificates)
+	c.cfg.UnmarshalKey(CFG_DNSENTRIES, &c.dnsentries)
 
 	for i := 0; i < len(c.lures); i++ {
 		c.lureIds = append(c.lureIds, GenRandomToken())
@@ -299,6 +308,19 @@ func (c *Config) SetDnsPort(port int) {
 	c.general.DnsPort = port
 	c.cfg.Set(CFG_GENERAL, c.general)
 	log.Info("dns port set to: %d", port)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetDnsEntry(name string, rtype string, value string) {
+	rtypes := []string{"A", "CNAME"}
+	if !stringExists(rtype, rtypes) {
+		log.Error("invalid record type %s, allowed types are %s", rtype, strings.Join(rtypes, ","))
+		return
+	}
+	entry := &DNSEntry{rtype, value}
+	c.dnsentries[name] = entry
+	c.cfg.Set(CFG_DNSENTRIES, c.dnsentries)
+	log.Info("DNS entry set: %s -> %s: %s", name, rtype, value)
 	c.cfg.WriteConfig()
 }
 
@@ -822,4 +844,12 @@ func (c *Config) GetGoPhishApiKey() string {
 
 func (c *Config) GetGoPhishInsecureTLS() bool {
 	return c.gophishConfig.InsecureTLS
+}
+
+func (c *Config) GetDnsEntries() string {
+	out := ""
+	for k, v := range c.dnsentries {
+		out += fmt.Sprintf("%s -> %s: %s; ", k, v.Type, v.Value)
+	}
+	return out
 }

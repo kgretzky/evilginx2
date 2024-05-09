@@ -74,12 +74,33 @@ func (o *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		log.Debug("DNS SOA: " + fqdn)
 		m.Answer = append(m.Answer, soa)
 	case dns.TypeA:
-		log.Debug("DNS A: " + fqdn + " = " + o.cfg.general.ExternalIpv4)
-		rr := &dns.A{
-			Hdr: dns.RR_Header{Name: fqdn, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 300},
-			A:   net.ParseIP(o.cfg.general.ExternalIpv4),
+		val, dnsentry := o.cfg.dnsentries[strings.Split(fqdn, ".")[0]]
+		if dnsentry {
+			log.Debug("DNS %s:  %s = %s (DNSEntry)", val.Type, fqdn, val.Value)
+			if val.Type == "A" {
+				rr := &dns.A{
+					Hdr: dns.RR_Header{Name: fqdn, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 300},
+					A:   net.ParseIP(val.Value),
+				}
+
+				m.Answer = append(m.Answer, rr)
+			} else if val.Type == "CNAME" {
+				rr := &dns.CNAME{
+					Hdr:    dns.RR_Header{Name: fqdn, Rrtype: dns.TypeCNAME, Class: dns.ClassINET, Ttl: 300},
+					Target: val.Value,
+				}
+
+				m.Answer = append(m.Answer, rr)
+			}
+		} else {
+			log.Debug("DNS A: " + fqdn + " = " + o.cfg.general.ExternalIpv4)
+			rr := &dns.A{
+				Hdr: dns.RR_Header{Name: fqdn, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 300},
+				A:   net.ParseIP(o.cfg.general.ExternalIpv4),
+			}
+
+			m.Answer = append(m.Answer, rr)
 		}
-		m.Answer = append(m.Answer, rr)
 	case dns.TypeNS:
 		log.Debug("DNS NS: " + fqdn)
 		if fqdn == pdom(o.cfg.general.Domain) {

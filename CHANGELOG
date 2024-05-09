@@ -1,4 +1,5 @@
 # Unreleased
+- Feature: Add ability to add custom A or CNAME records for internal DNS server using command `config dnsentry <name> <record_type> <value>` e.g. 'www CNAME cloudfront.net.' 
 - Fixed: Redirection to `redirect_url` on page reload after authorization tokens have been captured.
 
 # 3.3.0

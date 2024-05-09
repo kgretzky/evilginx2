@@ -192,8 +192,8 @@ func (t *Terminal) handleConfig(args []string) error {
 			gophishInsecure = "true"
 		}
 
-		keys := []string{"domain", "external_ipv4", "bind_ipv4", "https_port", "dns_port", "unauth_url", "autocert", "gophish admin_url", "gophish api_key", "gophish insecure"}
-		vals := []string{t.cfg.general.Domain, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.UnauthUrl, autocertOnOff, t.cfg.GetGoPhishAdminUrl(), t.cfg.GetGoPhishApiKey(), gophishInsecure}
+		keys := []string{"domain", "external_ipv4", "bind_ipv4", "https_port", "dns_port", "unauth_url", "autocert", "gophish admin_url", "gophish api_key", "gophish insecure", "dnsentries"}
+		vals := []string{t.cfg.general.Domain, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.UnauthUrl, autocertOnOff, t.cfg.GetGoPhishAdminUrl(), t.cfg.GetGoPhishApiKey(), gophishInsecure, t.cfg.GetDnsEntries()}
 		log.Printf("\n%s\n", AsRows(keys, vals))
 		return nil
 	} else if pn == 2 {
@@ -268,6 +268,12 @@ func (t *Terminal) handleConfig(args []string) error {
 					return nil
 				}
 			}
+		}
+	} else if pn == 4 {
+		switch args[0] {
+		case "dnsentry":
+			t.cfg.SetDnsEntry(args[1], args[2], args[3])
+			return nil
 		}
 	}
 	return fmt.Errorf("invalid syntax: %s", args)
@@ -1161,7 +1167,7 @@ func (t *Terminal) createHelp() {
 	h, _ := NewHelp()
 	h.AddCommand("config", "general", "manage general configuration", "Shows values of all configuration variables and allows to change them.", LAYER_TOP,
 		readline.PcItem("config", readline.PcItem("domain"), readline.PcItem("ipv4", readline.PcItem("external"), readline.PcItem("bind")), readline.PcItem("unauth_url"), readline.PcItem("autocert", readline.PcItem("on"), readline.PcItem("off")),
-			readline.PcItem("gophish", readline.PcItem("admin_url"), readline.PcItem("api_key"), readline.PcItem("insecure", readline.PcItem("true"), readline.PcItem("false")), readline.PcItem("test"))))
+			readline.PcItem("gophish", readline.PcItem("admin_url"), readline.PcItem("api_key"), readline.PcItem("insecure", readline.PcItem("true"), readline.PcItem("false")), readline.PcItem("test")), readline.PcItem("dnsentry")))
 	h.AddSubCommand("config", nil, "", "show all configuration variables")
 	h.AddSubCommand("config", []string{"domain"}, "domain <domain>", "set base domain for all phishlets (e.g. evilsite.com)")
 	h.AddSubCommand("config", []string{"ipv4"}, "ipv4 <ipv4_address>", "set ipv4 external address of the current server")
@@ -1173,6 +1179,7 @@ func (t *Terminal) createHelp() {
 	h.AddSubCommand("config", []string{"gophish", "api_key"}, "gophish api_key <key>", "set up the api key for the gophish instance to communicate with")
 	h.AddSubCommand("config", []string{"gophish", "insecure"}, "gophish insecure <true|false>", "enable or disable the verification of gophish tls certificate (set to `true` if using self-signed certificate)")
 	h.AddSubCommand("config", []string{"gophish", "test"}, "gophish test", "test the gophish configuration")
+	h.AddSubCommand("config", []string{"dnsentry"}, "dnsentry <name> <record_type> <value>", "provide a DNS entry of type A or CNAME to be returned by the internal resolver e.g. 'www CNAME cloudfront.net.'")
 
 	h.AddCommand("proxy", "general", "manage proxy configuration", "Configures proxy which will be used to proxy the connection to remote website", LAYER_TOP,
 		readline.PcItem("proxy", readline.PcItem("enable"), readline.PcItem("disable"), readline.PcItem("type"), readline.PcItem("address"), readline.PcItem("port"), readline.PcItem("username"), readline.PcItem("password")))
