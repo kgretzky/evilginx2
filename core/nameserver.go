@@ -74,7 +74,7 @@ func (o *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		log.Debug("DNS SOA: " + fqdn)
 		m.Answer = append(m.Answer, soa)
 	case dns.TypeA:
-		val, dnsentry := o.cfg.dnsentries[strings.Split(fqdn, ".")[0]]
+		val, dnsentry := o.cfg.dnsentries[strings.TrimRight(strings.Replace(fqdn, strings.ToLower(o.cfg.general.Domain), "", -1), ".")]
 		if dnsentry {
 			log.Debug("DNS %s:  %s = %s (DNSEntry)", val.Type, fqdn, val.Value)
 			if val.Type == "A" {
