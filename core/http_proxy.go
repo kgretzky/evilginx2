@@ -914,6 +914,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			var rm_headers = []string{
 				"Content-Security-Policy",
 				"Content-Security-Policy-Report-Only",
+				"Public-Key-Pins",
+				"Public-Key-Pins-Report-Only",
 				"Strict-Transport-Security",
 				"X-XSS-Protection",
 				"X-Content-Type-Options",
