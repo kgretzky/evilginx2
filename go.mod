@@ -18,6 +18,8 @@ require (
 	golang.org/x/net v0.22.0
 )
 
+require github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
+
 require (
 	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
@@ -36,6 +38,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
+	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/tidwall/btree v0.0.0-20170113224114-9876f1454cf0 // indirect
 	github.com/tidwall/gjson v1.14.0 // indirect
 	github.com/tidwall/grect v0.0.0-20161006141115-ba9a043346eb // indirect

