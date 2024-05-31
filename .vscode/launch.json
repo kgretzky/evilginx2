@@ -5,6 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Program",
+            "program": "${workspaceFolder}/
+        ",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node"
+        },
+        {
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
@@ -12,6 +22,7 @@
                 "<node_internals>/**"
             ],
             "program": "${file}"
+            
         }
     ]
 }
