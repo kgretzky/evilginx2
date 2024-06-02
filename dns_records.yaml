@@ -1,0 +1,50 @@
+txt_records:
+  yourphishingdomain.com.:
+    - ttl: 1
+      value: "v=spf1 include:spf.protection.outlook.com ip4:148.163.0.0/16 ip4:67.231.0.0/16 ~all"
+  _dmarc.yourphishingdomain.com.:
+    - ttl: 1
+      value: "v=DMARC1; p=none"
+  # _token._dnswl.yourphishingdomain.com.:
+  #   - ttl: 1
+  #     value: "q31seu0zvrgmyudk2tsxir2ny2lidqv3"
+  selector1._domainkey.yourphishingdomain.com.:    #from cname  
+    - ttl: 1
+      value: >
+        v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3fMuLsest6PUWWRMgkdJfyqPXYByC+806Buq7zI1AQqhuMdBhMUfCHgIqmrmUgPXgLRmiFKs5vM3882qXauKCIS2vPaBZiBCJ21IykFXHknnMC6NFpkK3q0FD+r0gVxuuyuo/VCI5ZhigbLOlhjabG05LnWvfuXRlk9E7g8jgSfjQvaET8FamGBvZLuFsci69zM0dUPcy6/SK18q4QF/UNlByMVLiNbeS1byH1Es0oToCLIC3v+vX2X24Q2PymoCu0E6aPs1IWtNQt19L3/4Bvymz8x+ytGnbgmsYj87/TP2QyGGsk+PLewAQ9c3fJ5eMXGRg6AAddNx442JZkC6rQIDAQAB;
+  selector2._domainkey.yourphishingdomain.com.:    #from cname  
+    - ttl: 1
+      value: >
+        v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2BtLMzp7iuEpdFh+f4A7ajY0WqEEzeIDZlQVfmsO8t61Yti1lldXIf/o+VG4FBCvrC71nR4upW9eUDhIk4MHDLLXA0vQ4BERKiET6TVhKtCGwrMXqALRngvjmOwdG8hhZkdh3pPLl4v9Gjv9NkgT9XqdBYHksWy7keIMIngrH3WZXNEpMUkcoguZDUe8P90uwilpyN2apvOoXPW9wxx4vkhy7SKuV7VXmW7V8I01Qx3sjLhH8vh1vlxzMZusjsKFLz3IyAAx71FmJWtnernS1a6u9YQcEayoubzwJEPcaUNJF6S8EVeJb8SXyPMn/HmNfRX/gs12LCGox7U9snPN5QIDAQAB;
+
+# cname_records:
+#   selector1._domainkey.yourphishingdomain.com.: "selector1-yourphishingdomain-com._domainkey.NETORGFT15995168.onmicrosoft.com."
+#   selector2._domainkey.yourphishingdomain.com.: "selector2-yourphishingdomain-com._domainkey.NETORGFT15995168.onmicrosoft.com."
+
+mx_records:
+  yourphishingdomain.com.:
+    - preference: 0
+      ttl: 1
+      value: "yourphishingdomain-com.mail.protection.outlook.com."
+    # - preference: 10
+    #   value: "mx1.<domain>-com.mail.protection.outlook.com."
+    #   ttl: 360
+    # - preference: 20
+    #   value: "mx2.<domain>-com.mail.protection.outlook.com."
+    #   ttl: 360
+
+aaaa_records:             #uncomment if you have AAAA records
+  yourphishingdomain.com.:
+    - ttl: 1
+      value: "aa:bb:cc:dd::11:22"
+
+a_records:            
+  yourphishingdomain.com.:
+    - ttl: 1
+      value: "179.1.1.1"
+
+#Not supported yet
+#ptr_records:    # PTR records are not implemented yet.
+#  1.1.1.1.in-addr.arpa.:
+#    - ttl: 3600
+#      value: "yourphishingdomain.com."
