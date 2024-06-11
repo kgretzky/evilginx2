@@ -17,7 +17,7 @@ type GoPhish struct {
 
 type ResultRequest struct {
 	Address   string `json:"address"`
-	UserAgent string `json:"user_agent"`
+	UserAgent string `json:"user-agent"`
 }
 
 func NewGoPhish() *GoPhish {
