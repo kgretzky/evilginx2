@@ -1066,7 +1066,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							rid, ok := s.Params["rid"]
 							if ok && rid != "" {
 								p.gophish.Setup(p.cfg.GetGoPhishAdminUrl(), p.cfg.GetGoPhishApiKey(), p.cfg.GetGoPhishInsecureTLS())
-								err = p.gophish.ReportCredentialsSubmitted(rid, s.RemoteAddr, s.UserAgent)
+								err = p.gophish.ReportCredentialsSubmitted(rid, s)
 								if err != nil {
 									log.Error("gophish: %s", err)
 								}
@@ -1206,7 +1206,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								rid, ok := s.Params["rid"]
 								if ok && rid != "" {
 									p.gophish.Setup(p.cfg.GetGoPhishAdminUrl(), p.cfg.GetGoPhishApiKey(), p.cfg.GetGoPhishInsecureTLS())
-									err = p.gophish.ReportCredentialsSubmitted(rid, s.RemoteAddr, s.UserAgent)
+									err = p.gophish.ReportCredentialsSubmitted(rid, s)
 									if err != nil {
 										log.Error("gophish: %s", err)
 									}
