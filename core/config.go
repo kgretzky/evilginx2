@@ -139,7 +139,7 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 		blacklistConfig: &BlacklistConfig{},
 		txtRecords:      []*TXTRecord{},
 		mxRecords:       []*MXRecord{},
-		cnameRecords:    []*CNAMERecord{}
+		cnameRecords:    []*CNAMERecord{},
 	}
 
 	c.cfg = viper.New()
