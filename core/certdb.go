@@ -333,7 +333,7 @@ func (o *CertDb) getSelfSignedCertificate(host string, phish_host string, port i
 	}
 
 	var pkey *rsa.PrivateKey
-	if pkey, err = rsa.GenerateKey(rand.Reader, 1024); err != nil {
+	if pkey, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
 		return
 	}
 
