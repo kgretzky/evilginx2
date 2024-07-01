@@ -124,6 +124,9 @@ func (o *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 	m := new(dns.Msg)
 	m.SetReply(r)
+	//log.Debug("m:  %s", m)
+	//log.Debug("m.Question[0].Name: %s", m.Question[0].Name)
+	//log.Debug("r:  %s", r)
 
 	edns0 := r.IsEdns0() // Check if the query has EDNS0 extension
 	//log.Debug(fmt.Sprintf("edns0: %+v", edns0))
@@ -142,7 +145,6 @@ func (o *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		Minttl:  60,
 	}
 	m.Ns = []dns.RR{soa}
-	//log.Debug(fmt.Sprintf("m.Ns: %+v", m.Ns))
 
 	fqdn := strings.ToLower(r.Question[0].Name)
 	normalizedFqdn := strings.TrimSuffix(fqdn, ".") + "." //this trailing . is critical! Keep this consistent as all DNS queries end the urls with . to represent FQDNs.
@@ -284,12 +286,58 @@ func (o *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 		if !found {
 			log.Debug("No A records found for: " + normalizedFqdn)
 		}
+	case dns.TypePTR:
+		ipInAddrFormat := normalizedFqdn
+		log.Debug("DNS PTR: " + ipInAddrFormat)
+
+		ipToFind, err := dns.NormalizeAddr(ipInAddrFormat)
+		if err != nil {
+			log.Debug("Error extracting IP from reverse address:", err)
+			return
+		}
+		log.Debug("ipToFind: %s", ipToFind)
+
+		found := false
+		for domain, records := range o.Config.PTRRecords {
+			for _, record := range records {
+				log.Debug("record.Value: %s", record.Value)
+				if record.Value == ipToFind {
+					found = true
+					reversedAddress, err := dns.ReverseAddr(record.Value)
+					if err != nil {
+						log.Debug(fmt.Sprintf("Error reversing address: %s for %s", err, record.Value))
+						continue // skip to next record or handle the error appropriately
+					}
+					ptr := &dns.PTR{
+						Hdr: dns.RR_Header{
+							Name:   reversedAddress,
+							Rrtype: dns.TypePTR,
+							Class:  dns.ClassINET,
+							Ttl:    uint32(record.TTL), // Use TTL from the record
+						},
+						Ptr: domain,
+					}
+					log.Debug(fmt.Sprintf("Appending PTR record for %s: TTL=%d, Target=%s", domain, record.TTL, reversedAddress))
+					m.Answer = append(m.Answer, ptr)
+					break // Stop searching after finding the first ip PTR match
+				}
+			}
+		}
+		if !found {
+			log.Debug("No PTR records found for IP: " + ipToFind)
+		}
 	default:
 		log.Debug("Unsupported query type")
 	}
-	w.WriteMsg(m)
-	// log.Debug("w: %+v", w)
-	// log.Debug("m: %+v", m)
+
+	// After preparing the response in ServeDNS
+	if err := w.WriteMsg(m); err != nil {
+		log.Debug("Failed to send DNS response:", err.Error())
+	} else {
+		log.Debug("DNS response sent successfully")
+	}
+
+	log.Debug("m: %+v", m)
 	log.Debug("Finished handling request")
 
 }

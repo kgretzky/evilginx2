@@ -1,7 +1,15 @@
 package dns
 
 import (
+	"errors"
+	"strings"
 	"sync"
+
+	"github.com/kgretzky/evilginx2/log"
+
+	"os"
+
+	"gopkg.in/yaml.v2"
 )
 
 // ServeMux is an DNS request multiplexer. It matches the zone name of
@@ -20,6 +28,14 @@ type ServeMux struct {
 	m sync.RWMutex
 }
 
+// DNSConfig holds configuration for DNS PTR records
+type DNSConfig struct {
+	PTRRecords map[string][]struct {
+		TTL   int    `yaml:"ttl"`
+		Value string `yaml:"value"`
+	} `yaml:"ptr_records"`
+}
+
 // NewServeMux allocates and returns a new ServeMux.
 func NewServeMux() *ServeMux {
 	return new(ServeMux)
@@ -34,7 +50,6 @@ func (mux *ServeMux) match(q string, t uint16) Handler {
 	if mux.z == nil {
 		return nil
 	}
-
 	q = CanonicalName(q)
 
 	var handler Handler
@@ -95,8 +110,34 @@ func (mux *ServeMux) HandleRemove(pattern string) {
 // message is returned
 func (mux *ServeMux) ServeDNS(w ResponseWriter, req *Msg) {
 	var h Handler
+	var reversedAddr string // Variable to store the reversed IP address
+	log.Debug("!ServeDNS")
+
+	//If the query is of type PTR
+	if req.Question[0].Qtype == 12 {
+		// Check if the domain ends with ".in-addr.arpa." before reversing
+		if strings.HasSuffix(req.Question[0].Name, ".in-addr.arpa.") {
+			reversedAddr = req.Question[0].Name
+			normalAddress, err := NormalizeAddr(req.Question[0].Name)
+			if err != nil {
+				log.Debug("Error normalizing address:", err)
+			} else {
+				req.Question[0].Name = normalAddress // Assign the normal address
+			}
+		}
+
+		//If it already ends with ".", it might need trimming the trailing dot
+		if req.Question[0].Name[len(req.Question[0].Name)-1] == '.' {
+			req.Question[0].Name = req.Question[0].Name[:len(req.Question[0].Name)-1] // Remove trailing '.'
+		}
+		req.Question[0].Name = checkIfPTR(req.Question[0].Name)
+	}
+
 	if len(req.Question) >= 1 { // allow more than one question
 		h = mux.match(req.Question[0].Name, req.Question[0].Qtype)
+		if req.Question[0].Qtype == 12 {
+			req.Question[0].Name = reversedAddr
+		}
 	}
 
 	if h != nil {
@@ -104,6 +145,32 @@ func (mux *ServeMux) ServeDNS(w ResponseWriter, req *Msg) {
 	} else {
 		handleRefused(w, req)
 	}
+}
+
+// NormalizeAddr takes a reversed IP address string ending with ".in-addr.arpa."
+// and returns the normalized IPv4 address in the standard format.
+func NormalizeAddr(reversedAddr string) (string, error) {
+	const suffix = ".in-addr.arpa."
+	if !strings.HasSuffix(reversedAddr, suffix) {
+		return "", errors.New("invalid address format")
+	}
+
+	// Remove the suffix and split the remaining address
+	cleanAddr := strings.TrimSuffix(reversedAddr, suffix)
+	parts := strings.Split(cleanAddr, ".")
+
+	if len(parts) != 4 {
+		return "", errors.New("invalid parts count for an IPv4 address")
+	}
+
+	// Reverse the order of the parts
+	for i, j := 0, len(parts)-1; i < j; i, j = i+1, j-1 {
+		parts[i], parts[j] = parts[j], parts[i]
+	}
+
+	// Join the parts back into a standard IP address
+	normalizedAddr := strings.Join(parts, ".")
+	return normalizedAddr, nil
 }
 
 // Handle registers the handler with the given pattern
@@ -119,4 +186,32 @@ func HandleRemove(pattern string) { DefaultServeMux.HandleRemove(pattern) }
 // in the DefaultServeMux.
 func HandleFunc(pattern string, handler func(ResponseWriter, *Msg)) {
 	DefaultServeMux.HandleFunc(pattern, handler)
+}
+
+// checkIfPTR looks up PTR records in the Evilginx DNS configuration file and returns the domain if found.
+func checkIfPTR(ip string) string {
+	data, err := os.ReadFile("dns_records.yaml") // Updated to use os.ReadFile
+	if err != nil {
+		log.Debug("Error reading YAML file:", err)
+		return ip
+	}
+
+	var config DNSConfig
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		log.Debug("Error unmarshaling YAML data:", err)
+		return ip
+	}
+
+	for domain, records := range config.PTRRecords {
+		//log.Debug(fmt.Sprintf("Checking domain: %s", domain))
+		for _, record := range records {
+			//log.Debug(fmt.Sprintf("Checking IP: %s against %s", record.Value, ip))
+			if record.Value == ip {
+				//log.Debug(fmt.Sprintf("Match found: %s", domain))
+				return domain // Return the domain corresponding to the found IP
+			}
+		}
+	}
+	return ip // Returns the original IP if no PTR record is found
 }
