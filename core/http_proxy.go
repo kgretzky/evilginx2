@@ -174,7 +174,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			for _, h := range proxyHeaders {
 				origin_ip := req.Header.Get(h)
 				if origin_ip != "" {
-					from_ip = strings.SplitN(origin_ip, ":", 2)[0]
+					first_ip := strings.TrimSpace(strings.Split(origin_ip, ",")[0])
+					from_ip = strings.SplitN(first_ip, ":", 2)[0]
 					break
 				}
 			}
