@@ -9,7 +9,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -80,9 +79,9 @@ func (o *CertDb) GetEmail() string {
 func (o *CertDb) generateCertificates() error {
 	var key *rsa.PrivateKey
 
-	pkey, err := ioutil.ReadFile(filepath.Join(o.cache_dir, "private.key"))
+	pkey, err := os.ReadFile(filepath.Join(o.cache_dir, "private.key"))
 	if err != nil {
-		pkey, err = ioutil.ReadFile(filepath.Join(o.cache_dir, "ca.key"))
+		pkey, err = os.ReadFile(filepath.Join(o.cache_dir, "ca.key"))
 	}
 
 	if err != nil {
@@ -97,7 +96,7 @@ func (o *CertDb) generateCertificates() error {
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(key),
 		})
-		err = ioutil.WriteFile(filepath.Join(o.cache_dir, "ca.key"), pkey, 0600)
+		err = os.WriteFile(filepath.Join(o.cache_dir, "ca.key"), pkey, 0600)
 		if err != nil {
 			return err
 		}
@@ -113,7 +112,7 @@ func (o *CertDb) generateCertificates() error {
 		}
 	}
 
-	ca_cert, err := ioutil.ReadFile(filepath.Join(o.cache_dir, "ca.crt"))
+	ca_cert, err := os.ReadFile(filepath.Join(o.cache_dir, "ca.crt"))
 	if err != nil {
 		notBefore := time.Now()
 		aYear := time.Duration(10*365*24) * time.Hour
@@ -149,7 +148,7 @@ func (o *CertDb) generateCertificates() error {
 			Type:  "CERTIFICATE",
 			Bytes: cert,
 		})
-		err = ioutil.WriteFile(filepath.Join(o.cache_dir, "ca.crt"), ca_cert, 0600)
+		err = os.WriteFile(filepath.Join(o.cache_dir, "ca.crt"), ca_cert, 0600)
 		if err != nil {
 			return err
 		}

