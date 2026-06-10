@@ -3,3 +3,7 @@ build/
 private/
 /phishlets
 !/phishlets/example.yaml
+!/phishlets/example-http.yaml
+!/phishlets/README.md
+/evilginx
+.claude

