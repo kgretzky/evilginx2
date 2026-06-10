@@ -1,6 +1,5 @@
-bin/
-docs/
-img/
 release/
 build/
-phishlets/test-*
+private/
+/phishlets
+!/phishlets/example.yaml

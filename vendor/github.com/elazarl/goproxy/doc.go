@@ -3,7 +3,7 @@ Package goproxy provides a customizable HTTP proxy,
 supporting hijacking HTTPS connection.
 
 The intent of the proxy, is to be usable with reasonable amount of traffic
-yet, customizable and programable.
+yet, customizable and programmable.
 
 The proxy itself is simply an `net/http` handler.
 
@@ -63,7 +63,7 @@ Finally, we have convenience function to throw a quick response
 		return goproxy.NewResponse(ctx.Req, goproxy.ContentTypeText, http.StatusForbidden, "Can't see response with X-GoProxy header!")
 	})
 
-we close the body of the original repsonse, and return a new 403 response with a short message.
+we close the body of the original response, and return a new 403 response with a short message.
 
 Example use cases:
 

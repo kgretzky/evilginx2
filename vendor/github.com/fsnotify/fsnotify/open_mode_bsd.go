@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build freebsd || openbsd || netbsd || dragonfly
 // +build freebsd openbsd netbsd dragonfly
 
 package fsnotify
 
 import "golang.org/x/sys/unix"
 
-const openMode = unix.O_NONBLOCK | unix.O_RDONLY
+const openMode = unix.O_NONBLOCK | unix.O_RDONLY | unix.O_CLOEXEC

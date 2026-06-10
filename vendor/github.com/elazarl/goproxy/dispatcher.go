@@ -161,6 +161,22 @@ func ContentTypeIs(typ string, types ...string) RespCondition {
 	})
 }
 
+// StatusCodeIs returns a RespCondition, testing whether or not the HTTP status
+// code is one of the given ints
+func StatusCodeIs(codes ...int) RespCondition {
+	codeSet := make(map[int]bool)
+	for _, c := range codes {
+		codeSet[c] = true
+	}
+	return RespConditionFunc(func(resp *http.Response, ctx *ProxyCtx) bool {
+		if resp == nil {
+			return false
+		}
+		_, codeMatch := codeSet[resp.StatusCode]
+		return codeMatch
+	})
+}
+
 // ProxyHttpServer.OnRequest Will return a temporary ReqProxyConds struct, aggregating the given condtions.
 // You will use the ReqProxyConds struct to register a ReqHandler, that would filter
 // the request, only if all the given ReqCondition matched.

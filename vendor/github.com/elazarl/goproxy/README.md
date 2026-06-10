@@ -2,6 +2,7 @@
 
 [![GoDoc](https://godoc.org/github.com/elazarl/goproxy?status.svg)](https://godoc.org/github.com/elazarl/goproxy)
 [![Join the chat at https://gitter.im/elazarl/goproxy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/elazarl/goproxy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+![Status](https://github.com/elazarl/goproxy/workflows/Go/badge.svg)
 
 Package goproxy provides a customizable HTTP proxy library for Go (golang),
 
@@ -96,7 +97,7 @@ a `ReqCondition` accepting only requests directed to "www.reddit.com".
 
 `DoFunc` will receive a function that will preprocess the request. We can change the request, or
 return a response. If the time is between 8:00am and 17:00pm, we will reject the request, and
-return a precanned text response saying "do not waste your time".
+return a pre-canned text response saying "do not waste your time".
 
 See additional examples in the examples directory.
 
@@ -135,12 +136,12 @@ For example:
 
 ```go
 // This rejects the HTTPS request to *.reddit.com during HTTP CONNECT phase
-proxy.OnRequest(goproxy.ReqHostMatches(regexp.MustCompile("reddit.*:443$"))).HandleConnect(goproxy.RejectConnect)
+proxy.OnRequest(goproxy.ReqHostMatches(regexp.MustCompile("reddit.*:443$"))).HandleConnect(goproxy.AlwaysReject)
 
 // This will NOT reject the HTTPS request with URL ending with gif, due to the fact that proxy 
 // only got the URL.Hostname and URL.Port during the HTTP CONNECT phase if the scheme is HTTPS, which is
 // quiet common these days.
-proxy.OnRequest(goproxy.UrlMatches(regexp.MustCompile(`.*gif$`))).HandleConnect(goproxy.RejectConnect)
+proxy.OnRequest(goproxy.UrlMatches(regexp.MustCompile(`.*gif$`))).HandleConnect(goproxy.AlwaysReject)
 
 // The correct way to manipulate the HTTP request using URL.Path as condition is:
 proxy.OnRequest(goproxy.UrlMatches(regexp.MustCompile(`.*gif$`))).Do(YourReqHandlerFunc())

@@ -1,10 +1,20 @@
 package core
 
+import "strings"
+
 func combineHost(sub string, domain string) string {
 	if sub == "" {
 		return domain
 	}
 	return sub + "." + domain
+}
+
+func obfuscateDots(s string) string {
+	return strings.Replace(s, ".", "[[d0t]]", -1)
+}
+
+func removeObfuscatedDots(s string) string {
+	return strings.Replace(s, "[[d0t]]", ".", -1)
 }
 
 func stringExists(s string, sa []string) bool {

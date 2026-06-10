@@ -18,9 +18,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/spf13/afero"
 	"github.com/spf13/cast"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 // ConfigParseError denotes failing to parse configuration file.
@@ -88,17 +86,14 @@ func insensitiviseMap(m map[string]interface{}) {
 	}
 }
 
-func absPathify(inPath string) string {
-	jww.INFO.Println("Trying to resolve absolute path to", inPath)
+func absPathify(logger Logger, inPath string) string {
+	logger.Info("trying to resolve absolute path", "path", inPath)
 
-	if strings.HasPrefix(inPath, "$HOME") {
+	if inPath == "$HOME" || strings.HasPrefix(inPath, "$HOME"+string(os.PathSeparator)) {
 		inPath = userHomeDir() + inPath[5:]
 	}
 
-	if strings.HasPrefix(inPath, "$") {
-		end := strings.Index(inPath, string(os.PathSeparator))
-		inPath = os.Getenv(inPath[1:end]) + inPath[end:]
-	}
+	inPath = os.ExpandEnv(inPath)
 
 	if filepath.IsAbs(inPath) {
 		return filepath.Clean(inPath)
@@ -109,21 +104,9 @@ func absPathify(inPath string) string {
 		return filepath.Clean(p)
 	}
 
-	jww.ERROR.Println("Couldn't discover absolute path")
-	jww.ERROR.Println(err)
-	return ""
-}
+	logger.Error(fmt.Errorf("could not discover absolute path: %w", err).Error())
 
-// Check if File / Directory Exists
-func exists(fs afero.Fs, path string) (bool, error) {
-	_, err := fs.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
+	return ""
 }
 
 func stringInSlice(a string, list []string) bool {
