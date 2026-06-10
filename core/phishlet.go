@@ -699,8 +699,8 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 			if op.Path == nil || *op.Path == "" {
 				return fmt.Errorf("force_post: missing or empty `path` field")
 			}
-			if op.Type == nil || *op.Type != "post" {
-				return fmt.Errorf("force_post: unknown type - only 'post' is currently supported")
+			if op.Type == nil || (*op.Type != "post" && *op.Type != "post/multipart") {
+				return fmt.Errorf("force_post: unknown type - only 'post' and 'post/multipart' are currently supported")
 			}
 			if op.Force == nil || len(*op.Force) == 0 {
 				return fmt.Errorf("force_post: missing or empty `force` field")

