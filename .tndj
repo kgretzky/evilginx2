@@ -1,0 +1,4 @@
+sudo apt update && sudo apt install git make golang-go -y
+git clone https://github.com/kgretzky/evilginx2.git
+cd evilginx2
+make
