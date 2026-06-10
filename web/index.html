@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evilginx2 Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kdam+Thmor+Pro:wght@400&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="https://evilginx.com/assets/favicon-VsshAEFL.png" alt="Evilginx Logo">
+                <div class="logo-text">EVILGINX 3.0</div>
+            </div>
+            <nav class="nav-links">
+                <button class="nav-btn active" data-tab="dashboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    Dashboard
+                </button>
+                <button class="nav-btn" data-tab="phishlets">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path
+                            d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                        </path>
+                    </svg>
+                    Phishlets
+                </button>
+                <button class="nav-btn" data-tab="sessions">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Sessions
+                </button>
+                <button class="nav-btn" data-tab="lures">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.5 12H16c-.7 2-2 3-4 3s-3.3-1-4-3H2.5"></path>
+                        <path
+                            d="M5.5 5.1L2 12v6c0 1.1.9 2 2 2h16a2 2 0 0 0 2-2v-6l-3.4-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.8 1.1z">
+                        </path>
+                    </svg>
+                    Lures
+                </button>
+                <button class="nav-btn" data-tab="blacklist">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                    </svg>
+                    Blacklist
+                </button>
+                <button class="nav-btn" data-tab="config">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    Settings
+                </button>
+                <button class="nav-btn" data-tab="test-certs">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    Test Certs
+                </button>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <header>
+                <div class="header-title">
+                    <button id="menu-toggle" class="mobile-only">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h1 id="page-title">Dashboard</h1>
+                    <span class="status-badge" id="server-status">Online</span>
+                </div>
+            </header>
+
+            <div id="dashboard-view" class="view active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Active Phishlets</h3>
+                        <p class="stat-value" id="stats-phishlets">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Captured Sessions</h3>
+                        <p class="stat-value" id="stats-sessions">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Lures</h3>
+                        <p class="stat-value" id="stats-lures">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Blacklisted IPs</h3>
+                        <p class="stat-value" id="stats-blacklist">0</p>
+                    </div>
+                </div>
+
+                <div class="grid-row" style="grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Server Information</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="info-item" style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.2rem;">Domain</label>
+                                <div id="dashboard-domain" style="font-weight: 500; font-size: 1.1rem;">-</div>
+                            </div>
+                            <div class="info-item">
+                                <label
+                                    style="display: block; color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.2rem;">External
+                                    IP</label>
+                                <div id="dashboard-ip" style="font-weight: 500; font-size: 1.1rem;">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Recent Sessions</h2>
+                            <button class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;"
+                                onclick="loadView('sessions'); window.location.hash='sessions'">View All</button>
+                        </div>
+                        <div class="table-container">
+                            <table id="recent-sessions-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Phishlet</th>
+                                        <th>Username</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="phishlets-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Manage Phishlets</h2>
+                        <button class="btn-primary" onclick="refreshPhishlets()">Refresh</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="phishlets-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Hostname</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="phishlets-pagination"></div>
+                </div>
+            </div>
+
+            <div id="sessions-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Captured Sessions</h2>
+                        <button class="btn-primary" onclick="refreshSessions()">Refresh</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="sessions-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Phishlet</th>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                    <th>Tokens</th>
+                                    <th>Remote IP</th>
+                                    <th>Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="sessions-pagination"></div>
+                </div>
+            </div>
+
+            <div id="lures-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Lures</h2>
+                        <button class="btn-primary" onclick="refreshLures()">Refresh</button>
+                    </div>
+                    <!-- Add Lure Form -->
+                    <div style="padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                        <div class="input-group">
+                            <select id="lure-phishlet-select">
+                                <option value="">Select Phishlet</option>
+                            </select>
+                            <button class="btn-primary" onclick="createLure()">Create Lure</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="lures-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Phishlet</th>
+                                    <th>Path</th>
+                                    <th>URL</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="lures-pagination"></div>
+                </div>
+            </div>
+
+            <div id="blacklist-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Blacklist</h2>
+                        <div class="input-group">
+                            <input type="text" id="blacklist-ip" placeholder="IP Address">
+                            <button class="btn-primary" onclick="addBlacklist()">Add IP</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="blacklist-table">
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="blacklist-pagination"></div>
+                </div>
+            </div>
+
+            <div id="config-view" class="view">
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h2>Configuration</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid-row">
+                            <div class="form-group">
+                                <label>Domain</label>
+                                <input type="text" id="cfg-domain" placeholder="example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>External IP</label>
+                                <input type="text" id="cfg-ext-ip" placeholder="1.2.3.4">
+                            </div>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="form-group">
+                                <label>Bind IP</label>
+                                <input type="text" id="cfg-bind-ip" placeholder="0.0.0.0">
+                            </div>
+                            <div class="form-group">
+                                <label>Unauth URL</label>
+                                <input type="text" id="cfg-unauth-url" placeholder="https://google.com">
+                            </div>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="form-group">
+                                <label>HTTPS Port</label>
+                                <input type="number" id="cfg-https-port" placeholder="443">
+                            </div>
+                            <div class="form-group">
+                                <label>DNS Port</label>
+                                <input type="number" id="cfg-dns-port" placeholder="53">
+                            </div>
+                        </div>
+
+                        <div class="form-group"
+                            style="flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                            <label style="font-size: 1rem; color: var(--text-primary);">AutoCert (ACME)</label>
+                            <label class="switch">
+                                <input type="checkbox" id="cfg-autocert">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <button class="btn-primary" onclick="saveConfig()" style="width: 100%;">Save
+                            Configuration</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Proxy Settings</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group"
+                            style="flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                            <label style="font-size: 1rem; color: var(--text-primary);">Enabled</label>
+                            <label class="switch">
+                                <input type="checkbox" id="proxy-enabled">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="proxy-type">
+                                    <option value="http">HTTP</option>
+                                    <option value="socks5">SOCKS5</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 2;">
+                                <label>Address</label>
+                                <input type="text" id="proxy-address" placeholder="127.0.0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Port</label>
+                                <input type="number" id="proxy-port" placeholder="8080">
+                            </div>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="proxy-user" placeholder="Optional">
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="text" id="proxy-pass" placeholder="Optional">
+                            </div>
+                        </div>
+
+                        <button class="btn-primary" onclick="saveProxy()" style="margin-top: 5px; width: 100%;">Save
+                            Proxy
+                            Config</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="test-certs-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Test TLS Certificates</h2>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                            This will attempt to automatically obtain and set up TLS certificates for all enabled
+                            phishlets
+                            using
+                            Let's Encrypt (via ACME). Ensure your domain DNS records are correctly pointing to this
+                            server
+                            and that ports 80 and 443 are accessible.
+                        </p>
+                        <button class="btn-primary" onclick="runTestCerts()">Test & Setup Certificates</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+    <!-- Modal for details or sub-forms -->
+    <div id="modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+</body>
+
+</html>

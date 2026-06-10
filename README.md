@@ -85,6 +85,22 @@ If you want to learn more about reverse proxy phishing, I've published extensive
 
 [Evilginx 3.3](https://breakdev.org/evilginx-3-3-go-phish/)
 
+## Web Interface
+
+Evilginx 3.3 now comes with a built-in Web Interface for easier management of phishlets, lures, sessions, and configuration.
+
+To enable the Web Interface, use the `-web` flag when starting Evilginx:
+
+```bash
+./evilginx -web
+```
+
+### Web UI CLI Flags:
+- `-web`: Enable the Web Interface.
+- `-web-host`: IP address to bind the Web Interface to (default: `127.0.0.1`).
+- `-web-port`: Port number for the Web Interface (default: `8080`).
+- `-web-auth`: Basic Authentication credentials (default: `admin:evilginx`). Format: `user:pass`.
+
 ## Help
 
 In case you want to learn how to install and use **Evilginx**, please refer to online documentation available at:
