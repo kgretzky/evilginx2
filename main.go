@@ -22,6 +22,8 @@ var phishlets_dir = flag.String("p", "", "Phishlets directory path")
 var redirectors_dir = flag.String("t", "", "HTML redirector pages directory path")
 var debug_log = flag.Bool("debug", false, "Enable debug output")
 var developer_mode = flag.Bool("developer", false, "Enable developer mode (generates self-signed certificates for all hostnames)")
+var notls = flag.Bool("notls", false, "Disable HTTPS and use HTTP mode")
+var preserve_https = flag.Bool("preserve-https", false, "Preserve HTTPS scheme in responses even in notls mode (for reverse proxy)")
 var cfg_dir = flag.String("c", "", "Configuration directory path")
 var version_flag = flag.Bool("v", false, "Show version")
 
@@ -102,6 +104,13 @@ func main() {
 		log.Info("debug output enabled")
 	}
 
+	if *notls {
+		log.Warning("notls mode enabled: server will run on HTTP (no HTTPS)")
+		if *preserve_https {
+			log.Info("preserve-https enabled: HTTPS scheme will be maintained in responses")
+		}
+	}
+
 	phishlets_path := *phishlets_dir
 	log.Info("loading phishlets from: %s", phishlets_path)
 
@@ -179,7 +188,13 @@ func main() {
 		return
 	}
 
-	hp, _ := core.NewHttpProxy(cfg.GetServerBindIP(), cfg.GetHttpsPort(), cfg, crt_db, db, bl, *developer_mode)
+	// Use HTTP port if notls mode, otherwise use HTTPS port
+	port := cfg.GetHttpsPort()
+	if *notls {
+		port = cfg.GetHttpPort()
+	}
+
+	hp, _ := core.NewHttpProxy(cfg.GetServerBindIP(), port, cfg, crt_db, db, bl, *developer_mode, *notls, *preserve_https)
 	hp.Start()
 
 	t, err := core.NewTerminal(hp, cfg, crt_db, db, *developer_mode)

