@@ -1,4 +1,5 @@
 # Unreleased
+- Feature: Added ability to customise the JavaScript redirect page contents by providing a format string to the `config customredir <redirect_code>` option
 - Fixed: Redirection to `redirect_url` on page reload after authorization tokens have been captured.
 
 # 3.3.0

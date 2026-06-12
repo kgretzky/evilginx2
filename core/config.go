@@ -71,6 +71,7 @@ type GeneralConfig struct {
 	ExternalIpv4 string `mapstructure:"external_ipv4" json:"external_ipv4" yaml:"external_ipv4"`
 	BindIpv4     string `mapstructure:"bind_ipv4" json:"bind_ipv4" yaml:"bind_ipv4"`
 	UnauthUrl    string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
+	CustomRedir  string `mapstructure:"custom_redir" json:"custom_redir" yaml:"custom_redir"`
 	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
 	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
 	Autocert     bool   `mapstructure:"autocert" json:"autocert" yaml:"autocert"`
@@ -822,4 +823,15 @@ func (c *Config) GetGoPhishApiKey() string {
 
 func (c *Config) GetGoPhishInsecureTLS() bool {
 	return c.gophishConfig.InsecureTLS
+}
+
+func (c *Config) GetCustomRedir() string {
+	return c.general.CustomRedir
+}
+
+func (c *Config) SetCustomRedir(redir string) {
+	c.general.CustomRedir = redir
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("custom redirect location set to: %s", redir)
+	c.cfg.WriteConfig()
 }
