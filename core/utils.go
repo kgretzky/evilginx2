@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -58,7 +58,7 @@ func ReadFromFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

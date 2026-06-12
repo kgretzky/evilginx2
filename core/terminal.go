@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/url"
 	"os"
@@ -1474,7 +1473,7 @@ func (t *Terminal) phishletPrefixCompleter(args string) []string {
 func (t *Terminal) redirectorsPrefixCompleter(args string) []string {
 	dir := t.cfg.GetRedirectorsDir()
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return []string{}
 	}
@@ -1601,7 +1600,7 @@ func (t *Terminal) importParamsFromFile(base_url string, path string) ([]string,
 			return ret, ret_params, err
 		}
 	case "json":
-		data, err := ioutil.ReadAll(bufio.NewReader(f))
+		data, err := io.ReadAll(bufio.NewReader(f))
 		if err != nil {
 			return ret, ret_params, err
 		}
