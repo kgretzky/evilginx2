@@ -192,8 +192,8 @@ func (t *Terminal) handleConfig(args []string) error {
 			gophishInsecure = "true"
 		}
 
-		keys := []string{"domain", "external_ipv4", "bind_ipv4", "https_port", "dns_port", "unauth_url", "autocert", "gophish admin_url", "gophish api_key", "gophish insecure"}
-		vals := []string{t.cfg.general.Domain, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.UnauthUrl, autocertOnOff, t.cfg.GetGoPhishAdminUrl(), t.cfg.GetGoPhishApiKey(), gophishInsecure}
+		keys := []string{"domain", "target", "external_ipv4", "bind_ipv4", "https_port", "dns_port", "unauth_url", "autocert", "gophish admin_url", "gophish api_key", "gophish insecure"}
+		vals := []string{t.cfg.general.Domain, t.cfg.general.Target, t.cfg.general.ExternalIpv4, t.cfg.general.BindIpv4, strconv.Itoa(t.cfg.general.HttpsPort), strconv.Itoa(t.cfg.general.DnsPort), t.cfg.general.UnauthUrl, autocertOnOff, t.cfg.GetGoPhishAdminUrl(), t.cfg.GetGoPhishApiKey(), gophishInsecure}
 		log.Printf("\n%s\n", AsRows(keys, vals))
 		return nil
 	} else if pn == 2 {
@@ -202,6 +202,9 @@ func (t *Terminal) handleConfig(args []string) error {
 			t.cfg.SetBaseDomain(args[1])
 			t.cfg.ResetAllSites()
 			t.manageCertificates(false)
+			return nil
+		case "target":
+			t.cfg.SetTarget(args[1])
 			return nil
 		case "ipv4":
 			t.cfg.SetServerExternalIP(args[1])

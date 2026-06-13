@@ -74,6 +74,7 @@ type GeneralConfig struct {
 	HttpsPort    int    `mapstructure:"https_port" json:"https_port" yaml:"https_port"`
 	DnsPort      int    `mapstructure:"dns_port" json:"dns_port" yaml:"dns_port"`
 	Autocert     bool   `mapstructure:"autocert" json:"autocert" yaml:"autocert"`
+	Target       string `mapstructure:"target" json:"target" yaml:"target"`
 }
 
 type Config struct {
@@ -494,6 +495,17 @@ func (c *Config) EnableAutocert(enabled bool) {
 	}
 	c.cfg.Set(CFG_GENERAL, c.general)
 	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetTarget(target string) {
+	c.general.Target = target
+	c.cfg.Set(CFG_GENERAL, c.general)
+	log.Info("target set to: %s", target)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) GetTarget() string {
+	return c.general.Target
 }
 
 func (c *Config) refreshActiveHostnames() {
