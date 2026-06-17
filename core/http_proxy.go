@@ -661,6 +661,50 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 							}
 						}
 						req.URL.RawQuery = qs.Encode()
+
+						// force get
+						for _, fp := range pl.forceGet {
+							if fp.tp == "query" {
+								if fp.path.MatchString(req.URL.Path) {
+									log.Debug("force_get: url matched: %s", req.URL.Path)
+									ok_search := false
+									if len(fp.search) > 0 {
+										k_matched := len(fp.search)
+										for _, fp_s := range fp.search {
+											for gp := range qs {
+												if fp_s.key.MatchString(gp) {
+													for _, v := range qs[gp] {
+														if fp_s.search.MatchString(v) {
+															if k_matched > 0 {
+																k_matched -= 1
+															}
+															break
+														}
+													}
+												}
+											}
+										}
+										if k_matched == 0 {
+											ok_search = true
+										}
+									} else {
+										ok_search = true
+									}
+									if ok_search {
+										for _, fp_f := range fp.force {
+											for gp := range qs {
+												if fp_f.key == gp {
+													for i, _ := range qs[gp] {
+														qs[gp][i] = fp_f.value
+													}
+												}
+											}
+										}
+									}
+									req.URL.RawQuery = qs.Encode()
+								}
+							}
+						}
 					}
 				}
 
