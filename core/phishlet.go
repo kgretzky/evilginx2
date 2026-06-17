@@ -75,6 +75,7 @@ type ForcePostSearch struct {
 type ForcePostForce struct {
 	key   string `mapstructure:"key"`
 	value string `mapstructure:"value"`
+	tp    string `mapstructure:"type"`
 }
 
 type ForcePost struct {
@@ -189,6 +190,7 @@ type ConfigForcePostSearch struct {
 type ConfigForcePostForce struct {
 	Key   *string `mapstructure:"key"`
 	Value *string `mapstructure:"value"`
+	Type  *string `mapstructure:"type",default:"string`
 }
 
 type ConfigForcePost struct {
@@ -699,8 +701,8 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 			if op.Path == nil || *op.Path == "" {
 				return fmt.Errorf("force_post: missing or empty `path` field")
 			}
-			if op.Type == nil || *op.Type != "post" {
-				return fmt.Errorf("force_post: unknown type - only 'post' is currently supported")
+			if op.Type == nil || (*op.Type != "post" && *op.Type != "json") {
+				return fmt.Errorf("force_post: unknown type - only 'post' and 'json' are currently supported")
 			}
 			if op.Force == nil || len(*op.Force) == 0 {
 				return fmt.Errorf("force_post: missing or empty `force` field")
@@ -741,10 +743,20 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 				if op_f.Value == nil {
 					return fmt.Errorf("force_post: missing force `value` field")
 				}
+				tp := ""
+				if op_f.Type == nil {
+					tp = "string"
+				} else {
+					if *op_f.Type != "boolean" && *op_f.Type != "string" {
+						return fmt.Errorf("force_post: unknown force type - only 'boolean' and 'string' (default) are currently supported")
+					}
+					tp = *op_f.Type
+				}
 
 				f_f := ForcePostForce{
 					key:   p.paramVal(*op_f.Key),
 					value: p.paramVal(*op_f.Value),
+					tp:    p.paramVal(tp),
 				}
 				fpf.force = append(fpf.force, f_f)
 			}
