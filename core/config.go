@@ -62,6 +62,7 @@ type CertificatesConfig struct {
 type GoPhishConfig struct {
 	AdminUrl    string `mapstructure:"admin_url" json:"admin_url" yaml:"admin_url"`
 	ApiKey      string `mapstructure:"api_key" json:"api_key" yaml:"api_key"`
+	Sessions      bool `mapstructure:"sessions" json:"sessions" yaml:"sessions"`
 	InsecureTLS bool   `mapstructure:"insecure" json:"insecure" yaml:"insecure"`
 }
 
@@ -377,6 +378,13 @@ func (c *Config) SetGoPhishInsecureTLS(k bool) {
 	c.gophishConfig.InsecureTLS = k
 	c.cfg.Set(CFG_GOPHISH, c.gophishConfig)
 	log.Info("gophish insecure set to: %v", k)
+	c.cfg.WriteConfig()
+}
+
+func (c *Config) SetGoPhishSessions(k bool) {
+	c.gophishConfig.Sessions = k
+	c.cfg.Set(CFG_GOPHISH, c.gophishConfig)
+	log.Info("gophish sessions set to: %v", k)
 	c.cfg.WriteConfig()
 }
 
@@ -822,4 +830,8 @@ func (c *Config) GetGoPhishApiKey() string {
 
 func (c *Config) GetGoPhishInsecureTLS() bool {
 	return c.gophishConfig.InsecureTLS
+}
+
+func (c *Config) GetGoPhishSessions() bool {
+	return c.gophishConfig.Sessions
 }
