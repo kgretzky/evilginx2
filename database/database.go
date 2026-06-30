@@ -91,6 +91,12 @@ func (d *Database) Flush() {
 	d.db.Shrink()
 }
 
+// Close releases the underlying BuntDB handle. Call Flush() first if a final
+// shrink is desired.
+func (d *Database) Close() error {
+	return d.db.Close()
+}
+
 func (d *Database) genIndex(table_name string, id int) string {
 	return table_name + ":" + strconv.Itoa(id)
 }

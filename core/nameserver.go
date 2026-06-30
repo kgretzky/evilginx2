@@ -6,6 +6,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/miekg/dns"
@@ -14,11 +15,12 @@ import (
 )
 
 type Nameserver struct {
-	srv    *dns.Server
-	cfg    *Config
-	bind   string
-	serial uint32
-	ctx    context.Context
+	srv          *dns.Server
+	cfg          *Config
+	bind         string
+	serial       uint32
+	ctx          context.Context
+	shuttingDown atomic.Bool
 }
 
 func NewNameserver(cfg *Config) (*Nameserver, error) {
@@ -39,12 +41,23 @@ func (o *Nameserver) Reset() {
 }
 
 func (o *Nameserver) Start() {
+	// Assign srv before launching the goroutine so Stop() can never observe a
+	// nil or partially-published server.
+	o.srv = &dns.Server{Addr: o.bind, Net: "udp"}
 	go func() {
-		o.srv = &dns.Server{Addr: o.bind, Net: "udp"}
-		if err := o.srv.ListenAndServe(); err != nil {
+		if err := o.srv.ListenAndServe(); err != nil && !o.shuttingDown.Load() {
 			log.Fatal("Failed to start nameserver on: %s", o.bind)
 		}
 	}()
+}
+
+// Stop shuts the DNS server down. The shuttingDown flag prevents the serving
+// goroutine from treating the resulting ListenAndServe return as a fatal error.
+func (o *Nameserver) Stop() {
+	o.shuttingDown.Store(true)
+	if o.srv != nil {
+		o.srv.Shutdown()
+	}
 }
 
 func (o *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {

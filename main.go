@@ -5,9 +5,12 @@ import (
 	"fmt"
 	_log "log"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"sync"
+	"syscall"
 
 	"github.com/caddyserver/certmagic"
 	"github.com/kgretzky/evilginx2/core"
@@ -170,7 +173,11 @@ func main() {
 	cfg.LoadSubPhishlets()
 	cfg.CleanUp()
 
-	ns, _ := core.NewNameserver(cfg)
+	ns, err := core.NewNameserver(cfg)
+	if err != nil {
+		log.Fatal("nameserver: %v", err)
+		return
+	}
 	ns.Start()
 
 	crt_db, err := core.NewCertDb(crt_path, cfg, ns)
@@ -179,7 +186,11 @@ func main() {
 		return
 	}
 
-	hp, _ := core.NewHttpProxy(cfg.GetServerBindIP(), cfg.GetHttpsPort(), cfg, crt_db, db, bl, *developer_mode)
+	hp, err := core.NewHttpProxy(cfg.GetServerBindIP(), cfg.GetHttpsPort(), cfg, crt_db, db, bl, *developer_mode)
+	if err != nil {
+		log.Fatal("http_proxy: %v", err)
+		return
+	}
 	hp.Start()
 
 	t, err := core.NewTerminal(hp, cfg, crt_db, db, *developer_mode)
@@ -188,5 +199,36 @@ func main() {
 		return
 	}
 
+	// Graceful shutdown: release servers and the database exactly once, whether
+	// triggered by a termination signal or by the operator typing 'exit'.
+	// SIGINT/Ctrl-C is left to readline (it prompts "type 'exit' to quit"), so
+	// only SIGTERM/SIGHUP are handled here.
+	//
+	// shutdown() must not touch the readline terminal: on the signal path it runs
+	// in a separate goroutine while the main goroutine is still blocked in
+	// readline's Readline(), and closing readline from another goroutine
+	// deadlocks. The terminal is closed only on the normal-exit path below, where
+	// it is safe to do so from the main goroutine.
+	var shutdownOnce sync.Once
+	shutdown := func() {
+		shutdownOnce.Do(func() {
+			log.Info("shutting down...")
+			ns.Stop()
+			hp.Stop()
+			db.Flush()
+			db.Close()
+		})
+	}
+
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGTERM, syscall.SIGHUP)
+	go func() {
+		<-sigc
+		shutdown()
+		os.Exit(0)
+	}()
+
 	t.DoWork()
+	shutdown()
+	t.Close()
 }
